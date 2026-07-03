@@ -1,0 +1,134 @@
+{
+  "common": {
+    "brand": "YourStore",
+    "search": "مصنوعات، برانڈز، زمرے تلاش کریں...",
+    "shopNow": "ابھی خریدیں",
+    "addToCart": "کارٹ میں شامل کریں",
+    "buyNow": "ابھی خریدیں",
+    "viewAll": "سب دیکھیں",
+    "loading": "لوڈ ہو رہا ہے...",
+    "save": "محفوظ",
+    "cancel": "منسوخ",
+    "delete": "حذف",
+    "edit": "ترمیم",
+    "create": "بنائیں",
+    "back": "واپس",
+    "continue": "جاری رکھیں",
+    "free": "مفت",
+    "sale": "سیل",
+    "featured": "نمایاں",
+    "inStock": "دستیاب",
+    "outOfStock": "ناموجود",
+    "noResults": "کوئی نتیجہ نہیں"
+  },
+  "header": {
+    "wishlist": "پسندیدہ",
+    "cart": "کارٹ",
+    "account": "اکاؤنٹ",
+    "login": "سائن ان",
+    "register": "رجسٹر",
+    "language": "زبان",
+    "country": "ملک",
+    "currency": "کرنسی",
+    "selectCountry": "ملک اور علاقہ منتخب کریں",
+    "selectLanguage": "زبان منتخب کریں",
+    "selectCurrency": "کرنسی منتخب کریں"
+  },
+  "nav": {
+    "newArrivals": "نئی آمد",
+    "bestSellers": "سب سے زیادہ فروخت",
+    "categories": "زمرے",
+    "deals": "ڈیلز",
+    "allProducts": "تمام مصنوعات"
+  },
+  "home": {
+    "featuredProducts": "نمایاں مصنوعات",
+    "shopByCategory": "زمرے کے لحاظ سے خریداری",
+    "newsletterTitle": "اپ ڈیٹ رہیں",
+    "newsletterSubtitle": "خصوصی پیشکشیں اور نئی آمد اپنی ان باکس میں حاصل کریں۔",
+    "subscribe": "سبسکرائب"
+  },
+  "products": {
+    "title": "تمام مصنوعات",
+    "resultsFor": "\"{query}\" کے نتائج",
+    "found": "{count} مصنوعات",
+    "related": "متعلقہ مصنوعات",
+    "specifications": "تفصیلات",
+    "sku": "SKU"
+  },
+  "cart": {
+    "title": "شاپنگ کارٹ",
+    "empty": "آپ کا کارٹ خالی ہے",
+    "emptyDesc": "ہماری پریمیم کلیکشن دریافت کریں۔",
+    "continueShopping": "خریداری جاری رکھیں",
+    "summary": "آرڈر خلاصہ",
+    "subtotal": "ذیلی کل",
+    "shipping": "شipping",
+    "tax": "ٹیکس (تخمینہ)",
+    "total": "کل",
+    "checkout": "چیک آؤٹ",
+    "items": "{count} اشیاء"
+  },
+  "checkout": {
+    "title": "چیک آؤٹ",
+    "contact": "رابطہ",
+    "shipping": "شipping پتہ",
+    "payment": "ادائیگی کا طریقہ",
+    "orderSummary": "آرڈر خلاصہ",
+    "placeOrder": "آرڈر دیں",
+    "processing": "پروسیسنگ...",
+    "empty": "چیک آؤٹ کے لیے کچھ نہیں"
+  },
+  "order": {
+    "confirmed": "آرڈر کی تصدیق!",
+    "number": "آرڈر نمبر: {number}",
+    "thankYou": "خریداری کا شکریہ۔",
+    "continueShopping": "خریداری جاری رکھیں",
+    "viewOrders": "آرڈرز دیکھیں"
+  },
+  "auth": {
+    "signIn": "سائن ان",
+    "signInDesc": "اپنے اکاؤنٹ تک رسائی کے لیے credentials درج کریں",
+    "createAccount": "اکاؤنٹ بنائیں",
+    "createAccountDesc": "پریمیم شاپنگ کے لیے YourStore میں شامل ہوں",
+    "email": "ای میل",
+    "password": "پاس ورڈ",
+    "firstName": "پہلا نام",
+    "lastName": "آخری نام",
+    "rememberMe": "مجھے یاد رکھیں",
+    "noAccount": "اکاؤنٹ نہیں ہے؟",
+    "hasAccount": "پہلے سے اکاؤنٹ ہے؟"
+  },
+  "wishlist": {
+    "title": "پسندیدہ",
+    "empty": "پسندیدہ خالی ہے",
+    "emptyDesc": "پسندیدہ مصنوعات محفوظ کریں۔",
+    "moveToCart": "کارٹ میں منتقل",
+    "remove": "ہٹائیں"
+  },
+  "compare": {
+    "title": "مصنوعات کا موازنہ",
+    "empty": "موازنہ کے لیے کوئی مصنوع نہیں",
+    "emptyDesc": "خصوصیات کا موازنہ کرنے کے لیے مصنوعات شامل کریں۔",
+    "add": "موازنہ",
+    "remove": "ہٹائیں",
+    "clear": "سب صاف",
+    "max": "زیادہ سے زیادہ 4"
+  },
+  "footer": {
+    "shop": "خریداری",
+    "company": "کمپنی",
+    "support": "سپورٹ",
+    "about": "ہمارے بارے میں",
+    "contact": "رابطہ",
+    "privacy": "رازداری",
+    "rights": "جملہ حقوق محفوظ ہیں۔"
+  },
+  "account": {
+    "title": "میرا اکاؤنٹ",
+    "orders": "آرڈر کی تاریخ",
+    "profile": "پروفائل",
+    "addresses": "پتے",
+    "noOrders": "ابھی کوئی آرڈر نہیں"
+  }
+}

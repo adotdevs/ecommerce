@@ -1,0 +1,143 @@
+{
+  "common": {
+    "brand": "YourStore",
+    "search": "Search products, brands, categories...",
+    "shopNow": "Shop Now",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "viewAll": "View All",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "continue": "Continue",
+    "free": "Free",
+    "sale": "Sale",
+    "featured": "Featured",
+    "inStock": "In Stock",
+    "outOfStock": "Out of Stock",
+    "noResults": "No results found"
+  },
+  "header": {
+    "wishlist": "Wishlist",
+    "cart": "Cart",
+    "account": "Account",
+    "login": "Sign In",
+    "register": "Register",
+    "language": "Language",
+    "country": "Country",
+    "currency": "Currency",
+    "selectCountry": "Select country & region",
+    "selectLanguage": "Select language",
+    "selectCurrency": "Select currency"
+  },
+  "nav": {
+    "newArrivals": "New Arrivals",
+    "bestSellers": "Best Sellers",
+    "categories": "Categories",
+    "deals": "Deals",
+    "allProducts": "All Products"
+  },
+  "home": {
+    "heroBadge": "New Collection 2026",
+    "exploreNew": "Explore New",
+    "viewAll": "View All",
+    "featuredSubtitle": "Handpicked favorites from our curated collection",
+    "statCustomers": "Happy Customers",
+    "statProducts": "Premium Products",
+    "statRating": "Average Rating",
+    "emailPlaceholder": "Enter your email",
+    "newsletterPrivacy": "No spam. Unsubscribe anytime.",
+    "featuredProducts": "Featured Products",
+    "shopByCategory": "Shop by Category",
+    "newsletterTitle": "Stay in the Loop",
+    "newsletterSubtitle": "Get exclusive offers and new arrivals delivered to your inbox.",
+    "subscribe": "Subscribe"
+  },
+  "products": {
+    "title": "All Products",
+    "resultsFor": "Results for \"{query}\"",
+    "found": "{count} products found",
+    "related": "Related Products",
+    "specifications": "Specifications",
+    "sku": "SKU"
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": "Your cart is empty",
+    "emptyDesc": "Discover our premium collection and add items to your cart.",
+    "continueShopping": "Continue Shopping",
+    "summary": "Order Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "tax": "Tax (est.)",
+    "total": "Total",
+    "checkout": "Proceed to Checkout",
+    "items": "{count} items"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "contact": "Contact",
+    "shipping": "Shipping Address",
+    "payment": "Payment Method",
+    "orderSummary": "Order Summary",
+    "placeOrder": "Place Order",
+    "processing": "Processing...",
+    "empty": "Nothing to checkout"
+  },
+  "order": {
+    "confirmed": "Order Confirmed!",
+    "number": "Order number: {number}",
+    "thankYou": "Thank you for your purchase. You will receive a confirmation email shortly.",
+    "continueShopping": "Continue Shopping",
+    "viewOrders": "View Orders"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signInDesc": "Enter your credentials to access your account",
+    "createAccount": "Create Account",
+    "createAccountDesc": "Join YourStore for a premium shopping experience",
+    "email": "Email",
+    "password": "Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "rememberMe": "Remember me",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "empty": "Your wishlist is empty",
+    "emptyDesc": "Save items you love for later.",
+    "moveToCart": "Move to Cart",
+    "remove": "Remove"
+  },
+  "compare": {
+    "title": "Compare Products",
+    "empty": "No products to compare",
+    "emptyDesc": "Add products to compare their features side by side.",
+    "add": "Compare",
+    "remove": "Remove",
+    "clear": "Clear All",
+    "max": "Maximum 4 products"
+  },
+  "footer": {
+    "shop": "Shop",
+    "company": "Company",
+    "support": "Support",
+    "about": "About Us",
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "rights": "All rights reserved."
+  },
+  "account": {
+    "title": "My Account",
+    "orders": "Order History",
+    "profile": "Profile",
+    "addresses": "Addresses",
+    "noOrders": "No orders yet"
+  }
+}

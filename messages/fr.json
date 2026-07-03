@@ -1,0 +1,134 @@
+{
+  "common": {
+    "brand": "YourStore",
+    "search": "Rechercher produits, marques, catégories...",
+    "shopNow": "Acheter",
+    "addToCart": "Ajouter au panier",
+    "buyNow": "Acheter maintenant",
+    "viewAll": "Voir tout",
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "back": "Retour",
+    "continue": "Continuer",
+    "free": "Gratuit",
+    "sale": "Promo",
+    "featured": "En vedette",
+    "inStock": "En stock",
+    "outOfStock": "Rupture de stock",
+    "noResults": "Aucun résultat"
+  },
+  "header": {
+    "wishlist": "Favoris",
+    "cart": "Panier",
+    "account": "Compte",
+    "login": "Connexion",
+    "register": "S'inscrire",
+    "language": "Langue",
+    "country": "Pays",
+    "currency": "Devise",
+    "selectCountry": "Sélectionner pays et région",
+    "selectLanguage": "Sélectionner la langue",
+    "selectCurrency": "Sélectionner la devise"
+  },
+  "nav": {
+    "newArrivals": "Nouveautés",
+    "bestSellers": "Meilleures ventes",
+    "categories": "Catégories",
+    "deals": "Offres",
+    "allProducts": "Tous les produits"
+  },
+  "home": {
+    "featuredProducts": "Produits en vedette",
+    "shopByCategory": "Acheter par catégorie",
+    "newsletterTitle": "Restez informé",
+    "newsletterSubtitle": "Recevez des offres exclusives et nouveautés.",
+    "subscribe": "S'abonner"
+  },
+  "products": {
+    "title": "Tous les produits",
+    "resultsFor": "Résultats pour \"{query}\"",
+    "found": "{count} produits trouvés",
+    "related": "Produits similaires",
+    "specifications": "Spécifications",
+    "sku": "SKU"
+  },
+  "cart": {
+    "title": "Panier",
+    "empty": "Votre panier est vide",
+    "emptyDesc": "Découvrez notre collection premium.",
+    "continueShopping": "Continuer vos achats",
+    "summary": "Récapitulatif",
+    "subtotal": "Sous-total",
+    "shipping": "Livraison",
+    "tax": "Taxes (est.)",
+    "total": "Total",
+    "checkout": "Passer commande",
+    "items": "{count} articles"
+  },
+  "checkout": {
+    "title": "Commande",
+    "contact": "Contact",
+    "shipping": "Adresse de livraison",
+    "payment": "Mode de paiement",
+    "orderSummary": "Récapitulatif",
+    "placeOrder": "Confirmer la commande",
+    "processing": "Traitement...",
+    "empty": "Rien à commander"
+  },
+  "order": {
+    "confirmed": "Commande confirmée !",
+    "number": "N° de commande : {number}",
+    "thankYou": "Merci pour votre achat.",
+    "continueShopping": "Continuer vos achats",
+    "viewOrders": "Voir les commandes"
+  },
+  "auth": {
+    "signIn": "Connexion",
+    "signInDesc": "Entrez vos identifiants",
+    "createAccount": "Créer un compte",
+    "createAccountDesc": "Rejoignez YourStore",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "rememberMe": "Se souvenir de moi",
+    "noAccount": "Pas de compte ?",
+    "hasAccount": "Déjà un compte ?"
+  },
+  "wishlist": {
+    "title": "Favoris",
+    "empty": "Liste de favoris vide",
+    "emptyDesc": "Enregistrez vos produits préférés.",
+    "moveToCart": "Ajouter au panier",
+    "remove": "Retirer"
+  },
+  "compare": {
+    "title": "Comparer",
+    "empty": "Aucun produit à comparer",
+    "emptyDesc": "Ajoutez des produits pour comparer.",
+    "add": "Comparer",
+    "remove": "Retirer",
+    "clear": "Tout effacer",
+    "max": "Maximum 4 produits"
+  },
+  "footer": {
+    "shop": "Boutique",
+    "company": "Entreprise",
+    "support": "Support",
+    "about": "À propos",
+    "contact": "Contact",
+    "privacy": "Confidentialité",
+    "rights": "Tous droits réservés."
+  },
+  "account": {
+    "title": "Mon compte",
+    "orders": "Historique",
+    "profile": "Profil",
+    "addresses": "Adresses",
+    "noOrders": "Aucune commande"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "common": {
+    "brand": "YourStore",
+    "search": "ابحث عن المنتجات والعلامات والفئات...",
+    "shopNow": "تسوق الآن",
+    "addToCart": "أضف إلى السلة",
+    "buyNow": "اشتر الآن",
+    "viewAll": "عرض الكل",
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "back": "رجوع",
+    "continue": "متابعة",
+    "free": "مجاني",
+    "sale": "تخفيض",
+    "featured": "مميز",
+    "inStock": "متوفر",
+    "outOfStock": "غير متوفر",
+    "noResults": "لا توجد نتائج"
+  },
+  "header": {
+    "wishlist": "المفضلة",
+    "cart": "السلة",
+    "account": "الحساب",
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "language": "اللغة",
+    "country": "البلد",
+    "currency": "العملة",
+    "selectCountry": "اختر البلد والمنطقة",
+    "selectLanguage": "اختر اللغة",
+    "selectCurrency": "اختر العملة"
+  },
+  "nav": {
+    "newArrivals": "وصل حديثاً",
+    "bestSellers": "الأكثر مبيعاً",
+    "categories": "الفئات",
+    "deals": "العروض",
+    "allProducts": "جميع المنتجات"
+  },
+  "home": {
+    "featuredProducts": "منتجات مميزة",
+    "shopByCategory": "تسوق حسب الفئة",
+    "newsletterTitle": "ابق على اطلاع",
+    "newsletterSubtitle": "احصل على عروض حصرية ومنتجات جديدة في بريدك.",
+    "subscribe": "اشترك"
+  },
+  "products": {
+    "title": "جميع المنتجات",
+    "resultsFor": "نتائج \"{query}\"",
+    "found": "{count} منتج",
+    "related": "منتجات ذات صلة",
+    "specifications": "المواصفات",
+    "sku": "رمز المنتج"
+  },
+  "cart": {
+    "title": "سلة التسوق",
+    "empty": "سلتك فارغة",
+    "emptyDesc": "اكتشف مجموعتنا المميزة وأضف منتجات إلى سلتك.",
+    "continueShopping": "متابعة التسوق",
+    "summary": "ملخص الطلب",
+    "subtotal": "المجموع الفرعي",
+    "shipping": "الشحن",
+    "tax": "الضريبة (تقريبي)",
+    "total": "الإجمالي",
+    "checkout": "إتمام الشراء",
+    "items": "{count} منتج"
+  },
+  "checkout": {
+    "title": "إتمام الشراء",
+    "contact": "التواصل",
+    "shipping": "عنوان الشحن",
+    "payment": "طريقة الدفع",
+    "orderSummary": "ملخص الطلب",
+    "placeOrder": "تأكيد الطلب",
+    "processing": "جاري المعالجة...",
+    "empty": "لا يوجد شيء للشراء"
+  },
+  "order": {
+    "confirmed": "تم تأكيد الطلب!",
+    "number": "رقم الطلب: {number}",
+    "thankYou": "شكراً لشرائك. ستتلقى رسالة تأكيد قريباً.",
+    "continueShopping": "متابعة التسوق",
+    "viewOrders": "عرض الطلبات"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signInDesc": "أدخل بياناتك للوصول إلى حسابك",
+    "createAccount": "إنشاء حساب",
+    "createAccountDesc": "انضم إلى YourStore لتجربة تسوق مميزة",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "rememberMe": "تذكرني",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟"
+  },
+  "wishlist": {
+    "title": "المفضلة",
+    "empty": "قائمة المفضلة فارغة",
+    "emptyDesc": "احفظ المنتجات التي تحبها لاحقاً.",
+    "moveToCart": "نقل إلى السلة",
+    "remove": "إزالة"
+  },
+  "compare": {
+    "title": "مقارنة المنتجات",
+    "empty": "لا توجد منتجات للمقارنة",
+    "emptyDesc": "أضف منتجات لمقارنة ميزاتها.",
+    "add": "قارن",
+    "remove": "إزالة",
+    "clear": "مسح الكل",
+    "max": "4 منتجات كحد أقصى"
+  },
+  "footer": {
+    "shop": "تسوق",
+    "company": "الشركة",
+    "support": "الدعم",
+    "about": "من نحن",
+    "contact": "اتصل بنا",
+    "privacy": "سياسة الخصوصية",
+    "rights": "جميع الحقوق محفوظة."
+  },
+  "account": {
+    "title": "حسابي",
+    "orders": "سجل الطلبات",
+    "profile": "الملف الشخصي",
+    "addresses": "العناوين",
+    "noOrders": "لا توجد طلبات بعد"
+  }
+}

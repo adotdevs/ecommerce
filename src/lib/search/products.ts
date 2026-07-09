@@ -202,7 +202,7 @@ async function collectDeepSearchCandidates(
       .select(DEEP_SELECT)
       .limit(120)
       .lean();
-    candidates = mergeProducts(candidates, flex as Record<string, unknown>[]);
+    candidates = mergeProducts(candidates, flex as unknown as Record<string, unknown>[]);
   }
 
   try {
@@ -254,13 +254,13 @@ async function collectDeepSearchCandidates(
       .select(DEEP_SELECT)
       .limit(100)
       .lean();
-    candidates = mergeProducts(candidates, prefix as Record<string, unknown>[]);
+    candidates = mergeProducts(candidates, prefix as unknown as Record<string, unknown>[]);
   }
 
   if (candidates.length < 30) {
     const broad = await Product.find(baseFilter).select(DEEP_SELECT).limit(350).lean();
     const tokens = tokenizeSearchQuery(q);
-    const fuzzyHits = (broad as Record<string, unknown>[])
+    const fuzzyHits = (broad as unknown as Record<string, unknown>[])
       .map((p) => ({
         p,
         score: rankProductMatch(p, q, tokens),

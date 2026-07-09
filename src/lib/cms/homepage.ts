@@ -7,6 +7,7 @@ import {
   lookupProductByLink,
 } from "@/lib/cms/resolve-links";
 import { toProductCardData } from "@/lib/catalog/product-card";
+import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
 
 export function isSectionVisible(section: IHomepageSection): boolean {
   if (!section.enabled) return false;
@@ -59,10 +60,13 @@ export async function resolveHomepageCategories(config: Record<string, unknown>)
 
   if (mode === "manual" && links.length > 0) {
     const categories = await resolveCategoriesByLinks(links);
-    if (categories.length > 0) return categories;
+    if (categories.length > 0) {
+      return toCategoryShowcaseList(categories);
+    }
   }
 
-  return Category.find().sort({ sortOrder: 1 }).limit(8).lean();
+  const categories = await Category.find().sort({ sortOrder: 1 }).limit(8).lean();
+  return toCategoryShowcaseList(categories);
 }
 
 /** Apply product link data to a hero slide or promo banner */

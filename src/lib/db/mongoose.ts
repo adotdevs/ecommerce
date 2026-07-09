@@ -22,7 +22,9 @@ if (!global.mongooseCache) {
 export async function connectDB(): Promise<typeof mongoose> {
   const MONGODB_URI = process.env.MONGODB_URI;
   if (!MONGODB_URI) {
-    throw new Error("Please define MONGODB_URI in .env.local");
+    throw new Error(
+      "MONGODB_URI is not configured. Set it in .env.local (development) or Vercel project environment variables (production)."
+    );
   }
 
   if (cached.conn) return cached.conn;

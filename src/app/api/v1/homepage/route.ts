@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { HomepageSection, Product, Category } from "@/models";
 import { isSectionVisible, resolveFeaturedProducts } from "@/lib/cms/homepage";
+import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
 import { apiSuccess } from "@/lib/api/response";
 
 export async function GET() {
@@ -18,7 +19,8 @@ export async function GET() {
       }
 
       if (section.type === "category_showcase") {
-        config.categories = await Category.find().sort({ sortOrder: 1 }).limit(8).lean();
+        const categories = await Category.find().sort({ sortOrder: 1 }).limit(8).lean();
+        config.categories = toCategoryShowcaseList(categories);
       }
 
       if (section.type === "hero_slider" && config.productIds) {

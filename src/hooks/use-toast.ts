@@ -4,12 +4,18 @@ import { create } from "zustand";
 
 export type ToastVariant = "success" | "error" | "info" | "warning";
 
+export interface ToastAction {
+  label: string;
+  href: string;
+}
+
 export interface ToastItem {
   id: string;
   title: string;
   description?: string;
   variant: ToastVariant;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastStore {

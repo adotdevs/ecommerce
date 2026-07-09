@@ -8,6 +8,7 @@ import {
   PromoBannerSection,
   TrustBadgesSection,
   NewsletterSection,
+  FlashSaleSection,
 } from "./sections";
 
 interface Section {
@@ -26,6 +27,7 @@ const SECTION_MAP: Record<
   promo_banner: PromoBannerSection,
   trust_badges: TrustBadgesSection,
   newsletter: NewsletterSection,
+  flash_sale: FlashSaleSection,
 };
 
 export function HomepageRenderer({ sections }: { sections: Section[] }) {

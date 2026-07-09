@@ -13,6 +13,8 @@ import {
   ShoppingCart,
   LogOut,
   ChevronRight,
+  LayoutGrid,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,9 +24,11 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/merchandising", label: "Merchandising", icon: Sparkles },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/brands", label: "Brands", icon: Tag },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
+  { href: "/admin/catalog-pages", label: "Catalog Pages", icon: LayoutGrid },
   { href: "/admin/cms", label: "CMS Pages", icon: FileText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

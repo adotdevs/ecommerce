@@ -9,5 +9,6 @@ export { Product } from "./Product";
 export { Cart } from "./Cart";
 export { Order } from "./Order";
 export { CmsPage } from "./CmsPage";
+export { CatalogPage } from "./CatalogPage";
 export { Wishlist } from "./Wishlist";
 export { CompareList } from "./CompareList";

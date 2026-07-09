@@ -4,35 +4,30 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Heart, GitCompareArrows, ShoppingBag } from "lucide-react";
+import { Heart, GitCompareArrows, ShoppingBag, Check } from "lucide-react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { StarRating, getProductRating } from "@/components/storefront/products/StarRating";
-import { useCartStore } from "@/stores/cart-store";
+import { useAddToCart } from "@/hooks/use-add-to-cart";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { cn } from "@/components/ds/utils";
+import type { ProductCardData } from "@/lib/catalog/product-card";
 
 interface ProductCardProps {
-  product: {
-    _id: string;
-    name: string;
-    slug: string;
-    pricing: { price: number; compareAtPrice?: number; currency?: string };
-    media?: { url: string; alt?: string }[];
-    brandName?: string;
-    featured?: boolean;
-    inventory?: { stock: number };
-  };
+  product: ProductCardData;
   className?: string;
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
   const t = useTranslations("common");
-  const addItem = useCartStore((s) => s.addItem);
+  const mounted = useClientMounted();
+  const { addToCart, justAdded } = useAddToCart();
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
-  const isWishlisted = useWishlistStore((s) => s.hasItem(product._id));
+  const isWishlistedRaw = useWishlistStore((s) => s.hasItem(product._id));
+  const isWishlisted = mounted && isWishlistedRaw;
   const toggleCompare = useCompareStore((s) => s.toggleProduct);
   const image = product.media?.[0];
   const onSale =
@@ -44,8 +39,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (outOfStock) return;
-    addItem({
+    if (outOfStock || justAdded) return;
+    addToCart({
       productId: product._id,
       name: product.name,
       slug: product.slug,
@@ -57,10 +52,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
   return (
     <motion.article
+      initial={false}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-[var(--radius-md)] border border-border bg-card shadow-[var(--shadow-subtle)] transition-shadow duration-200 hover:shadow-[var(--shadow-card)]",
+        "group relative flex flex-col overflow-hidden rounded-[var(--radius-md)] border border-border/80 bg-card shadow-[var(--shadow-subtle)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[var(--shadow-card)]",
         className
       )}
     >
@@ -71,7 +67,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               src={image.url}
               alt={image.alt ?? product.name}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
               sizes="(max-width:640px) 50vw, 25vw"
               loading="lazy"
             />
@@ -146,13 +142,25 @@ export function ProductCard({ product, className }: ProductCardProps) {
       <div className="px-4 pb-4">
         <Button
           size="md"
-          variant="primary"
-          className="w-full"
+          variant={justAdded ? "accent" : "primary"}
+          className={cn(
+            "w-full transition-all",
+            justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
+          )}
           onClick={handleAddToCart}
           disabled={outOfStock}
         >
-          <ShoppingBag className="h-4 w-4" />
-          {outOfStock ? t("outOfStock") : t("addToCart")}
+          {justAdded ? (
+            <>
+              <Check className="h-4 w-4" />
+              {t("addedToCart")}
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="h-4 w-4" />
+              {outOfStock ? t("outOfStock") : t("addToCart")}
+            </>
+          )}
         </Button>
       </div>
     </motion.article>

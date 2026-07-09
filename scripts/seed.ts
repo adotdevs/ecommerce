@@ -90,8 +90,8 @@ async function seed() {
         keywords: ["ecommerce", "premium", "shopping"],
       },
       navigation: [
-        { label: "New Arrivals", href: "/products?sort=new" },
-        { label: "Best Sellers", href: "/products?sort=bestsellers" },
+        { label: "New Arrivals", href: "/new-arrivals" },
+        { label: "Best Sellers", href: "/bestsellers" },
         {
           label: "Categories",
           href: "/products",
@@ -101,7 +101,7 @@ async function seed() {
             { label: "Home", href: "/categories/home-living" },
           ],
         },
-        { label: "Deals", href: "/products?sort=deals" },
+        { label: "Deals", href: "/deals" },
       ],
     },
     { upsert: true, new: true }
@@ -128,9 +128,24 @@ async function seed() {
 
   // Brands
   const brands = [
-    { name: "Apex", slug: "apex", description: "Premium tech innovation" },
-    { name: "Nova", slug: "nova", description: "Modern lifestyle essentials" },
-    { name: "Stride", slug: "stride", description: "Performance athletic gear" },
+    {
+      name: "Apex",
+      slug: "apex",
+      description: "Premium tech innovation",
+      categoryIds: [categoryDocs[0]._id],
+    },
+    {
+      name: "Nova",
+      slug: "nova",
+      description: "Modern lifestyle essentials",
+      categoryIds: [categoryDocs[1]._id, categoryDocs[2]._id],
+    },
+    {
+      name: "Stride",
+      slug: "stride",
+      description: "Performance athletic gear",
+      categoryIds: [categoryDocs[3]._id],
+    },
   ];
 
   const brandDocs = [];
@@ -286,27 +301,21 @@ async function seed() {
       order: 0,
       enabled: true,
       config: {
-        heroBadge: "New Collection 2026",
-        exploreNewLabel: "Explore New",
-        stats: [
-          { value: "10K+", label: "Happy Customers" },
-          { value: "500+", label: "Premium Products" },
-          { value: "4.9", label: "Average Rating" },
-        ],
+        heroBadge: "Free shipping over $100",
+        exploreNewLabel: "New arrivals",
+        exploreNewHref: "/new-arrivals",
         slides: [
           {
-            title: "Elevate Every Moment",
-            subtitle: "Curated premium products for the modern lifestyle",
+            title: "Shop the season's bestsellers",
+            subtitle: "Premium picks, fast delivery, and easy returns — everything you need in one store.",
             cta: { label: "Shop Now", href: "/products" },
-            image: "https://images.unsplash.com/photo-1441986300917-64644bd600d8?w=1600",
-            overlay: "dark",
+            image: "https://images.unsplash.com/photo-1441986300917-64644bd600d8?auto=format&fit=crop&w=1920&q=80",
           },
           {
-            title: "New Season Collection",
-            subtitle: "Discover what's trending this season",
-            cta: { label: "Explore", href: "/products?sort=new" },
-            image: "https://images.unsplash.com/photo-1483985988350-763728e1935b?w=1600",
-            overlay: "light",
+            title: "New arrivals just dropped",
+            subtitle: "Fresh styles and limited drops. Grab yours before they're gone.",
+            cta: { label: "Explore New", href: "/new-arrivals" },
+            image: "https://images.unsplash.com/photo-1483985988350-763728e1935b?auto=format&fit=crop&w=1920&q=80",
           },
         ],
       },
@@ -325,8 +334,24 @@ async function seed() {
       },
     },
     {
-      type: "featured_products",
+      type: "flash_sale",
       order: 2,
+      enabled: true,
+      config: {
+        eyebrow: "Limited time",
+        title: "Flash Sale",
+        subtitle: "Lightning deals — grab them before the clock hits zero.",
+        endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        ctaLabel: "Shop all deals",
+        ctaHref: "/deals",
+        selectionMode: "auto",
+        limit: 4,
+        productLinks: [],
+      },
+    },
+    {
+      type: "featured_products",
+      order: 3,
       enabled: true,
       config: {
         title: "Featured Products",
@@ -338,7 +363,7 @@ async function seed() {
     },
     {
       type: "category_showcase",
-      order: 3,
+      order: 4,
       enabled: true,
       config: {
         title: "Shop by Category",
@@ -347,19 +372,19 @@ async function seed() {
     },
     {
       type: "promo_banner",
-      order: 4,
+      order: 5,
       enabled: true,
       config: {
         eyebrow: "Limited offer",
         title: "Summer Sale — Up to 40% Off",
         subtitle: "Limited time offer on select items",
         discountLabel: "40%",
-        cta: { label: "Shop Deals", href: "/products?sort=deals" },
+        cta: { label: "Shop Deals", href: "/deals" },
       },
     },
     {
       type: "newsletter",
-      order: 5,
+      order: 6,
       enabled: true,
       config: {
         title: "Stay in the Loop",

@@ -4,13 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Globe, ChevronDown } from "lucide-react";
+import { useCurrency, useLocaleStore } from "@/stores/locale-store";
 import {
-  useCountry,
-  useCurrency,
-  useLocaleStore,
-} from "@/stores/locale-store";
-import {
-  countries,
   currencies,
   localeConfig,
   type Locale,
@@ -41,14 +36,14 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
   const routeLocale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
-  const [enabledLanguages, setEnabledLanguages] = useState<LanguageEntry[]>([]);
+  const [languageOptions, setLanguageOptions] = useState<LanguageEntry[]>([]);
 
   useEffect(() => {
     fetch("/api/v1/settings/languages")
       .then((r) => r.json())
       .then((d) => {
         if (d.data?.languages) {
-          setEnabledLanguages(
+          setLanguageOptions(
             d.data.languages.filter((l: LanguageEntry) => l.enabled !== false)
           );
         }
@@ -56,9 +51,26 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
       .catch(() => {});
   }, []);
 
-  const languageOptions =
-    enabledLanguages.length > 0
-      ? enabledLanguages
+  const currency = useCurrency();
+  const setLocale = useLocaleStore((s) => s.setLocale);
+  const setCurrency = useLocaleStore((s) => s.setCurrency);
+
+  const switchLocale = (newLocale: Locale) => {
+    setPrefCookie("preferences-manual-locale", "true");
+    setPrefCookie("preferred-locale", newLocale);
+    setLocale(newLocale);
+    router.replace(pathname, { locale: newLocale });
+  };
+
+  const switchCurrency = (code: CurrencyCode) => {
+    setPrefCookie("preferences-manual-currency", "true");
+    setCurrency(code);
+    setPrefCookie("preferred-currency", code);
+  };
+
+  const langs =
+    languageOptions.length > 0
+      ? languageOptions
       : Object.entries(localeConfig).map(([code, meta]) => ({
           code,
           label: meta.label,
@@ -67,61 +79,10 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
           enabled: true,
         }));
 
-  const country = useCountry();
-  const currency = useCurrency();
-  const setCountry = useLocaleStore((s) => s.setCountry);
-  const setCurrency = useLocaleStore((s) => s.setCurrency);
-  const setLocale = useLocaleStore((s) => s.setLocale);
-
-  const currentCountry =
-    countries.find((c) => c.code === country) ?? countries[0];
-
-  const switchLocale = (newLocale: Locale) => {
-    setLocale(newLocale);
-    setPrefCookie("preferred-locale", newLocale);
-    router.replace(pathname, { locale: newLocale });
-  };
-
-  const switchCountry = (code: string) => {
-    const c = countries.find((x) => x.code === code);
-    if (!c) return;
-    setCountry(code);
-    setPrefCookie("preferred-country", code);
-    setPrefCookie("preferred-currency", c.currency);
-    switchLocale(c.defaultLocale);
-  };
-
-  const switchCurrency = (code: CurrencyCode) => {
-    setCurrency(code);
-    setPrefCookie("preferred-currency", code);
-  };
-
   const trigger = compact ? `${triggerClass} h-7` : triggerClassDefault;
 
   return (
     <div className="flex items-center gap-0.5">
-      <DropdownMenu>
-        <DropdownMenuTrigger className={trigger}>
-          <span aria-hidden>{currentCountry.flag}</span>
-          <span className="hidden sm:inline max-w-[80px] truncate">{currentCountry.code}</span>
-          <ChevronDown className="h-3 w-3 opacity-60" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{t("selectCountry")}</DropdownMenuLabel>
-          {countries.map((c) => (
-            <DropdownMenuItem
-              key={c.code}
-              onClick={() => switchCountry(c.code)}
-              className={cn(country === c.code && "bg-secondary")}
-            >
-              <span>{c.flag}</span>
-              <span className="flex-1">{c.name}</span>
-              <span className="text-muted-foreground">{c.currency}</span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       <DropdownMenu>
         <DropdownMenuTrigger className={trigger}>
           <Globe className="h-3 w-3" />
@@ -132,13 +93,15 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{t("selectLanguage")}</DropdownMenuLabel>
-          {languageOptions.map((lang) => (
+          {langs.map((lang) => (
             <DropdownMenuItem
               key={lang.code}
               onClick={() => switchLocale(lang.code as Locale)}
               className={cn(routeLocale === lang.code && "bg-secondary")}
             >
-              {lang.nativeLabel ?? localeConfig[lang.code]?.nativeLabel ?? lang.code}
+              {lang.nativeLabel ??
+                localeConfig[lang.code]?.nativeLabel ??
+                lang.code}
               {routeLocale === lang.code && (
                 <span className="ml-auto text-primary">✓</span>
               )}

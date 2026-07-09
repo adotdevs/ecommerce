@@ -49,6 +49,7 @@ export type HomepageSectionType =
   | "promo_banner"
   | "newsletter"
   | "trust_badges"
+  | "flash_sale"
   | "custom_html";
 
 export interface HomepageSection {

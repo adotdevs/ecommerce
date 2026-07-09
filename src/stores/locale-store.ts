@@ -48,7 +48,6 @@ export const useLocaleStore = create<LocaleState>()(
         set({
           country: code,
           currency: country.currency as CurrencyCode,
-          locale: country.defaultLocale,
         });
       },
 

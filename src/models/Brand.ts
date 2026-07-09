@@ -5,6 +5,8 @@ export interface IBrand extends Document {
   slug: string;
   logo?: string;
   description?: string;
+  /** Categories this brand belongs to */
+  categoryIds: mongoose.Types.ObjectId[];
   seo: {
     title?: string;
     description?: string;
@@ -18,6 +20,10 @@ const BrandSchema = new Schema<IBrand>(
     slug: { type: String, required: true, unique: true },
     logo: String,
     description: String,
+    categoryIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Category" }],
+      default: [],
+    },
     seo: {
       title: String,
       description: String,
@@ -28,6 +34,7 @@ const BrandSchema = new Schema<IBrand>(
 );
 
 BrandSchema.index({ slug: 1 }, { unique: true });
+BrandSchema.index({ categoryIds: 1 });
 
 export const Brand: Model<IBrand> =
   mongoose.models.Brand ?? mongoose.model<IBrand>("Brand", BrandSchema);

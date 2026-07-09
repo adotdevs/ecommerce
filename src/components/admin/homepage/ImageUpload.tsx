@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ds/button";
 import { Label } from "@/components/ds/label";
@@ -16,6 +15,15 @@ interface ImageUploadProps {
   aspectHint?: string;
 }
 
+function isHttpUrl(value: string) {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function ImageUpload({
   label = "Image",
   value,
@@ -27,9 +35,15 @@ export function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [broken, setBroken] = useState(false);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [value]);
 
   const uploadFile = (file: File) => {
     setError(null);
+    setBroken(false);
     setProgress(0);
 
     const formData = new FormData();
@@ -83,6 +97,8 @@ export function ImageUpload({
     e.target.value = "";
   };
 
+  const showPreview = Boolean(value) && isHttpUrl(value);
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -90,10 +106,24 @@ export function ImageUpload({
         <p className="text-[12px] text-muted-foreground">{aspectHint}</p>
       )}
 
-      {value ? (
+      {showPreview ? (
         <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-border bg-secondary">
           <div className="relative aspect-video max-h-48 w-full">
-            <Image src={value} alt="" fill className="object-cover" sizes="400px" />
+            {broken ? (
+              <div className="flex h-full items-center justify-center px-4 text-center text-[12px] text-muted-foreground">
+                Preview unavailable — URL is saved. Prefer uploading a file for reliable images.
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={value}
+                src={value}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setBroken(true)}
+                onLoad={() => setBroken(false)}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 border-t border-border p-2">
             <Button
@@ -109,7 +139,10 @@ export function ImageUpload({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onChange("")}
+              onClick={() => {
+                onChange("");
+                setBroken(false);
+              }}
               disabled={progress !== null}
             >
               <X className="h-4 w-4" /> Remove
@@ -166,6 +199,9 @@ export function ImageUpload({
       )}
 
       {error && <p className="text-[12px] text-destructive">{error}</p>}
+      {value && !isHttpUrl(value) && (
+        <p className="text-[12px] text-destructive">Enter a valid http(s) image URL.</p>
+      )}
 
       <input
         ref={inputRef}
@@ -175,30 +211,19 @@ export function ImageUpload({
         onChange={handleFileChange}
       />
 
-      {value && (
-        <InputPreview url={value} onManualChange={onChange} />
-      )}
-    </div>
-  );
-}
-
-function InputPreview({
-  url,
-  onManualChange,
-}: {
-  url: string;
-  onManualChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-[12px] text-muted-foreground">Or paste URL</Label>
-      <input
-        type="url"
-        value={url}
-        onChange={(e) => onManualChange(e.target.value)}
-        className="flex h-9 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-small"
-        placeholder="https://..."
-      />
+      <div className="space-y-1">
+        <Label className="text-[12px] text-muted-foreground">Or paste URL</Label>
+        <input
+          type="url"
+          value={value}
+          onChange={(e) => {
+            setBroken(false);
+            onChange(e.target.value);
+          }}
+          className="flex h-9 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-small"
+          placeholder="https://..."
+        />
+      </div>
     </div>
   );
 }

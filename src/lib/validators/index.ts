@@ -13,20 +13,48 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-export const productSchema = z.object({
+const productMediaSchema = z.object({
+  url: z.string().min(1),
+  alt: z.string().optional(),
+  type: z.enum(["image", "video"]).default("image"),
+  sortOrder: z.number().default(0),
+});
+
+const productVariantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sku: z.string(),
+  price: z.number().min(0),
+  compareAtPrice: z.number().optional(),
+  stock: z.number().min(0).default(0),
+  attributes: z.record(z.string(), z.string()).default({}),
+});
+
+const keyValueSchema = z.object({
+  key: z.string().min(1),
+  value: z.string().min(1),
+});
+
+const faqSchema = z.object({
+  question: z.string().min(1),
+  answer: z.string().min(1),
+});
+
+const productFieldsSchema = z.object({
   name: z.string().min(1),
   slug: z.string().optional(),
   sku: z.string().min(1),
+  barcode: z.string().optional(),
   description: z.string().optional(),
   shortDescription: z.string().optional(),
-  brandId: z.string().optional(),
-  brandName: z.string().optional(),
+  brandId: z.string().optional().nullable(),
   categoryIds: z.array(z.string()).optional(),
-  categoryNames: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
+  media: z.array(productMediaSchema).optional(),
+  variants: z.array(productVariantSchema).optional(),
   pricing: z.object({
     price: z.number().min(0),
-    compareAtPrice: z.number().optional(),
+    compareAtPrice: z.number().optional().nullable(),
     currency: z.string().default("USD"),
   }),
   inventory: z
@@ -36,8 +64,44 @@ export const productSchema = z.object({
       trackInventory: z.boolean().default(true),
     })
     .optional(),
+  weight: z.number().optional().nullable(),
+  dimensions: z
+    .object({
+      length: z.number().optional(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      unit: z.string().default("cm"),
+    })
+    .optional()
+    .nullable(),
+  specifications: z.array(keyValueSchema).optional(),
+  faqs: z.array(faqSchema).optional(),
+  warranty: z.string().optional(),
   status: z.enum(["draft", "published", "archived"]).default("draft"),
   featured: z.boolean().default(false),
+  isNewArrival: z.boolean().default(false),
+  seo: z
+    .object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      keywords: z.array(z.string()).optional(),
+      canonical: z.string().optional(),
+      ogImage: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const productSchema = productFieldsSchema;
+
+export const productUpdateSchema = productFieldsSchema.partial();
+
+export const categorySchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().optional(),
+  parentId: z.string().optional(),
+  description: z.string().optional(),
+  image: z.string().optional(),
+  sortOrder: z.number().default(0),
   seo: z
     .object({
       title: z.string().optional(),
@@ -47,20 +111,12 @@ export const productSchema = z.object({
     .optional(),
 });
 
-export const categorySchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().optional(),
-  parentId: z.string().optional(),
-  description: z.string().optional(),
-  image: z.string().optional(),
-  sortOrder: z.number().default(0),
-});
-
 export const brandSchema = z.object({
   name: z.string().min(1),
   slug: z.string().optional(),
   logo: z.string().optional(),
   description: z.string().optional(),
+  categoryIds: z.array(z.string()).optional(),
 });
 
 export const homepageSectionSchema = z.object({

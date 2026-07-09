@@ -114,11 +114,14 @@ export default function AdminDashboardPage() {
             <a href="/admin/products/new" className="text-small font-medium text-primary hover:underline">
               + Add Product
             </a>
+            <a href="/admin/merchandising" className="text-small font-medium text-primary hover:underline">
+              Manage Merchandising
+            </a>
+            <a href="/admin/categories" className="text-small font-medium text-primary hover:underline">
+              Manage Categories
+            </a>
             <a href="/admin/orders" className="text-small font-medium text-primary hover:underline">
               View Orders
-            </a>
-            <a href="/admin/settings" className="text-small font-medium text-primary hover:underline">
-              Store Settings
             </a>
           </CardContent>
         </Card>

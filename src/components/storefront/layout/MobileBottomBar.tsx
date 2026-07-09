@@ -6,10 +6,12 @@ import { Link } from "@/i18n/navigation";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 import { Button } from "@/components/ds/button";
 
 export function MobileBottomBar() {
   const t = useTranslations("cart");
+  const mounted = useClientMounted();
   const items = useCartStore((s) => s.items);
 
   const itemCount = useMemo(
@@ -24,7 +26,7 @@ export function MobileBottomBar() {
 
   const formatted = useFormattedPrice(subtotalUsd);
 
-  if (itemCount === 0) return null;
+  if (!mounted || itemCount === 0) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 p-4 backdrop-blur-md md:hidden">

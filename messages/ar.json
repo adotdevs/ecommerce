@@ -4,6 +4,8 @@
     "search": "ابحث عن المنتجات والعلامات والفئات...",
     "shopNow": "تسوق الآن",
     "addToCart": "أضف إلى السلة",
+    "addedToCart": "تمت الإضافة إلى السلة",
+    "viewCart": "عرض السلة",
     "buyNow": "اشتر الآن",
     "viewAll": "عرض الكل",
     "loading": "جاري التحميل...",
@@ -20,6 +22,14 @@
     "inStock": "متوفر",
     "outOfStock": "غير متوفر",
     "noResults": "لا توجد نتائج"
+  },
+  "search": {
+    "products": "المنتجات",
+    "categories": "الفئات",
+    "brands": "العلامات",
+    "viewAll": "عرض كل النتائج لـ",
+    "noSuggestions": "لا اقتراحات — جرّب كلمة أخرى",
+    "searching": "جاري البحث…"
   },
   "header": {
     "wishlist": "المفضلة",
@@ -46,7 +56,11 @@
     "shopByCategory": "تسوق حسب الفئة",
     "newsletterTitle": "ابق على اطلاع",
     "newsletterSubtitle": "احصل على عروض حصرية ومنتجات جديدة في بريدك.",
-    "subscribe": "اشترك"
+    "subscribe": "اشترك",
+    "flashSale": "تخفيضات سريعة",
+    "flashSaleSubtitle": "عروض خاطفة — اغتنمها قبل انتهاء الوقت.",
+    "flashSaleCta": "تسوق كل العروض",
+    "endsIn": "ينتهي خلال"
   },
   "products": {
     "title": "جميع المنتجات",

@@ -1,8 +1,52 @@
 "use client";
 
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useToastStore, type ToastVariant } from "@/hooks/use-toast";
 import { cn } from "@/components/ds/utils";
+import { defaultLocale, routingLocales } from "@/config/locales";
+
+function getLocalizedHref(href: string): string {
+  if (
+    href.startsWith("http") ||
+    href.startsWith("/admin") ||
+    href.startsWith("/login") ||
+    href.startsWith("/api")
+  ) {
+    return href;
+  }
+  const locale =
+    (typeof document !== "undefined" && document.documentElement.lang) ||
+    defaultLocale;
+  const firstSegment = href.split("/").filter(Boolean)[0];
+  if (firstSegment && routingLocales.includes(firstSegment)) return href;
+  return `/${locale}${href.startsWith("/") ? href : `/${href}`}`;
+}
+
+function ToastAction({
+  href,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  onNavigate: () => void;
+}) {
+  const router = useRouter();
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate();
+        router.push(getLocalizedHref(href));
+      }}
+      className="mt-2.5 inline-flex cursor-pointer text-[13px] font-semibold text-primary underline-offset-2 hover:underline"
+    >
+      {label} →
+    </button>
+  );
+}
 
 const variantStyles: Record<
   ToastVariant,
@@ -60,15 +104,22 @@ export function Toaster() {
             <div className="min-w-0 flex-1 pr-6">
               <p className="text-small font-semibold text-foreground">{t.title}</p>
               {t.description && (
-                <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+                <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
                   {t.description}
                 </p>
+              )}
+              {t.action && (
+                <ToastAction
+                  href={t.action.href}
+                  label={t.action.label}
+                  onNavigate={() => dismiss(t.id)}
+                />
               )}
             </div>
             <button
               type="button"
               onClick={() => dismiss(t.id)}
-              className="absolute right-3 top-3 rounded-[var(--radius-sm)] p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="absolute right-3 top-3 cursor-pointer rounded-[var(--radius-sm)] p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

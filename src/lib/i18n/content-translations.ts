@@ -27,6 +27,10 @@ const SKIP_KEYS = new Set([
   "sku",
   "type",
   "mode",
+  "endsAt",
+  "ctaHref",
+  "exploreNewHref",
+  "heroImage",
 ]);
 
 /** Collect dot-paths of all string leaves in an object (skips URLs and image paths) */

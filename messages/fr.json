@@ -4,6 +4,8 @@
     "search": "Rechercher produits, marques, catégories...",
     "shopNow": "Acheter",
     "addToCart": "Ajouter au panier",
+    "addedToCart": "Ajouté au panier",
+    "viewCart": "Voir le panier",
     "buyNow": "Acheter maintenant",
     "viewAll": "Voir tout",
     "loading": "Chargement...",
@@ -46,7 +48,11 @@
     "shopByCategory": "Acheter par catégorie",
     "newsletterTitle": "Restez informé",
     "newsletterSubtitle": "Recevez des offres exclusives et nouveautés.",
-    "subscribe": "S'abonner"
+    "subscribe": "S'abonner",
+    "flashSale": "Vente flash",
+    "flashSaleSubtitle": "Offres éclair — profitez-en avant la fin du compte à rebours.",
+    "flashSaleCta": "Voir toutes les offres",
+    "endsIn": "Se termine dans"
   },
   "products": {
     "title": "Tous les produits",

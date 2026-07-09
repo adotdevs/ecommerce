@@ -86,12 +86,21 @@ export const countries: CountryConfig[] = [
   { code: "US", name: "United States", flag: "🇺🇸", currency: "USD", defaultLocale: "en" },
   { code: "GB", name: "United Kingdom", flag: "🇬🇧", currency: "GBP", defaultLocale: "en" },
   { code: "AU", name: "Australia", flag: "🇦🇺", currency: "AUD", defaultLocale: "en" },
+  { code: "CA", name: "Canada", flag: "🇨🇦", currency: "CAD", defaultLocale: "en" },
+  { code: "PK", name: "Pakistan", flag: "🇵🇰", currency: "PKR", defaultLocale: "en" },
+  { code: "IN", name: "India", flag: "🇮🇳", currency: "INR", defaultLocale: "en" },
   { code: "AE", name: "United Arab Emirates", flag: "🇦🇪", currency: "AED", defaultLocale: "ar" },
   { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", currency: "SAR", defaultLocale: "ar" },
-  { code: "PK", name: "Pakistan", flag: "🇵🇰", currency: "PKR", defaultLocale: "ur" },
   { code: "FR", name: "France", flag: "🇫🇷", currency: "EUR", defaultLocale: "fr" },
   { code: "DE", name: "Germany", flag: "🇩🇪", currency: "EUR", defaultLocale: "de" },
   { code: "ES", name: "Spain", flag: "🇪🇸", currency: "EUR", defaultLocale: "es" },
+  { code: "IT", name: "Italy", flag: "🇮🇹", currency: "EUR", defaultLocale: "it" },
+  { code: "JP", name: "Japan", flag: "🇯🇵", currency: "JPY", defaultLocale: "ja" },
+  { code: "CN", name: "China", flag: "🇨🇳", currency: "CNY", defaultLocale: "zh" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷", currency: "KRW", defaultLocale: "ko" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷", currency: "BRL", defaultLocale: "pt" },
+  { code: "TR", name: "Turkey", flag: "🇹🇷", currency: "TRY", defaultLocale: "tr" },
+  { code: "SG", name: "Singapore", flag: "🇸🇬", currency: "SGD", defaultLocale: "en" },
 ];
 
 export const currencies = [
@@ -99,9 +108,20 @@ export const currencies = [
   { code: "EUR", symbol: "€", rate: 0.92 },
   { code: "GBP", symbol: "£", rate: 0.79 },
   { code: "AUD", symbol: "A$", rate: 1.52 },
+  { code: "CAD", symbol: "C$", rate: 1.36 },
   { code: "AED", symbol: "د.إ", rate: 3.67 },
   { code: "SAR", symbol: "﷼", rate: 3.75 },
   { code: "PKR", symbol: "₨", rate: 278.5 },
+  { code: "INR", symbol: "₹", rate: 83.5 },
+  { code: "JPY", symbol: "¥", rate: 149 },
+  { code: "CNY", symbol: "¥", rate: 7.24 },
+  { code: "KRW", symbol: "₩", rate: 1320 },
+  { code: "BRL", symbol: "R$", rate: 4.97 },
+  { code: "TRY", symbol: "₺", rate: 32.5 },
+  { code: "SGD", symbol: "S$", rate: 1.34 },
+  { code: "CHF", symbol: "Fr", rate: 0.88 },
+  { code: "MXN", symbol: "$", rate: 17.2 },
+  { code: "ZAR", symbol: "R", rate: 18.5 },
 ] as const;
 
 export type CurrencyCode = (typeof currencies)[number]["code"];
@@ -116,6 +136,7 @@ export function getCurrencyRate(code: string, rates?: Record<string, number>): n
 }
 
 export function detectLocaleFromCountry(countryCode: string): Locale {
+  if (countryCode === "PK") return "en";
   return getCountryByCode(countryCode)?.defaultLocale ?? defaultLocale;
 }
 

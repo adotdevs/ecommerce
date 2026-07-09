@@ -51,7 +51,7 @@ async function getHomepageSections(locale: Locale) {
       if (section.type === "promo_banner") {
         localizedConfig = await enrichConfigFromProductLink(localizedConfig);
       }
-      if (section.type === "featured_products") {
+      if (section.type === "featured_products" || section.type === "flash_sale") {
         localizedConfig.products = await resolveHomepageProducts(localizedConfig);
       }
       if (section.type === "category_showcase") {

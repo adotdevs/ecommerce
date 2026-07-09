@@ -64,6 +64,7 @@ export interface IProduct extends Document {
   };
   status: "draft" | "published" | "archived";
   featured: boolean;
+  isNewArrival: boolean;
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -132,6 +133,7 @@ const ProductSchema = new Schema<IProduct>(
       default: "draft",
     },
     featured: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -139,7 +141,7 @@ const ProductSchema = new Schema<IProduct>(
 ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ sku: 1 }, { unique: true });
 ProductSchema.index({ status: 1, featured: 1 });
-ProductSchema.index({ name: "text", "seo.title": "text", tags: "text" });
+ProductSchema.index({ name: "text", description: "text", shortDescription: "text", brandName: "text", categoryNames: "text", tags: "text", sku: "text", "seo.title": "text" });
 
 export const Product: Model<IProduct> =
   mongoose.models.Product ??

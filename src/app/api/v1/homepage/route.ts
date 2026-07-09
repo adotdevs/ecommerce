@@ -12,7 +12,7 @@ export async function GET() {
     visible.map(async (section) => {
       const config = { ...section.config } as Record<string, unknown>;
 
-      if (section.type === "featured_products") {
+      if (section.type === "featured_products" || section.type === "flash_sale") {
         const limit = (config.limit as number) ?? 8;
         config.products = await resolveFeaturedProducts(limit);
       }

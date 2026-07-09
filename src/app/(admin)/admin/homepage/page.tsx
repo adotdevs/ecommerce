@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { Badge } from "@/components/ds/badge";
 import { renderSectionEditor } from "@/components/admin/homepage/SectionEditor";
-import { Loader2, Save, Languages, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Save, Languages, ChevronDown, ChevronUp, Plus, Zap } from "lucide-react";
 import { defaultLocale, localeConfig, type LanguageEntry } from "@/config/locales";
 import { toastSaveSuccess, toastError, toast } from "@/hooks/use-toast";
 
@@ -55,6 +55,7 @@ export default function AdminHomepagePage() {
   >({});
   const [activeLocale, setActiveLocale] = useState<Record<string, Locale>>({});
   const [siteLanguages, setSiteLanguages] = useState<LanguageEntry[]>([]);
+  const [addingFlash, setAddingFlash] = useState(false);
 
   const loadLanguages = () => {
     fetch("/api/v1/settings/languages")
@@ -234,6 +235,55 @@ export default function AdminHomepagePage() {
     }
   };
 
+  const hasFlashSale = sections.some((s) => s.type === "flash_sale");
+
+  const addFlashSaleSection = async () => {
+    if (!accessToken || hasFlashSale) return;
+    setAddingFlash(true);
+    try {
+      const featured = sections.find((s) => s.type === "featured_products");
+      const order = featured ? featured.order : sections.length;
+      const res = await fetch("/api/v1/admin/homepage/sections", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "flash_sale",
+          order,
+          enabled: true,
+          config: {
+            eyebrow: "Limited time",
+            title: "Flash Sale",
+            subtitle: "Lightning deals — grab them before the clock hits zero.",
+            endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            ctaLabel: "Shop all deals",
+            ctaHref: "/deals",
+            selectionMode: "auto",
+            limit: 4,
+            productLinks: [],
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "Flash sale section added",
+          description: "Edit texts and products below.",
+          variant: "success",
+        });
+        load();
+      } else {
+        toastError("Could not add section", data.error ?? "Try again");
+      }
+    } catch {
+      toastError("Could not add section", "Network error");
+    } finally {
+      setAddingFlash(false);
+    }
+  };
+
   const nonEnLocalesForRender = nonEnLocales.length
     ? nonEnLocales
     : [{ code: "ar", label: "Arabic", nativeLabel: "العربية", dir: "rtl" as const, enabled: true }];
@@ -259,12 +309,31 @@ export default function AdminHomepagePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-display-h2 text-foreground">Homepage Builder</h1>
-        <p className="mt-1 text-body text-muted-foreground">
-          Edit all homepage text and images. Auto-translate uses{" "}
-          <strong>MyMemory (free)</strong> — no API key or credit card needed.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-display-h2 text-foreground">Homepage Builder</h1>
+          <p className="mt-1 text-body text-muted-foreground">
+            Edit all homepage text and images. Auto-translate uses{" "}
+            <strong>MyMemory (free)</strong> — no API key or credit card needed.
+          </p>
+        </div>
+        {!hasFlashSale && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addFlashSaleSection}
+            disabled={addingFlash}
+            className="shrink-0"
+          >
+            {addingFlash ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4 text-amber-500" />
+            )}
+            <Plus className="h-3.5 w-3.5" />
+            Add Flash Sale
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">

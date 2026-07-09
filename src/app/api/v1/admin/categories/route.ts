@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
-import { Category } from "@/models";
+import { Category, Product } from "@/models";
 import { withAuth } from "@/lib/api/authMiddleware";
 import { PERMISSIONS } from "@/config/permissions";
 import { categorySchema } from "@/lib/validators";
@@ -10,7 +10,21 @@ import { apiSuccess, apiError } from "@/lib/api/response";
 export async function GET() {
   await connectDB();
   const categories = await Category.find().sort({ sortOrder: 1 }).lean();
-  return apiSuccess(categories);
+
+  const productCounts = await Product.aggregate([
+    { $unwind: "$categoryIds" },
+    { $group: { _id: "$categoryIds", count: { $sum: 1 } } },
+  ]);
+  const countById = new Map(
+    productCounts.map((r) => [String(r._id), r.count as number])
+  );
+
+  const enriched = categories.map((c) => ({
+    ...c,
+    productCount: countById.get(String(c._id)) ?? 0,
+  }));
+
+  return apiSuccess(enriched);
 }
 
 export const POST = withAuth(async (request: NextRequest) => {

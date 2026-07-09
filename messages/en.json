@@ -4,6 +4,8 @@
     "search": "Search products, brands, categories...",
     "shopNow": "Shop Now",
     "addToCart": "Add to Cart",
+    "addedToCart": "Added to cart",
+    "viewCart": "View cart",
     "buyNow": "Buy Now",
     "viewAll": "View All",
     "loading": "Loading...",
@@ -20,6 +22,14 @@
     "inStock": "In Stock",
     "outOfStock": "Out of Stock",
     "noResults": "No results found"
+  },
+  "search": {
+    "products": "Products",
+    "categories": "Categories",
+    "brands": "Brands",
+    "viewAll": "View all results for",
+    "noSuggestions": "No suggestions — try another keyword",
+    "searching": "Searching…"
   },
   "header": {
     "wishlist": "Wishlist",
@@ -55,7 +65,11 @@
     "shopByCategory": "Shop by Category",
     "newsletterTitle": "Stay in the Loop",
     "newsletterSubtitle": "Get exclusive offers and new arrivals delivered to your inbox.",
-    "subscribe": "Subscribe"
+    "subscribe": "Subscribe",
+    "flashSale": "Flash Sale",
+    "flashSaleSubtitle": "Lightning deals — grab them before the clock hits zero.",
+    "flashSaleCta": "Shop all deals",
+    "endsIn": "Ends in"
   },
   "products": {
     "title": "All Products",

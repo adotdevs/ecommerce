@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter, usePathname } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import {
   Search,
@@ -19,10 +19,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { Button } from "@/components/ds/button";
-import { Input } from "@/components/ds/input";
+import { SearchAutocomplete } from "@/components/storefront/search/SearchAutocomplete";
 import { RegionSelector } from "@/components/storefront/layout/RegionSelector";
 import { ThemeToggle } from "@/components/storefront/layout/ThemeToggle";
+import { cn } from "@/components/ds/utils";
 import type { SiteSettingsPublic } from "@/types";
+import { useClientMounted } from "@/hooks/use-client-mounted";
 
 interface Category {
   _id: string;
@@ -36,17 +38,33 @@ interface HeaderProps {
 
 export function Header({ settings }: HeaderProps) {
   const t = useTranslations();
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
+  const mounted = useClientMounted();
   const itemCount = useCartStore((s) =>
     s.items.reduce((sum, i) => sum + i.quantity, 0)
   );
+  const displayItemCount = mounted ? itemCount : 0;
+  const [cartPulse, setCartPulse] = useState(false);
+  const prevCountRef = useRef(displayItemCount);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (itemCount > prevCountRef.current) {
+      setCartPulse(true);
+      const tmr = setTimeout(() => setCartPulse(false), 700);
+      prevCountRef.current = itemCount;
+      return () => clearTimeout(tmr);
+    }
+    prevCountRef.current = itemCount;
+  }, [itemCount, mounted]);
   const wishlistCount = useWishlistStore((s) => s.items.length);
+  const displayWishlistCount = mounted ? wishlistCount : 0;
   const compareCount = useCompareStore((s) => s.productIds.length);
+  const displayCompareCount = mounted ? compareCount : 0;
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
@@ -58,20 +76,13 @@ export function Header({ settings }: HeaderProps) {
       .catch(() => {});
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
-      setMobileOpen(false);
-    }
-  };
-
   const navItems = settings?.navigation?.length
     ? settings.navigation
     : [
-        { label: t("nav.newArrivals"), href: "/products?sort=new" },
-        { label: t("nav.bestSellers"), href: "/products?sort=bestsellers" },
-        { label: t("nav.deals"), href: "/products?sort=deals" },
+        { label: t("nav.newArrivals"), href: "/new-arrivals" },
+        { label: t("nav.bestSellers"), href: "/bestsellers" },
+        { label: t("nav.categories"), href: "/categories" },
+        { label: t("nav.deals"), href: "/deals" },
       ];
 
   return (
@@ -87,10 +98,10 @@ export function Header({ settings }: HeaderProps) {
               <RegionSelector compact />
               <div className="mx-1 h-4 w-px bg-border" />
               <ThemeToggle />
-              <TopBarIcon href="/wishlist" label={t("header.wishlist")} count={wishlistCount}>
+              <TopBarIcon href="/wishlist" label={t("header.wishlist")} count={displayWishlistCount}>
                 <Heart className="h-3.5 w-3.5" />
               </TopBarIcon>
-              <TopBarIcon href="/compare" label={t("compare.title")} count={compareCount}>
+              <TopBarIcon href="/compare" label={t("compare.title")} count={displayCompareCount}>
                 <GitCompareArrows className="h-3.5 w-3.5" />
               </TopBarIcon>
             </div>
@@ -178,20 +189,15 @@ export function Header({ settings }: HeaderProps) {
                 ))}
               </nav>
 
-              <form
-                onSubmit={handleSearch}
-                className="mx-auto hidden max-w-md flex-1 md:flex lg:max-w-lg"
-              >
-                <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t("common.search")}
-                    className="h-9 bg-secondary pl-9 md:h-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </form>
+              <div className="mx-auto hidden max-w-md flex-1 md:flex lg:max-w-lg">
+                <SearchAutocomplete
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSubmit={() => setMobileOpen(false)}
+                  placeholder={t("common.search")}
+                  size="md"
+                />
+              </div>
 
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="icon-sm" className="md:hidden" asChild>
@@ -199,7 +205,12 @@ export function Header({ settings }: HeaderProps) {
                     <Search className="h-[18px] w-[18px]" />
                   </Link>
                 </Button>
-                <NavIcon href="/cart" label={t("header.cart")} count={itemCount}>
+                <NavIcon
+                  href="/cart"
+                  label={t("header.cart")}
+                  count={displayItemCount}
+                  pulse={cartPulse}
+                >
                   <ShoppingCart className="h-[18px] w-[18px]" />
                 </NavIcon>
                 <Button variant="ghost" size="icon-sm" asChild>
@@ -233,17 +244,15 @@ export function Header({ settings }: HeaderProps) {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <form onSubmit={handleSearch} className="border-b border-border p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("common.search")}
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </form>
+            <div className="border-b border-border p-4">
+              <SearchAutocomplete
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSubmit={() => setMobileOpen(false)}
+                placeholder={t("common.search")}
+                size="md"
+              />
+            </div>
             <nav className="flex-1 overflow-y-auto p-4">
               <p className="mb-2 text-small font-semibold text-muted-foreground">
                 {t("nav.categories")}
@@ -276,9 +285,9 @@ export function Header({ settings }: HeaderProps) {
                 onClick={() => setMobileOpen(false)}
               >
                 <Heart className="h-4 w-4" /> {t("header.wishlist")}
-                {wishlistCount > 0 && (
+                {displayWishlistCount > 0 && (
                   <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
-                    {wishlistCount}
+                    {displayWishlistCount}
                   </span>
                 )}
               </Link>
@@ -336,18 +345,30 @@ function NavIcon({
   label,
   count,
   children,
+  pulse,
 }: {
   href: string;
   label: string;
   count: number;
   children: React.ReactNode;
+  pulse?: boolean;
 }) {
   return (
-    <Button variant="ghost" size="icon-sm" className="relative" asChild>
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className={cn("relative", pulse && "animate-[cart-pop_0.55s_ease]")}
+      asChild
+    >
       <Link href={href} aria-label={label}>
         {children}
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+          <span
+            className={cn(
+              "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground transition-transform",
+              pulse && "scale-125"
+            )}
+          >
             {count > 99 ? "99+" : count}
           </span>
         )}

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { atlasSearchProducts, searchSuggestions } from "@/lib/search/products";
+import { deepSearchProducts } from "@/lib/search/products";
 import { connectDB } from "@/lib/db/mongoose";
 import { apiSuccess } from "@/lib/api/response";
 
@@ -18,12 +18,17 @@ export async function GET(request: NextRequest) {
     ? parseFloat(searchParams.get("maxPrice")!)
     : undefined;
 
-  const result = await atlasSearchProducts(
-    q,
-    { category, brand, minPrice, maxPrice },
-    page,
-    limit
-  );
+  const filter: Record<string, unknown> = { status: "published" };
+  if (category) filter.categoryNames = category;
+  if (brand) filter.brandName = brand;
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    const price: Record<string, number> = {};
+    if (minPrice !== undefined) price.$gte = minPrice;
+    if (maxPrice !== undefined) price.$lte = maxPrice;
+    filter["pricing.price"] = price;
+  }
 
-  return apiSuccess(result);
+  const result = await deepSearchProducts(q, filter, page, limit);
+
+  return apiSuccess({ ...result, source: "deep" as const });
 }

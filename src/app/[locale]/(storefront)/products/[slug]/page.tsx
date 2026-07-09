@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import { ProductDetailView } from "@/components/storefront/products/ProductDetailView";
+import { toProductCardData } from "@/lib/catalog/product-card";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -71,12 +72,43 @@ export default async function ProductDetailPage({ params }: PageProps) {
     brandName: product.brandName,
     description: product.description,
     shortDescription: product.shortDescription,
-    media: product.media ?? [],
-    variants: product.variants ?? [],
-    pricing: product.pricing,
-    inventory: product.inventory,
-    specifications: product.specifications ?? [],
-    faqs: product.faqs ?? [],
+    media: (product.media ?? []).map((m) => ({
+      url: String(m.url),
+      alt: m.alt ? String(m.alt) : undefined,
+      sortOrder: m.sortOrder,
+    })),
+    variants: (product.variants ?? []).map((v) => ({
+      id: String(v.id),
+      name: String(v.name),
+      sku: String(v.sku),
+      price: Number(v.price),
+      compareAtPrice: v.compareAtPrice != null ? Number(v.compareAtPrice) : undefined,
+      stock: Number(v.stock),
+      attributes: Object.fromEntries(
+        Object.entries(v.attributes ?? {}).map(([k, val]) => [k, String(val)])
+      ),
+    })),
+    pricing: {
+      price: Number(product.pricing.price),
+      compareAtPrice:
+        product.pricing.compareAtPrice != null
+          ? Number(product.pricing.compareAtPrice)
+          : undefined,
+      currency: product.pricing.currency
+        ? String(product.pricing.currency)
+        : undefined,
+    },
+    inventory: {
+      stock: Number(product.inventory.stock),
+    },
+    specifications: (product.specifications ?? []).map((s) => ({
+      key: String(s.key),
+      value: String(s.value),
+    })),
+    faqs: (product.faqs ?? []).map((f) => ({
+      question: String(f.question),
+      answer: String(f.answer),
+    })),
   };
 
   return (
@@ -94,8 +126,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
               {related.map((p) => (
                 <ProductCard
-                  key={p._id.toString()}
-                  product={{ ...p, _id: p._id.toString() }}
+                  key={String(p._id)}
+                  product={toProductCardData(p as unknown as Record<string, unknown>)}
                 />
               ))}
             </div>

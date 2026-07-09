@@ -9,8 +9,9 @@ import { Button } from "@/components/ds/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ds/tabs";
 import { ProductDetailPrice } from "@/components/storefront/products/ProductDetailPrice";
 import { StarRating, getProductRating } from "@/components/storefront/products/StarRating";
-import { useCartStore } from "@/stores/cart-store";
+import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { cn } from "@/components/ds/utils";
+import { Check } from "lucide-react";
 
 interface ProductData {
   _id: string;
@@ -39,7 +40,7 @@ interface ProductData {
 export function ProductDetailView({ product }: { product: ProductData }) {
   const t = useTranslations("common");
   const tp = useTranslations("products");
-  const addItem = useCartStore((s) => s.addItem);
+  const { addToCart, justAdded } = useAddToCart();
 
   const sortedMedia = useMemo(
     () => [...product.media].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
@@ -71,8 +72,8 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   const { rating, count } = getProductRating(product._id);
 
   const handleAddToCart = () => {
-    if (!inStock) return;
-    addItem({
+    if (!inStock || justAdded) return;
+    addToCart({
       productId: product._id,
       variantId: selectedVariantId ?? undefined,
       name: selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name,
@@ -183,8 +184,24 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         ))}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" className="flex-1" onClick={handleAddToCart} disabled={!inStock}>
-            {t("addToCart")}
+          <Button
+            size="lg"
+            className={cn(
+              "flex-1",
+              justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
+            )}
+            variant={justAdded ? "accent" : "primary"}
+            onClick={handleAddToCart}
+            disabled={!inStock}
+          >
+            {justAdded ? (
+              <>
+                <Check className="h-4 w-4" />
+                {t("addedToCart")}
+              </>
+            ) : (
+              t("addToCart")
+            )}
           </Button>
           <Button size="lg" variant="outline" className="flex-1" asChild disabled={!inStock}>
             <Link href="/checkout">{t("buyNow")}</Link>

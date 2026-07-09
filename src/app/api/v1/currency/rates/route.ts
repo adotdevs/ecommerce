@@ -1,7 +1,12 @@
-import { currencyEngine } from "@/lib/currency/engine";
+import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
 import { apiSuccess } from "@/lib/api/response";
 
 export async function GET() {
-  const rates = currencyEngine.getRates();
-  return apiSuccess({ base: "USD", rates, updatedAt: new Date().toISOString() });
+  const rates = await fetchLiveExchangeRates();
+  return apiSuccess({
+    base: "USD",
+    rates,
+    updatedAt: new Date().toISOString(),
+    live: true,
+  });
 }

@@ -25,8 +25,10 @@ export async function Footer({ settings }: FooterProps) {
             <h4 className="mb-4 text-small font-semibold text-foreground">{t("shop")}</h4>
             <ul className="space-y-3 text-small text-muted-foreground">
               <li><Link href="/products" className="transition-colors hover:text-foreground">{tn("allProducts")}</Link></li>
-              <li><Link href="/products?sort=new" className="transition-colors hover:text-foreground">{tn("newArrivals")}</Link></li>
-              <li><Link href="/products?sort=deals" className="transition-colors hover:text-foreground">{tn("deals")}</Link></li>
+              <li><Link href="/categories" className="transition-colors hover:text-foreground">{tn("categories")}</Link></li>
+              <li><Link href="/new-arrivals" className="transition-colors hover:text-foreground">{tn("newArrivals")}</Link></li>
+              <li><Link href="/bestsellers" className="transition-colors hover:text-foreground">{tn("bestSellers")}</Link></li>
+              <li><Link href="/deals" className="transition-colors hover:text-foreground">{tn("deals")}</Link></li>
             </ul>
           </div>
           <div>

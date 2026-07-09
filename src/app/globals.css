@@ -13,7 +13,7 @@
   --brand-accent: #22c55e;
   --border-default: rgba(0, 0, 0, 0.08);
   --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.08);
 
   --background: var(--bg-primary);
   --foreground: var(--text-primary);
@@ -51,7 +51,7 @@
   --brand-accent: #22c55e;
   --border-default: rgba(255, 255, 255, 0.08);
   --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
 
   --background: var(--bg-primary);
   --foreground: var(--text-primary);
@@ -157,5 +157,40 @@ body {
 @media (min-width: 1024px) {
   .container-store {
     padding-inline: 32px;
+  }
+}
+
+/* Interactive affordance — buttons, links, and common controls */
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+label[for],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="reset"]:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"],
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+@keyframes cart-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
   }
 }

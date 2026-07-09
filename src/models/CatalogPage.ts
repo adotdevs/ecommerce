@@ -1,5 +1,6 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 import type { Locale } from "@/config/locales";
+import type { CatalogPageConfig } from "@/lib/cms/catalog-pages";
 
 export type CatalogPageSlug =
   | "all"
@@ -12,7 +13,7 @@ export type CatalogPageSlug =
 export interface ICatalogPage extends Document {
   slug: CatalogPageSlug;
   /** Master content (admin source language) */
-  config: Record<string, unknown>;
+  config: CatalogPageConfig;
   translations: Partial<Record<Locale, Record<string, unknown>>>;
   sourceLocale: Locale;
   translationStatus: "idle" | "pending" | "completed" | "failed";

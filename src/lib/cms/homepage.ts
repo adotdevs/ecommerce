@@ -28,7 +28,7 @@ export async function resolveSectionProducts(
     _id: { $in: productIds },
     status: "published",
   }).lean();
-  return products.map((p) => toProductCardData(p as Record<string, unknown>));
+  return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
 }
 
 export async function resolveFeaturedProducts(limit = 8) {
@@ -36,7 +36,7 @@ export async function resolveFeaturedProducts(limit = 8) {
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
-  return products.map((p) => toProductCardData(p as Record<string, unknown>));
+  return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
 }
 
 export async function resolveHomepageProducts(config: Record<string, unknown>) {
@@ -46,7 +46,7 @@ export async function resolveHomepageProducts(config: Record<string, unknown>) {
   if (mode === "manual" && links.length > 0) {
     const products = await resolveProductsByLinks(links);
     if (products.length > 0) {
-      return products.map((p) => toProductCardData(p as Record<string, unknown>));
+      return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
     }
   }
 

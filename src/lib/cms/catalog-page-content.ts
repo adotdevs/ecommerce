@@ -32,7 +32,7 @@ export async function ensureCatalogPages() {
       if (!existing) {
         await CatalogPage.create({
           slug,
-          config: DEFAULT_CATALOG_PAGES[slug] as Record<string, unknown>,
+          config: DEFAULT_CATALOG_PAGES[slug],
           sourceLocale: "en",
           translationStatus: "idle",
         });
@@ -47,16 +47,19 @@ export async function getLocalizedCatalogPage(
 ): Promise<CatalogPageConfig> {
   await ensureCatalogPages();
   const page = await CatalogPage.findOne({ slug }).lean();
-  const base = {
+  const base: CatalogPageConfig = {
     ...DEFAULT_CATALOG_PAGES[slug],
-    ...((page?.config as CatalogPageConfig) ?? {}),
+    ...(page?.config ?? {}),
   };
 
   const source = (page?.sourceLocale as Locale) ?? defaultLocale;
   if (!page || locale === source) return base;
 
   const overlay = page.translations?.[locale] as CatalogPageConfig | undefined;
-  return mergeLocalizedConfig(base, overlay) as CatalogPageConfig;
+  return mergeLocalizedConfig(
+    base as unknown as Record<string, unknown>,
+    overlay as Record<string, unknown> | undefined
+  ) as unknown as CatalogPageConfig;
 }
 
 export async function runCatalogPageTranslation(pageId: string) {
@@ -75,7 +78,7 @@ export async function runCatalogPageTranslation(pageId: string) {
     return;
   }
 
-  const config = page.config as Record<string, unknown>;
+  const config = page.config as unknown as Record<string, unknown>;
   const sourceLocale = (page.sourceLocale as Locale) ?? "en";
   const fields = collectTranslatableStrings(config);
 

@@ -1,14 +1,14 @@
 {
   "common": {
-    "brand": "YourStore",
+    "brand": "Matratzenmann",
     "search": "Produkte, Marken, Kategorien suchen...",
     "shopNow": "Jetzt einkaufen",
-    "addToCart": "In den Warenkorb",
-    "addedToCart": "In den Warenkorb gelegt",
+    "addToCart": "In den Warenkorb legen",
+    "addedToCart": "Zum Warenkorb hinzugefügt",
     "viewCart": "Warenkorb ansehen",
     "buyNow": "Jetzt kaufen",
-    "viewAll": "Alle anzeigen",
-    "loading": "Laden...",
+    "viewAll": "Alles anzeigen",
+    "loading": "Wird geladen …",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
@@ -17,108 +17,125 @@
     "back": "Zurück",
     "continue": "Weiter",
     "free": "Kostenlos",
-    "sale": "Angebot",
-    "featured": "Empfohlen",
-    "inStock": "Auf Lager",
-    "outOfStock": "Nicht verfügbar",
-    "noResults": "Keine Ergebnisse"
+    "sale": "Sale",
+    "featured": "Von unserer Redaktion empfohlen",
+    "inStock": "Vorrätig",
+    "outOfStock": "Nicht auf Lager",
+    "noResults": "Keine Ergebnisse gefunden"
+  },
+  "search": {
+    "products": "Produkte",
+    "categories": "Kategorien",
+    "brands": "Marken",
+    "viewAll": "Alle Ergebnisse anzeigen",
+    "noSuggestions": "Keine Vorschläge — versuchen Sie es mit einem anderen Schlüsselwort",
+    "searching": "Suchen …"
   },
   "header": {
-    "wishlist": "Wunschliste",
+    "wishlist": "Wunschzettel",
     "cart": "Warenkorb",
     "account": "Konto",
     "login": "Anmelden",
-    "register": "Registrieren",
+    "register": "Register",
     "language": "Sprache",
     "country": "Land",
     "currency": "Währung",
-    "selectCountry": "Land und Region wählen",
-    "selectLanguage": "Sprache wählen",
+    "selectCountry": "Land/Region auswählen",
+    "selectLanguage": "Sprache auswählen",
     "selectCurrency": "Währung wählen"
   },
   "nav": {
-    "newArrivals": "Neuheiten",
+    "newArrivals": "Neu im Sortiment",
     "bestSellers": "Bestseller",
     "categories": "Kategorien",
-    "deals": "Angebote",
+    "deals": "Angebote, Deals, Geschäfte",
     "allProducts": "Alle Produkte"
   },
   "home": {
+    "heroBadge": "NEUE KOLLEKTION",
+    "exploreNew": "Neu entdecken",
+    "viewAll": "Alles anzeigen",
+    "featuredSubtitle": "Handverlesene Favoriten aus unserer kuratierten Kollektion",
+    "statCustomers": "Zufriedene Kunden",
+    "statProducts": "wiederverwertbaren Premium-",
+    "statRating": "Bewertungsdurchschnitt",
+    "emailPlaceholder": "Geben Sie Ihre E-Mail-Adresse ein",
+    "newsletterPrivacy": "Kein Spam. Jederzeit abbestellen.",
     "featuredProducts": "Empfohlene Produkte",
-    "shopByCategory": "Nach Kategorie einkaufen",
-    "newsletterTitle": "Bleiben Sie informiert",
-    "newsletterSubtitle": "Exklusive Angebote und Neuheiten per E-Mail.",
+    "shopByCategory": "Nach Kategorie shoppen",
+    "newsletterTitle": "Bleibe auf dem Laufenden",
+    "newsletterSubtitle": "Lasse dir exklusive Angebote und Neuheiten in deinen Posteingang liefern.",
     "subscribe": "Abonnieren",
-    "flashSale": "Blitzangebot",
-    "flashSaleSubtitle": "Blitzdeals — schnappen Sie zu, bevor die Zeit abläuft.",
-    "flashSaleCta": "Alle Deals ansehen",
+    "flashSale": "Flash Verkauf",
+    "flashSaleSubtitle": "Blitz-Angebote — schnapp sie dir, bevor die Uhr auf Null schlägt.",
+    "flashSaleCta": "Alle Angebote",
     "endsIn": "Endet in"
   },
   "products": {
     "title": "Alle Produkte",
-    "resultsFor": "Ergebnisse für \"{query}\"",
-    "found": "{count} Produkte gefunden",
-    "related": "Ähnliche Produkte",
-    "specifications": "Spezifikationen",
-    "sku": "SKU"
+    "resultsFor": "Ergebnisse für „{query}“",
+    "found": "{{count}} Produkte gefunden",
+    "related": "Verwandte Produkte",
+    "specifications": "Technische Daten",
+    "sku": "Artikelnummer"
   },
   "cart": {
     "title": "Warenkorb",
     "empty": "Ihr Warenkorb ist leer",
-    "emptyDesc": "Entdecken Sie unsere Premium-Kollektion.",
+    "emptyDesc": "Entdecken Sie unsere Premium-Kollektion und legen Sie Artikel in Ihren Warenkorb.",
     "continueShopping": "Weiter einkaufen",
     "summary": "Bestellübersicht",
-    "subtotal": "Zwischensumme",
+    "subtotal": "Teilsumme",
     "shipping": "Versand",
     "tax": "Steuer (geschätzt)",
     "total": "Gesamt",
-    "checkout": "Zur Kasse",
-    "items": "{count} Artikel"
+    "checkout": "Weiter zur Kasse",
+    "items": "{count} Items"
   },
   "checkout": {
     "title": "Kasse",
     "contact": "Kontakt",
-    "shipping": "Lieferadresse",
+    "shipping": "Versandanschrift",
     "payment": "Zahlungsmethode",
     "orderSummary": "Bestellübersicht",
     "placeOrder": "Bestellung aufgeben",
-    "processing": "Wird verarbeitet...",
-    "empty": "Nichts zu bestellen"
+    "processing": "Wird bearbeitet...",
+    "empty": "Nichts zum Bezahlen"
   },
   "order": {
-    "confirmed": "Bestellung bestätigt!",
-    "number": "Bestellnummer: {number}",
-    "thankYou": "Vielen Dank für Ihren Einkauf.",
+    "confirmed": "Bestellung bestätigt",
+    "number": "Bestellnummer:% Nummer%",
+    "thankYou": "Vielen Dank für Ihren Kauf. Sie erhalten in Kürze eine Bestätigungs-E-Mail.",
     "continueShopping": "Weiter einkaufen",
-    "viewOrders": "Bestellungen anzeigen"
+    "viewOrders": "Bestellungen ansehen"
   },
   "auth": {
     "signIn": "Anmelden",
-    "signInDesc": "Geben Sie Ihre Anmeldedaten ein",
+    "signInDesc": "Gib deine Anmeldedaten ein, um auf dein Konto zuzugreifen",
     "createAccount": "Konto erstellen",
-    "createAccountDesc": "Werden Sie Teil von YourStore",
-    "email": "E-Mail",
-    "password": "Passwort",
+    "createAccountDesc": "Registrieren Sie sich bei YourStore für ein erstklassiges Einkaufserlebnis",
+    "email": "Email",
+    "password": "Kennwort",
     "firstName": "Vorname",
     "lastName": "Nachname",
     "rememberMe": "Angemeldet bleiben",
-    "noAccount": "Noch kein Konto?",
-    "hasAccount": "Bereits ein Konto?"
+    "noAccount": "Sie haben noch kein Benutzerkonto?",
+    "hasAccount": "Haben Sie ein Konto?"
   },
   "wishlist": {
-    "title": "Wunschliste",
-    "empty": "Wunschliste ist leer",
-    "emptyDesc": "Speichern Sie Ihre Lieblingsprodukte.",
-    "moveToCart": "In den Warenkorb",
-    "remove": "Entfernen"
+    "title": "Wunschzettel",
+    "empty": "Ihre Wunschliste ist leer",
+    "emptyDesc": "Bewahre Gegenstände, die du liebst, für später auf.",
+    "moveToCart": "In den Warenkorb verschieben",
+    "remove": "Entlassen"
   },
   "compare": {
     "title": "Produkte vergleichen",
-    "empty": "Keine Produkte zum Vergleichen",
-    "emptyDesc": "Fügen Sie Produkte zum Vergleichen hinzu.",
-    "add": "Vergleichen",
-    "remove": "Entfernen",
-    "clear": "Alle löschen",
+    "empty": "Keine Produkte zu vergleichen",
+    "emptyDesc": "Fügen Sie Produkte hinzu, um ihre Eigenschaften nebeneinander zu vergleichen.",
+    "add": "Vergleichen Sie",
+    "remove": "Entlassen",
+    "clear": "Alles löschen",
     "max": "Maximal 4 Produkte"
   },
   "footer": {
@@ -132,9 +149,9 @@
   },
   "account": {
     "title": "Mein Konto",
-    "orders": "Bestellverlauf",
+    "orders": "Bestellhistorie",
     "profile": "Profil",
     "addresses": "Adressen",
-    "noOrders": "Noch keine Bestellungen"
+    "noOrders": "Es sind noch keine Bestellungen vorhanden!"
   }
 }

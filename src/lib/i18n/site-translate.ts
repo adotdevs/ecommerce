@@ -88,7 +88,7 @@ export async function runFullSiteTranslation(
     const pages = await CatalogPage.find().lean();
     let count = 0;
     for (const page of pages) {
-      const config = page.config as Record<string, unknown>;
+      const config = page.config as unknown as Record<string, unknown>;
       const fields = collectTranslatableStrings(config);
       if (fields.length === 0) continue;
 

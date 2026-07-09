@@ -15,6 +15,7 @@ import {
   ChevronRight,
   LayoutGrid,
   Sparkles,
+  Languages,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/admin/brands", label: "Brands", icon: Tag },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
   { href: "/admin/catalog-pages", label: "Catalog Pages", icon: LayoutGrid },
+  { href: "/admin/translations", label: "Translations", icon: Languages },
   { href: "/admin/cms", label: "CMS Pages", icon: FileText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

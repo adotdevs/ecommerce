@@ -32,7 +32,7 @@ export async function ensureCatalogPages() {
       if (!existing) {
         await CatalogPage.create({
           slug,
-          config: DEFAULT_CATALOG_PAGES[slug],
+          config: DEFAULT_CATALOG_PAGES[slug] as Record<string, unknown>,
           sourceLocale: "en",
           translationStatus: "idle",
         });

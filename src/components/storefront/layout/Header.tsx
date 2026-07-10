@@ -286,7 +286,7 @@ export function Header({ settings }: HeaderProps) {
               >
                 <Heart className="h-4 w-4" /> {t("header.wishlist")}
                 {displayWishlistCount > 0 && (
-                  <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
+                  <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] text-white">
                     {displayWishlistCount}
                   </span>
                 )}
@@ -332,7 +332,7 @@ function TopBarIcon({
     >
       {children}
       {count > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground">
+        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -365,7 +365,7 @@ function NavIcon({
         {count > 0 && (
           <span
             className={cn(
-              "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground transition-transform",
+              "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white transition-transform",
               pulse && "scale-125"
             )}
           >

@@ -36,6 +36,13 @@
     "selectLanguage": "Sélectionner la langue",
     "selectCurrency": "Sélectionner la devise"
   },
+  "theme": {
+    "title": "Préférez le mode sombre ?",
+    "description": "Votre appareil utilise le mode sombre. Passez à une vue plus douce pour la nuit.",
+    "useDark": "Mode sombre",
+    "keepLight": "Garder le mode clair",
+    "close": "Fermer"
+  },
   "nav": {
     "newArrivals": "Nouveautés",
     "bestSellers": "Meilleures ventes",

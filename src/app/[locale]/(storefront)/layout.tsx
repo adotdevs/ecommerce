@@ -2,6 +2,7 @@ import { Header } from "@/components/storefront/layout/Header";
 import { Footer } from "@/components/storefront/layout/Footer";
 import { MobileBottomBar } from "@/components/storefront/layout/MobileBottomBar";
 import { NavigationProgress } from "@/components/storefront/layout/NavigationProgress";
+import { ThemePreferencePrompt } from "@/components/storefront/layout/ThemePreferencePrompt";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import type { SiteSettingsPublic } from "@/types";
 import { Suspense } from "react";
@@ -86,6 +87,7 @@ export default async function StorefrontLayout({
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
       <Footer settings={settings} />
       <MobileBottomBar />
+      <ThemePreferencePrompt />
     </>
   );
 }

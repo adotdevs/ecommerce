@@ -49,7 +49,7 @@ export function AdminSidebar() {
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
       <div className="border-b border-border p-6">
         <Link href="/admin" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground text-small font-bold">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-primary text-white text-small font-bold">
             YS
           </div>
           <div>
@@ -72,7 +72,7 @@ export function AdminSidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-small font-medium transition-colors duration-200",
                 active
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-white"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}
             >

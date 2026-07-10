@@ -154,7 +154,7 @@ export function ProductDetailSectionNav({ sections }: ProductDetailSectionNavPro
             className={cn(
               "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-medium transition-all duration-200",
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-primary text-white shadow-sm"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
               isReviews && !active && "ring-1 ring-amber-400/25"
             )}
@@ -166,7 +166,7 @@ export function ProductDetailSectionNav({ sections }: ProductDetailSectionNavPro
                 className={cn(
                   "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
                   active
-                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    ? "bg-white/20 text-white"
                     : "bg-amber-400/15 text-amber-700 dark:text-amber-300"
                 )}
               >

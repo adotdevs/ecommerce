@@ -44,6 +44,13 @@
     "selectLanguage": "Sprache auswählen",
     "selectCurrency": "Währung wählen"
   },
+  "theme": {
+    "title": "Dunkelmodus bevorzugt?",
+    "description": "Ihr Gerät nutzt den Dunkelmodus. Wechseln Sie für eine angenehmere Nachtansicht.",
+    "useDark": "Dunkelmodus nutzen",
+    "keepLight": "Hellmodus behalten",
+    "close": "Schließen"
+  },
   "nav": {
     "newArrivals": "Neu im Sortiment",
     "bestSellers": "Bestseller",

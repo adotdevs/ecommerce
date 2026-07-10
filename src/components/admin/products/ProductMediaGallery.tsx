@@ -284,7 +284,7 @@ export function ProductMediaGallery({
 
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border border-border bg-secondary">
                 {index === 0 && (
-                  <span className="absolute left-1 top-1 z-10 flex items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  <span className="absolute left-1 top-1 z-10 flex items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-white">
                     <Star className="h-2.5 w-2.5" /> Primary
                   </span>
                 )}

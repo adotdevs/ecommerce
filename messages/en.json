@@ -44,6 +44,13 @@
     "selectLanguage": "Select language",
     "selectCurrency": "Select currency"
   },
+  "theme": {
+    "title": "Prefer dark mode?",
+    "description": "Your device uses dark mode. Switch for a softer, nighttime-friendly view.",
+    "useDark": "Use dark mode",
+    "keepLight": "Keep light mode",
+    "close": "Dismiss"
+  },
   "nav": {
     "newArrivals": "New Arrivals",
     "bestSellers": "Best Sellers",

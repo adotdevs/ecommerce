@@ -426,7 +426,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                   <span
                     className={cn(
                       "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                      active && "bg-primary text-primary-foreground",
+                      active && "bg-primary text-white",
                       done && "bg-green-600 text-white",
                       !active && !done && "border border-border bg-background"
                     )}

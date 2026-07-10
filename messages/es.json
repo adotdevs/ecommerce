@@ -44,6 +44,13 @@
     "selectLanguage": "Seleccionar idioma",
     "selectCurrency": "Seleccionar moneda"
   },
+  "theme": {
+    "title": "¿Prefieres el modo oscuro?",
+    "description": "Tu dispositivo usa el modo oscuro. Cambia para una vista más cómoda por la noche.",
+    "useDark": "Usar modo oscuro",
+    "keepLight": "Mantener modo claro",
+    "close": "Cerrar"
+  },
   "nav": {
     "newArrivals": "Nuevas llegadas",
     "bestSellers": "Más vendidos",

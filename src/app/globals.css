@@ -82,7 +82,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-foreground: #ffffff;
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -90,7 +90,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-foreground: #ffffff;
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -139,6 +139,12 @@ body {
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Solid brand fills — white label text (Tailwind foreground utilities can fail to apply on links) */
+.bg-primary,
+.bg-destructive {
+  color: #ffffff;
 }
 
 .container-store {

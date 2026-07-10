@@ -153,7 +153,7 @@ export function ProductVariantSelector({
                       className={cn(
                         "min-w-[3rem] rounded-[var(--radius-sm)] border px-3 py-2 text-small font-medium tabular-nums transition-colors",
                         isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
+                          ? "border-primary bg-primary text-white"
                           : "border-border hover:border-muted-foreground",
                         !isAvailable &&
                           "cursor-not-allowed line-through opacity-40"

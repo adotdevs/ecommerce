@@ -179,7 +179,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
                             className={cn(
                               "flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-small font-medium transition",
                               p === result.page
-                                ? "border-primary bg-primary text-primary-foreground"
+                                ? "border-primary bg-primary text-white"
                                 : "border-border bg-card text-foreground hover:bg-secondary"
                             )}
                           >

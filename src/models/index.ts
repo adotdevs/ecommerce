@@ -12,3 +12,4 @@ export { CmsPage } from "./CmsPage";
 export { CatalogPage } from "./CatalogPage";
 export { Wishlist } from "./Wishlist";
 export { CompareList } from "./CompareList";
+export { ProductReview } from "./ProductReview";

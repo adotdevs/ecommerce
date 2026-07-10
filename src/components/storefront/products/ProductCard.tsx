@@ -8,7 +8,7 @@ import { Heart, GitCompareArrows, ShoppingBag, Check } from "lucide-react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
-import { StarRating, getProductRating } from "@/components/storefront/products/StarRating";
+import { StarRating } from "@/components/storefront/products/StarRating";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -34,7 +34,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
     product.pricing.compareAtPrice != null &&
     product.pricing.compareAtPrice > product.pricing.price;
   const outOfStock = product.inventory?.stock === 0;
-  const { rating, count } = getProductRating(product._id);
+  const rating = product.rating?.average ?? 0;
+  const reviewCount = product.rating?.count ?? 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -126,7 +127,9 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <h3 className="line-clamp-2 text-small font-medium leading-snug text-foreground">
             {product.name}
           </h3>
-          <StarRating rating={rating} count={count} />
+          {reviewCount > 0 && (
+            <StarRating rating={rating} count={reviewCount} />
+          )}
           <div className="mt-auto flex items-baseline gap-2">
             <PriceDisplay amountUsd={product.pricing.price} className="text-body font-semibold" />
             {onSale && (

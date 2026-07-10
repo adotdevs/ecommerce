@@ -27,6 +27,12 @@ export interface IProduct extends Document {
     stock: number;
     attributes: Record<string, string>;
   }[];
+  variantOptions: {
+    id: string;
+    name: string;
+    type: string;
+    values: { value: string; label: string; hex?: string }[];
+  }[];
   pricing: {
     price: number;
     compareAtPrice?: number;
@@ -65,6 +71,10 @@ export interface IProduct extends Document {
   status: "draft" | "published" | "archived";
   featured: boolean;
   isNewArrival: boolean;
+  rating: {
+    average: number;
+    count: number;
+  };
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -97,6 +107,20 @@ const ProductSchema = new Schema<IProduct>(
         compareAtPrice: Number,
         stock: Number,
         attributes: Schema.Types.Mixed,
+      },
+    ],
+    variantOptions: [
+      {
+        id: String,
+        name: String,
+        type: String,
+        values: [
+          {
+            value: String,
+            label: String,
+            hex: String,
+          },
+        ],
       },
     ],
     pricing: {
@@ -134,6 +158,10 @@ const ProductSchema = new Schema<IProduct>(
     },
     featured: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },
+    rating: {
+      average: { type: Number, default: 0 },
+      count: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

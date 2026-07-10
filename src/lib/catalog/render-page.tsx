@@ -58,6 +58,7 @@ export async function renderCatalogPage({
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
     onSale: searchParams.onSale === "1",
     featured: searchParams.featured === "1",
+    locale,
   });
 
   const qs = new URLSearchParams();

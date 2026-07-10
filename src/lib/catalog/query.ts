@@ -2,6 +2,7 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { Brand } from "@/models/Brand";
 import type { CatalogPageSlug } from "@/models/CatalogPage";
+import type { Locale } from "@/config/locales";
 import { toProductCardData } from "@/lib/catalog/product-card";
 import { deepSearchProducts } from "@/lib/search/products";
 
@@ -24,6 +25,7 @@ export interface CatalogQueryInput {
   maxPrice?: number;
   onSale?: boolean;
   featured?: boolean;
+  locale?: Locale;
   /** Preset from dedicated catalog routes */
   preset?: CatalogPageSlug;
 }
@@ -119,7 +121,7 @@ export async function queryCatalogProducts(input: CatalogQueryInput) {
     ]);
 
     return {
-      products: deep.products.map((p) => toProductCardData(p)),
+      products: deep.products.map((p) => toProductCardData(p, input.locale)),
       total: deep.total,
       page: deep.page,
       limit: deep.limit,
@@ -171,7 +173,9 @@ export async function queryCatalogProducts(input: CatalogQueryInput) {
   ]);
 
   return {
-    products: products.map((p) => toProductCardData(p as unknown as Record<string, unknown>)),
+    products: products.map((p) =>
+      toProductCardData(p as unknown as Record<string, unknown>, input.locale)
+    ),
     total,
     page,
     limit,

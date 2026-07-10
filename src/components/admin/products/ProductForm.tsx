@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
@@ -9,11 +9,28 @@ import { Label } from "@/components/ds/label";
 import { Textarea } from "@/components/ds/textarea";
 import { Switch } from "@/components/ds/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ds/tabs";
-import { ProductMediaGallery, type ProductMediaItem } from "./ProductMediaGallery";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { ProductMediaGallery } from "./ProductMediaGallery";
+import { ProductVariantBuilder } from "./ProductVariantBuilder";
+import {
+  type ProductFormData,
+  type ProductFormStepId,
+  PRODUCT_FORM_STEPS,
+  emptyProductForm,
+  formToPayload,
+} from "./product-form-data";
+import { Loader2, Plus, Trash2, ChevronLeft, ChevronRight, Check, Sparkles } from "lucide-react";
 import { toastError, toastSaveSuccess } from "@/hooks/use-toast";
 import { slugify } from "@/lib/utils";
+import { cn } from "@/components/ds/utils";
+import { nameToSku } from "@/lib/admin/product-copy-suggest";
+
+export type { ProductFormData } from "./product-form-data";
+export {
+  emptyProductForm,
+  productToFormData,
+  formToPayload,
+  PRODUCT_FORM_STEPS,
+} from "./product-form-data";
 
 interface Category {
   _id: string;
@@ -27,226 +44,57 @@ interface Brand {
   slug: string;
 }
 
-interface KeyValue {
-  key: string;
-  value: string;
-}
-
-interface FaqItem {
-  question: string;
-  answer: string;
-}
-
-export interface ProductFormData {
-  name: string;
-  slug: string;
-  sku: string;
-  barcode: string;
-  description: string;
-  shortDescription: string;
-  brandId: string;
-  categoryIds: string[];
-  tags: string;
-  media: ProductMediaItem[];
-  pricing: {
-    price: string;
-    compareAtPrice: string;
-    currency: string;
-  };
-  inventory: {
-    stock: string;
-    lowStockThreshold: string;
-    trackInventory: boolean;
-  };
-  weight: string;
-  dimensions: {
-    length: string;
-    width: string;
-    height: string;
-    unit: string;
-  };
-  specifications: KeyValue[];
-  faqs: FaqItem[];
-  warranty: string;
-  status: "draft" | "published" | "archived";
-  featured: boolean;
-  isNewArrival: boolean;
-  seo: {
-    title: string;
-    description: string;
-    keywords: string;
-    canonical: string;
-    ogImage: string;
-  };
-}
-
-export const emptyProductForm = (): ProductFormData => ({
-  name: "",
-  slug: "",
-  sku: "",
-  barcode: "",
-  description: "",
-  shortDescription: "",
-  brandId: "",
-  categoryIds: [],
-  tags: "",
-  media: [],
-  pricing: { price: "", compareAtPrice: "", currency: "USD" },
-  inventory: { stock: "0", lowStockThreshold: "5", trackInventory: true },
-  weight: "",
-  dimensions: { length: "", width: "", height: "", unit: "cm" },
-  specifications: [],
-  faqs: [],
-  warranty: "",
-  status: "draft",
-  featured: false,
-  isNewArrival: false,
-  seo: {
-    title: "",
-    description: "",
-    keywords: "",
-    canonical: "",
-    ogImage: "",
-  },
-});
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function productToFormData(product: Record<string, any>): ProductFormData {
-  return {
-    name: product.name ?? "",
-    slug: product.slug ?? "",
-    sku: product.sku ?? "",
-    barcode: product.barcode ?? "",
-    description: product.description ?? "",
-    shortDescription: product.shortDescription ?? "",
-    brandId: product.brandId ? String(product.brandId) : "",
-    categoryIds: (product.categoryIds ?? []).map((id: { toString(): string }) =>
-      String(id)
-    ),
-    tags: (product.tags ?? []).join(", "),
-    media: (product.media ?? []).map(
-      (m: ProductMediaItem, i: number) => ({
-        url: m.url,
-        alt: m.alt ?? "",
-        type: m.type ?? "image",
-        sortOrder: m.sortOrder ?? i,
-      })
-    ),
-    pricing: {
-      price: String(product.pricing?.price ?? ""),
-      compareAtPrice:
-        product.pricing?.compareAtPrice != null
-          ? String(product.pricing.compareAtPrice)
-          : "",
-      currency: product.pricing?.currency ?? "USD",
-    },
-    inventory: {
-      stock: String(product.inventory?.stock ?? 0),
-      lowStockThreshold: String(product.inventory?.lowStockThreshold ?? 5),
-      trackInventory: product.inventory?.trackInventory ?? true,
-    },
-    weight: product.weight != null ? String(product.weight) : "",
-    dimensions: {
-      length:
-        product.dimensions?.length != null
-          ? String(product.dimensions.length)
-          : "",
-      width:
-        product.dimensions?.width != null ? String(product.dimensions.width) : "",
-      height:
-        product.dimensions?.height != null
-          ? String(product.dimensions.height)
-          : "",
-      unit: product.dimensions?.unit ?? "cm",
-    },
-    specifications: product.specifications?.length
-      ? product.specifications
-      : [],
-    faqs: product.faqs?.length ? product.faqs : [],
-    warranty: product.warranty ?? "",
-    status: product.status ?? "draft",
-    featured: product.featured ?? false,
-    isNewArrival: product.isNewArrival ?? false,
-    seo: {
-      title: product.seo?.title ?? "",
-      description: product.seo?.description ?? "",
-      keywords: (product.seo?.keywords ?? []).join(", "),
-      canonical: product.seo?.canonical ?? "",
-      ogImage: product.seo?.ogImage ?? "",
-    },
-  };
-}
-
-function formToPayload(form: ProductFormData) {
-  const compareAt = form.pricing.compareAtPrice.trim();
-  return {
-    name: form.name.trim(),
-    slug: form.slug.trim() || undefined,
-    sku: form.sku.trim(),
-    barcode: form.barcode.trim() || undefined,
-    description: form.description.trim() || undefined,
-    shortDescription: form.shortDescription.trim() || undefined,
-    brandId: form.brandId || null,
-    categoryIds: form.categoryIds,
-    tags: form.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean),
-    media: form.media,
-    pricing: {
-      price: parseFloat(form.pricing.price) || 0,
-      compareAtPrice: compareAt ? parseFloat(compareAt) : null,
-      currency: form.pricing.currency || "USD",
-    },
-    inventory: {
-      stock: parseInt(form.inventory.stock) || 0,
-      lowStockThreshold: parseInt(form.inventory.lowStockThreshold) || 5,
-      trackInventory: form.inventory.trackInventory,
-    },
-    weight: form.weight.trim() ? parseFloat(form.weight) : null,
-    dimensions:
-      form.dimensions.length || form.dimensions.width || form.dimensions.height
-        ? {
-            length: parseFloat(form.dimensions.length) || undefined,
-            width: parseFloat(form.dimensions.width) || undefined,
-            height: parseFloat(form.dimensions.height) || undefined,
-            unit: form.dimensions.unit || "cm",
-          }
-        : null,
-    specifications: form.specifications.filter((s) => s.key && s.value),
-    faqs: form.faqs.filter((f) => f.question && f.answer),
-    warranty: form.warranty.trim() || undefined,
-    status: form.status,
-    featured: form.featured,
-    isNewArrival: form.isNewArrival,
-    seo: {
-      title: form.seo.title.trim() || undefined,
-      description: form.seo.description.trim() || undefined,
-      keywords: form.seo.keywords
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean),
-      canonical: form.seo.canonical.trim() || undefined,
-      ogImage: form.seo.ogImage.trim() || undefined,
-    },
-  };
-}
-
 interface ProductFormProps {
   productId?: string;
   initialData?: ProductFormData;
 }
 
-export function ProductForm({ productId, initialData }: ProductFormProps) {
+function validateStep(step: ProductFormStepId, form: ProductFormData): string | null {
+  switch (step) {
+    case "basic":
+      if (!form.name.trim()) return "Product name is required.";
+      if (!form.sku.trim()) return "SKU is required.";
+      return null;
+    case "pricing":
+      if (!form.variants.length) {
+        if (!form.pricing.price || parseFloat(form.pricing.price) < 0) {
+          return "A valid price is required.";
+        }
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function ProductForm({ productId: productIdProp, initialData }: ProductFormProps) {
   const router = useRouter();
   const { accessToken } = useAuthStore();
+  const [savedProductId, setSavedProductId] = useState<string | undefined>(
+    productIdProp
+  );
+  const productId = savedProductId ?? productIdProp;
   const [form, setForm] = useState<ProductFormData>(
     initialData ?? emptyProductForm()
   );
+  const [stepIndex, setStepIndex] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [saving, setSaving] = useState(false);
-  const [autoSlug, setAutoSlug] = useState(!productId);
+  const [autoSlug, setAutoSlug] = useState(!productIdProp);
+  const [suggesting, setSuggesting] = useState(false);
+  const [autoSku, setAutoSku] = useState(!productIdProp);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSuggestedName = useRef("");
+  const formRef = useRef(form);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  const currentStep = PRODUCT_FORM_STEPS[stepIndex];
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex === PRODUCT_FORM_STEPS.length - 1;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -273,7 +121,224 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
       ...f,
       name,
       slug: autoSlug ? slugify(name) : f.slug,
+      sku: autoSku && !productIdProp ? nameToSku(name) : f.sku,
     }));
+  };
+
+  const fetchFullAiSuggestions = useCallback(
+    async (name: string, opts?: { force?: boolean }) => {
+      if (!accessToken || !name.trim()) return;
+      const f = formRef.current;
+      if (lastSuggestedName.current === name.trim() && !opts?.force) return;
+
+      setSuggesting(true);
+      try {
+        const categoryNames = f.categoryIds
+          .map((id) => categories.find((c) => c._id === id)?.name)
+          .filter(Boolean) as string[];
+        const brandName = brands.find((b) => b._id === f.brandId)?.name;
+
+        const res = await fetch("/api/v1/admin/products/suggest-full", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            sku: f.sku.trim() || undefined,
+            categories: categoryNames.length ? categoryNames : undefined,
+            brand: brandName,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          toastError("AI suggest failed", data.error ?? "Could not generate suggestions.");
+          return;
+        }
+
+        const s = data.data;
+        lastSuggestedName.current = name.trim();
+        setForm((current) => ({
+          ...current,
+          shortDescription: opts?.force || !current.shortDescription.trim()
+            ? s.shortDescription
+            : current.shortDescription,
+          description: opts?.force || !current.description.trim()
+            ? s.description
+            : current.description,
+          tags: opts?.force || !current.tags.trim()
+            ? (s.tags ?? []).join(", ")
+            : current.tags,
+          variantOptions: s.variantOptions ?? current.variantOptions,
+          variants: (s.variants ?? []).map(
+            (v: {
+              id: string;
+              name: string;
+              sku: string;
+              price: number;
+              compareAtPrice?: number;
+              stock: number;
+              attributes: Record<string, string>;
+            }) => ({
+              id: v.id,
+              name: v.name,
+              sku: v.sku,
+              price: String(v.price),
+              compareAtPrice:
+                v.compareAtPrice != null ? String(v.compareAtPrice) : "",
+              stock: String(v.stock),
+              attributes: v.attributes,
+            })
+          ),
+          pricing: {
+            price: String(s.pricing?.price ?? current.pricing.price),
+            compareAtPrice:
+              s.pricing?.compareAtPrice != null
+                ? String(s.pricing.compareAtPrice)
+                : current.pricing.compareAtPrice,
+            currency: s.pricing?.currency ?? current.pricing.currency,
+          },
+          specifications: s.specifications?.length
+            ? s.specifications
+            : current.specifications,
+          faqs: s.faqs?.length ? s.faqs : current.faqs,
+          warranty: s.warranty ?? current.warranty,
+          weight: s.weight != null ? String(s.weight) : current.weight,
+          seo: {
+            title: opts?.force || !current.seo.title.trim()
+              ? s.seo?.title ?? ""
+              : current.seo.title,
+            description: opts?.force || !current.seo.description.trim()
+              ? s.seo?.description ?? ""
+              : current.seo.description,
+            keywords: opts?.force || !current.seo.keywords.trim()
+              ? (s.seo?.keywords ?? []).join(", ")
+              : current.seo.keywords,
+            canonical: current.seo.canonical,
+            ogImage: current.seo.ogImage,
+          },
+        }));
+      } catch {
+        toastError("AI suggest failed", "Network error.");
+      } finally {
+        setSuggesting(false);
+      }
+    },
+    [accessToken, categories, brands]
+  );
+
+  useEffect(() => {
+    if (!form.name.trim() || form.name.trim().length < 4) return;
+    if (form.variantOptions.length > 0 && form.description.trim()) return;
+
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    suggestTimer.current = setTimeout(() => {
+      fetchFullAiSuggestions(form.name);
+    }, 1800);
+
+    return () => {
+      if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    };
+  }, [form.name, form.variantOptions.length, form.description, fetchFullAiSuggestions]);
+
+  const saveProduct = async (opts?: { draft?: boolean; navigate?: boolean }) => {
+    if (!accessToken) return false;
+
+    const draft = opts?.draft ?? false;
+    if (!draft) {
+      const err = validateStep("basic", form);
+      if (err) {
+        toastError("Validation", err);
+        return false;
+      }
+      if (!form.variants.length) {
+        const priceErr = validateStep("pricing", form);
+        if (priceErr) {
+          toastError("Validation", priceErr);
+          return false;
+        }
+      }
+    } else if (!form.name.trim()) {
+      toastError("Validation", "Enter a product name to save as draft.");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      const payload = formToPayload({
+        ...form,
+        status: draft ? "draft" : form.status,
+      });
+
+      const url = productId
+        ? `/api/v1/admin/products/${productId}`
+        : "/api/v1/admin/products";
+      const res = await fetch(url, {
+        method: productId ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const id = productId ?? String(data.data._id);
+        if (!savedProductId && data.data?._id) {
+          setSavedProductId(String(data.data._id));
+        }
+        toastSaveSuccess({
+          sectionName: draft
+            ? "Draft saved"
+            : productId
+              ? "Product updated"
+              : "Product created",
+          englishOnly: true,
+        });
+        if (opts?.navigate !== false && !productIdProp && id) {
+          router.replace(`/admin/products/${id}`);
+        }
+        if (!draft && payload.status === "published" && id) {
+          fetch(`/api/v1/admin/products/${id}/translate`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ provider: "openai" }),
+          }).catch(() => undefined);
+        }
+        return true;
+      }
+      toastError("Save failed", data.error ?? "Could not save product.");
+      return false;
+    } catch {
+      toastError("Save failed", "Network error. Please try again.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const goNext = async () => {
+    const err = validateStep(currentStep.id, form);
+    if (err) {
+      toastError("Validation", err);
+      return;
+    }
+    if (!productId && currentStep.id === "basic" && form.name.trim()) {
+      const ok = await saveProduct({ draft: true, navigate: false });
+      if (!ok) return;
+    }
+    setStepIndex((i) => Math.min(i + 1, PRODUCT_FORM_STEPS.length - 1));
+  };
+
+  const goBack = () => setStepIndex((i) => Math.max(i - 1, 0));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveProduct();
   };
 
   const toggleCategory = (id: string) => {
@@ -285,233 +350,333 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessToken) return;
-    if (!form.name.trim() || !form.sku.trim()) {
-      toastError("Validation", "Name and SKU are required.");
-      return;
-    }
-    if (!form.pricing.price || parseFloat(form.pricing.price) < 0) {
-      toastError("Validation", "A valid price is required.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const url = productId
-        ? `/api/v1/admin/products/${productId}`
-        : "/api/v1/admin/products";
-      const res = await fetch(url, {
-        method: productId ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(formToPayload(form)),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toastSaveSuccess({
-          sectionName: productId ? "Product updated" : "Product created",
-          englishOnly: true,
-        });
-        router.push(
-          productId ? `/admin/products/${productId}` : `/admin/products/${data.data._id}`
-        );
-      } else {
-        toastError("Save failed", data.error ?? "Could not save product.");
-      }
-    } catch {
-      toastError("Save failed", "Network error. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const isOnSale =
     form.pricing.compareAtPrice &&
     parseFloat(form.pricing.compareAtPrice) > parseFloat(form.pricing.price || "0");
 
+  const hasVariants = form.variants.length > 0;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Tabs defaultValue="general">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing & Stock</TabsTrigger>
-          <TabsTrigger value="categories">Categories & Brand</TabsTrigger>
-          <TabsTrigger value="images">Images</TabsTrigger>
-          <TabsTrigger value="merchandising">Merchandising</TabsTrigger>
-          <TabsTrigger value="details">Specs & FAQs</TabsTrigger>
-          <TabsTrigger value="seo">SEO</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Product name *</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    required
-                    placeholder="e.g. Wireless Bluetooth Headphones"
+      {/* Progress bar */}
+      <nav aria-label="Product form progress" className="rounded-xl border border-border bg-card p-4">
+        <ol className="flex flex-wrap items-center gap-2 md:gap-0">
+          {PRODUCT_FORM_STEPS.map((step, i) => {
+            const done = i < stepIndex;
+            const active = i === stepIndex;
+            return (
+              <li key={step.id} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => i <= stepIndex && setStepIndex(i)}
+                  disabled={i > stepIndex}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors md:px-3",
+                    active && "bg-primary/10 text-primary",
+                    done && "text-foreground hover:bg-secondary",
+                    i > stepIndex && "cursor-not-allowed text-muted-foreground opacity-60"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                      active && "bg-primary text-primary-foreground",
+                      done && "bg-green-600 text-white",
+                      !active && !done && "border border-border bg-background"
+                    )}
+                  >
+                    {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  </span>
+                  <span className="hidden text-small font-medium sm:inline">{step.label}</span>
+                </button>
+                {i < PRODUCT_FORM_STEPS.length - 1 && (
+                  <div
+                    className={cn(
+                      "mx-1 hidden h-px w-6 bg-border md:block lg:w-10",
+                      done && "bg-green-600"
+                    )}
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>SKU *</Label>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <p className="mt-3 text-small text-muted-foreground sm:hidden">
+          Step {stepIndex + 1} of {PRODUCT_FORM_STEPS.length}: {currentStep.label}
+        </p>
+      </nav>
+
+      {/* Step content */}
+      {currentStep.id === "basic" && (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <CardTitle>Basic information</CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!form.name.trim() || suggesting}
+              onClick={() => fetchFullAiSuggestions(form.name, { force: true })}
+            >
+              {suggesting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Auto-complete with AI
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Product name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="e.g. Wireless Bluetooth Headphones"
+                />
+                {suggesting && (
+                  <p className="text-[11px] text-muted-foreground">
+                    AI is filling description, colors, sizes, prices, specs…
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>SKU *</Label>
+                <div className="flex gap-2">
                   <Input
                     value={form.sku}
-                    onChange={(e) => update("sku", e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setAutoSku(false);
+                      update("sku", e.target.value);
+                    }}
                     placeholder="e.g. WH-1000XM5-BLK"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAutoSku(true);
+                      update("sku", nameToSku(form.name));
+                    }}
+                  >
+                    Auto
+                  </Button>
                 </div>
               </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>URL slug</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.slug}
-                      onChange={(e) => {
-                        setAutoSlug(false);
-                        update("slug", e.target.value);
-                      }}
-                      placeholder="auto-generated-from-name"
-                    />
-                    {!productId && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setAutoSlug(true);
-                          update("slug", slugify(form.name));
-                        }}
-                      >
-                        Auto
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Barcode (optional)</Label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>URL slug</Label>
+                <div className="flex gap-2">
                   <Input
-                    value={form.barcode}
-                    onChange={(e) => update("barcode", e.target.value)}
-                    placeholder="UPC / EAN"
+                    value={form.slug}
+                    onChange={(e) => {
+                      setAutoSlug(false);
+                      update("slug", e.target.value);
+                    }}
+                    placeholder="auto-generated-from-name"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAutoSlug(true);
+                      update("slug", slugify(form.name));
+                    }}
+                  >
+                    Auto
+                  </Button>
                 </div>
               </div>
-
               <div className="space-y-1.5">
-                <Label>Short description</Label>
-                <Textarea
-                  value={form.shortDescription}
-                  onChange={(e) => update("shortDescription", e.target.value)}
-                  rows={2}
-                  placeholder="Brief summary shown on product cards"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Full description</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => update("description", e.target.value)}
-                  rows={6}
-                  placeholder="Detailed product description"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Tags</Label>
+                <Label>Barcode (optional)</Label>
                 <Input
-                  value={form.tags}
-                  onChange={(e) => update("tags", e.target.value)}
-                  placeholder="wireless, audio, premium (comma-separated)"
+                  value={form.barcode}
+                  onChange={(e) => update("barcode", e.target.value)}
+                  placeholder="UPC / EAN"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Short description</Label>
+              <Textarea
+                value={form.shortDescription}
+                onChange={(e) => update("shortDescription", e.target.value)}
+                rows={2}
+                placeholder="Brief summary shown on product cards"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Full description</Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+                rows={6}
+                placeholder="Detailed product description"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tags</Label>
+              <Input
+                value={form.tags}
+                onChange={(e) => update("tags", e.target.value)}
+                placeholder="wireless, audio, premium (comma-separated)"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
+      {currentStep.id === "taxonomy" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Categories & brand</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>Categories</Label>
+              <p className="text-[12px] text-muted-foreground">
+                Products appear in catalog filters and category pages by category name.
+              </p>
+              {categories.length === 0 ? (
+                <p className="text-small text-muted-foreground">
+                  No categories yet.{" "}
+                  <a href="/admin/categories" className="underline">
+                    Create categories
+                  </a>
+                </p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {categories.map((c) => (
+                    <label
+                      key={c._id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-small hover:bg-secondary"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.categoryIds.includes(c._id)}
+                        onChange={() => toggleCategory(c._id)}
+                      />
+                      {c.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Brand</Label>
+              <select
+                className="flex h-10 w-full max-w-md rounded-lg border border-border bg-background px-3 text-sm"
+                value={form.brandId}
+                onChange={(e) => update("brandId", e.target.value)}
+              >
+                <option value="">No brand</option>
+                {brands.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentStep.id === "media" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Product images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {accessToken ? (
+              <ProductMediaGallery
+                value={form.media}
+                onChange={(media) => update("media", media)}
+                accessToken={accessToken}
+                productName={form.name}
+              />
+            ) : (
+              <p className="text-small text-muted-foreground">Sign in to upload images.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {currentStep.id === "variants" && (
+        <ProductVariantBuilder
+          baseSku={form.sku}
+          basePrice={form.pricing.price}
+          baseCompareAt={form.pricing.compareAtPrice}
+          baseStock={form.inventory.stock}
+          optionGroups={form.variantOptions}
+          variants={form.variants}
+          onOptionGroupsChange={(groups) => update("variantOptions", groups)}
+          onVariantsChange={(variants) => update("variants", variants)}
+        />
+      )}
+
+      {currentStep.id === "pricing" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing & inventory</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {hasVariants && (
+              <p className="rounded-lg border border-border bg-secondary/50 px-4 py-3 text-small text-muted-foreground">
+                This product has {form.variants.length} variants. Base price is used when
+                generating variants; per-variant prices are set in the Options step.
+                Total stock is summed from all variants.
+              </p>
+            )}
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Status</Label>
-                <select
-                  className="flex h-10 w-full max-w-xs rounded-lg border border-border bg-background px-3 text-sm"
-                  value={form.status}
+                <Label>Base price {!hasVariants && "*"}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.pricing.price}
                   onChange={(e) =>
-                    update("status", e.target.value as ProductFormData["status"])
+                    update("pricing", { ...form.pricing, price: e.target.value })
                   }
-                >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="archived">Archived</option>
-                </select>
+                  disabled={hasVariants}
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="pricing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing & inventory</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label>Price *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.pricing.price}
-                    onChange={(e) =>
-                      update("pricing", { ...form.pricing, price: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Compare at price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.pricing.compareAtPrice}
-                    onChange={(e) =>
-                      update("pricing", {
-                        ...form.pricing,
-                        compareAtPrice: e.target.value,
-                      })
-                    }
-                    placeholder="Original price for deals"
-                  />
-                  {isOnSale && (
-                    <p className="text-[12px] text-green-600">
-                      This product will appear in Deals
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Currency</Label>
-                  <Input
-                    value={form.pricing.currency}
-                    onChange={(e) =>
-                      update("pricing", {
-                        ...form.pricing,
-                        currency: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>Compare at price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.pricing.compareAtPrice}
+                  onChange={(e) =>
+                    update("pricing", {
+                      ...form.pricing,
+                      compareAtPrice: e.target.value,
+                    })
+                  }
+                  placeholder="Original price for deals"
+                />
+                {isOnSale && (
+                  <p className="text-[12px] text-green-600">
+                    This product will appear in Deals
+                  </p>
+                )}
               </div>
-
+              <div className="space-y-1.5">
+                <Label>Currency</Label>
+                <Input
+                  value={form.pricing.currency}
+                  onChange={(e) =>
+                    update("pricing", { ...form.pricing, currency: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            {!hasVariants && (
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>Stock quantity</Label>
@@ -554,158 +719,222 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
                   <Label>Track inventory</Label>
                 </div>
               </div>
-
-              <div className="grid gap-4 md:grid-cols-4">
-                <div className="space-y-1.5">
-                  <Label>Weight (kg)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.weight}
-                    onChange={(e) => update("weight", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Length</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.dimensions.length}
-                    onChange={(e) =>
-                      update("dimensions", {
-                        ...form.dimensions,
-                        length: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Width</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.dimensions.width}
-                    onChange={(e) =>
-                      update("dimensions", {
-                        ...form.dimensions,
-                        width: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Height</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.dimensions.height}
-                    onChange={(e) =>
-                      update("dimensions", {
-                        ...form.dimensions,
-                        height: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
+            )}
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-1.5">
-                <Label>Warranty</Label>
+                <Label>Weight (kg)</Label>
                 <Input
-                  value={form.warranty}
-                  onChange={(e) => update("warranty", e.target.value)}
-                  placeholder="e.g. 2-year manufacturer warranty"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.weight}
+                  onChange={(e) => update("weight", e.target.value)}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="categories">
-          <Card>
-            <CardHeader>
-              <CardTitle>Categories & brand</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Categories</Label>
-                <p className="text-[12px] text-muted-foreground">
-                  Products appear in catalog filters and category pages by category name.
-                </p>
-                {categories.length === 0 ? (
-                  <p className="text-small text-muted-foreground">
-                    No categories yet.{" "}
-                    <a href="/admin/categories" className="underline">
-                      Create categories
-                    </a>
-                  </p>
-                ) : (
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((c) => (
-                      <label
-                        key={c._id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-small hover:bg-secondary"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.categoryIds.includes(c._id)}
-                          onChange={() => toggleCategory(c._id)}
-                        />
-                        {c.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <div className="space-y-1.5">
-                <Label>Brand</Label>
-                <select
-                  className="flex h-10 w-full max-w-md rounded-lg border border-border bg-background px-3 text-sm"
-                  value={form.brandId}
-                  onChange={(e) => update("brandId", e.target.value)}
-                >
-                  <option value="">No brand</option>
-                  {brands.map((b) => (
-                    <option key={b._id} value={b._id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="images">
-          <Card>
-            <CardContent className="pt-6">
-              {accessToken && (
-                <ProductMediaGallery
-                  value={form.media}
-                  onChange={(media) => update("media", media)}
-                  accessToken={accessToken}
+                <Label>Length</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={form.dimensions.length}
+                  onChange={(e) =>
+                    update("dimensions", {
+                      ...form.dimensions,
+                      length: e.target.value,
+                    })
+                  }
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Width</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={form.dimensions.width}
+                  onChange={(e) =>
+                    update("dimensions", {
+                      ...form.dimensions,
+                      width: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Height</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={form.dimensions.height}
+                  onChange={(e) =>
+                    update("dimensions", {
+                      ...form.dimensions,
+                      height: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Warranty</Label>
+              <Input
+                value={form.warranty}
+                onChange={(e) => update("warranty", e.target.value)}
+                placeholder="e.g. 2-year manufacturer warranty"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentStep.id === "details" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Specifications</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  update("specifications", [
+                    ...form.specifications,
+                    { key: "", value: "" },
+                  ])
+                }
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {form.specifications.length === 0 ? (
+                <p className="text-small text-muted-foreground">No specifications yet.</p>
+              ) : (
+                form.specifications.map((spec, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={spec.key}
+                      onChange={(e) => {
+                        const next = [...form.specifications];
+                        next[i] = { ...next[i], key: e.target.value };
+                        update("specifications", next);
+                      }}
+                      placeholder="Key"
+                    />
+                    <Input
+                      value={spec.value}
+                      onChange={(e) => {
+                        const next = [...form.specifications];
+                        next[i] = { ...next[i], value: e.target.value };
+                        update("specifications", next);
+                      }}
+                      placeholder="Value"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        update(
+                          "specifications",
+                          form.specifications.filter((_, j) => j !== i)
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>FAQs</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  update("faqs", [...form.faqs, { question: "", answer: "" }])
+                }
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {form.faqs.length === 0 ? (
+                <p className="text-small text-muted-foreground">No FAQs yet.</p>
+              ) : (
+                form.faqs.map((faq, i) => (
+                  <div key={i} className="space-y-2 rounded-md border border-border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <Input
+                        value={faq.question}
+                        onChange={(e) => {
+                          const next = [...form.faqs];
+                          next[i] = { ...next[i], question: e.target.value };
+                          update("faqs", next);
+                        }}
+                        placeholder="Question"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() =>
+                          update("faqs", form.faqs.filter((_, j) => j !== i))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={faq.answer}
+                      onChange={(e) => {
+                        const next = [...form.faqs];
+                        next[i] = { ...next[i], answer: e.target.value };
+                        update("faqs", next);
+                      }}
+                      rows={2}
+                      placeholder="Answer"
+                    />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        <TabsContent value="merchandising">
+      {currentStep.id === "publish" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Storefront placement</CardTitle>
+              <CardTitle>Publish settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <select
+                  className="flex h-10 w-full max-w-xs rounded-lg border border-border bg-background px-3 text-sm"
+                  value={form.status}
+                  onChange={(e) =>
+                    update("status", e.target.value as ProductFormData["status"])
+                  }
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
                 <div>
                   <p className="font-medium">Best Seller</p>
                   <p className="text-[12px] text-muted-foreground">
-                    Featured products appear on the Best Sellers page and homepage.
+                    Featured on Best Sellers page and homepage.
                   </p>
                 </div>
                 <Switch
@@ -713,12 +942,11 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
                   onCheckedChange={(v) => update("featured", v)}
                 />
               </div>
-
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
                 <div>
                   <p className="font-medium">New Arrival</p>
                   <p className="text-[12px] text-muted-foreground">
-                    Pinned to the New Arrivals collection regardless of creation date.
+                    Pinned to the New Arrivals collection.
                   </p>
                 </div>
                 <Switch
@@ -726,11 +954,10 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
                   onCheckedChange={(v) => update("isNewArrival", v)}
                 />
               </div>
-
               <div className="rounded-lg border border-border p-4">
                 <p className="font-medium">Deals / On Sale</p>
                 <p className="mt-1 text-[12px] text-muted-foreground">
-                  Set a compare-at price higher than the sale price in the Pricing tab.
+                  Set compare-at price higher than sale price.
                   {isOnSale ? (
                     <span className="ml-1 font-medium text-green-600">
                       Active — will show on Deals page.
@@ -742,135 +969,7 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="details">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Specifications</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    update("specifications", [
-                      ...form.specifications,
-                      { key: "", value: "" },
-                    ])
-                  }
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Add
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {form.specifications.length === 0 ? (
-                  <p className="text-small text-muted-foreground">
-                    No specifications yet.
-                  </p>
-                ) : (
-                  form.specifications.map((spec, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input
-                        value={spec.key}
-                        onChange={(e) => {
-                          const next = [...form.specifications];
-                          next[i] = { ...next[i], key: e.target.value };
-                          update("specifications", next);
-                        }}
-                        placeholder="Key"
-                      />
-                      <Input
-                        value={spec.value}
-                        onChange={(e) => {
-                          const next = [...form.specifications];
-                          next[i] = { ...next[i], value: e.target.value };
-                          update("specifications", next);
-                        }}
-                        placeholder="Value"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() =>
-                          update(
-                            "specifications",
-                            form.specifications.filter((_, j) => j !== i)
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>FAQs</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    update("faqs", [...form.faqs, { question: "", answer: "" }])
-                  }
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Add
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {form.faqs.length === 0 ? (
-                  <p className="text-small text-muted-foreground">No FAQs yet.</p>
-                ) : (
-                  form.faqs.map((faq, i) => (
-                    <div key={i} className="space-y-2 rounded-md border border-border p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <Input
-                          value={faq.question}
-                          onChange={(e) => {
-                            const next = [...form.faqs];
-                            next[i] = { ...next[i], question: e.target.value };
-                            update("faqs", next);
-                          }}
-                          placeholder="Question"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() =>
-                            update(
-                              "faqs",
-                              form.faqs.filter((_, j) => j !== i)
-                            )
-                          }
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                      <Textarea
-                        value={faq.answer}
-                        onChange={(e) => {
-                          const next = [...form.faqs];
-                          next[i] = { ...next[i], answer: e.target.value };
-                          update("faqs", next);
-                        }}
-                        rows={2}
-                        placeholder="Answer"
-                      />
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="seo">
           <Card>
             <CardHeader>
               <CardTitle>Search engine optimization</CardTitle>
@@ -928,17 +1027,50 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
-      <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-        <Button type="submit" disabled={saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {productId ? "Save changes" : "Create product"}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
+      {/* Footer actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+        <div className="flex flex-wrap gap-2">
+          {!isFirst && (
+            <Button type="button" variant="outline" onClick={goBack} disabled={saving}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Back
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => saveProduct({ draft: true })}
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save draft
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="ghost" onClick={() => router.back()}>
+            Cancel
+          </Button>
+          {!isLast ? (
+            <Button type="button" onClick={goNext} disabled={saving}>
+              Next
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button type="submit" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {form.status === "published"
+                ? productId
+                  ? "Publish changes"
+                  : "Publish product"
+                : productId
+                  ? "Save changes"
+                  : "Create product"}
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   );

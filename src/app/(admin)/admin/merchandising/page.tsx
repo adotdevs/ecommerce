@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ds/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
+import type { MerchandisingAutopilotResult } from "@/lib/admin/merchandising-ai";
+import { AiAssistButton } from "@/components/admin/AiAssistButton";
 import {
   Loader2,
   Search,
@@ -403,8 +405,12 @@ export default function MerchandisingPage() {
     newArrivals: 0,
     deals: 0,
   });
+  const [autopilotPreview, setAutopilotPreview] =
+    useState<MerchandisingAutopilotResult | null>(null);
+  const [autopilotLoading, setAutopilotLoading] = useState(false);
+  const [autopilotApplying, setAutopilotApplying] = useState(false);
 
-  useEffect(() => {
+  const loadCounts = () => {
     if (!accessToken) return;
     fetch("/api/v1/admin/merchandising", {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -413,7 +419,53 @@ export default function MerchandisingPage() {
       .then((d) => {
         if (d.data?.counts) setCounts(d.data.counts);
       });
+  };
+
+  useEffect(() => {
+    loadCounts();
   }, [accessToken]);
+
+  const runAutopilot = async (apply: boolean) => {
+    if (!accessToken) return;
+    if (apply) setAutopilotApplying(true);
+    else setAutopilotLoading(true);
+    try {
+      const res = await fetch("/api/v1/admin/merchandising/autopilot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ apply }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (apply) {
+          setAutopilotPreview(null);
+          toast({
+            variant: "success",
+            title: "Merchandising applied",
+            description: `Updated ${data.data?.updated ?? 0} product flags and deals.`,
+          });
+          loadCounts();
+        } else {
+          setAutopilotPreview(data.data as MerchandisingAutopilotResult);
+          toast({
+            variant: "success",
+            title: "AI suggestions ready",
+            description: "Review below, then apply with one click.",
+          });
+        }
+      } else {
+        toastError("Autopilot failed", data.error ?? "Could not run autopilot.");
+      }
+    } catch {
+      toastError("Autopilot failed", "Network error.");
+    } finally {
+      setAutopilotLoading(false);
+      setAutopilotApplying(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -421,9 +473,86 @@ export default function MerchandisingPage() {
         <h1 className="text-display-h2 text-foreground">Merchandising</h1>
         <p className="mt-1 text-body text-muted-foreground">
           Curate which products appear in Best Sellers, New Arrivals, and Deals
-          collections on the storefront.
+          collections — or let AI autopilot pick them for you.
         </p>
       </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI Merchandising Autopilot
+          </CardTitle>
+          <p className="text-[13px] text-muted-foreground">
+            Analyzes stock, price, ratings, and tags to suggest Best Sellers, New Arrivals, and
+            Deals — one click to apply.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <AiAssistButton
+              label="Preview suggestions"
+              loading={autopilotLoading}
+              disabled={autopilotApplying}
+              onClick={() => runAutopilot(false)}
+            />
+            {autopilotPreview && (
+              <Button
+                onClick={() => runAutopilot(true)}
+                disabled={autopilotApplying}
+              >
+                {autopilotApplying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Apply all suggestions
+              </Button>
+            )}
+          </div>
+          {autopilotPreview && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="mb-2 text-small font-semibold">
+                  Best Sellers ({autopilotPreview.bestsellers.length})
+                </p>
+                <ul className="space-y-1 text-[12px] text-muted-foreground">
+                  {autopilotPreview.bestsellers.map((p) => (
+                    <li key={p.productId} className="truncate">
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="mb-2 text-small font-semibold">
+                  New Arrivals ({autopilotPreview.newArrivals.length})
+                </p>
+                <ul className="space-y-1 text-[12px] text-muted-foreground">
+                  {autopilotPreview.newArrivals.map((p) => (
+                    <li key={p.productId} className="truncate">
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="mb-2 text-small font-semibold">
+                  Deals ({autopilotPreview.deals.length})
+                </p>
+                <ul className="space-y-1 text-[12px] text-muted-foreground">
+                  {autopilotPreview.deals.map((p) => (
+                    <li key={p.productId} className="truncate">
+                      {p.name} — {formatPrice(p.salePrice)} →{" "}
+                      {formatPrice(p.compareAtPrice)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

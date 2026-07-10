@@ -9,7 +9,7 @@ import {
 } from "@/lib/i18n/ui-messages";
 import { getTranslationProviderInfo } from "@/lib/i18n/site-translate";
 import { defaultLocale } from "@/config/locales";
-import { HomepageSection, CatalogPage } from "@/models";
+import { HomepageSection, CatalogPage, Product } from "@/models";
 
 export const GET = withAuth(async () => {
   await connectDB();
@@ -34,8 +34,15 @@ export const GET = withAuth(async () => {
 
   const localeCoverage: Record<
     string,
-    { ui: number; uiTotal: number; homepage: number; catalog: number }
+    { ui: number; uiTotal: number; homepage: number; catalog: number; products: number; productsTotal: number }
   > = {};
+
+  const allProducts = await Product.find()
+    .select("translations status")
+    .lean();
+  const productTotal = allProducts.filter((p) =>
+    ["published", "draft"].includes(String(p.status))
+  ).length;
 
   for (const locale of targetLocales) {
     const uiTranslated = entries.filter(
@@ -59,6 +66,15 @@ export const GET = withAuth(async () => {
             (p.translations as Record<string, unknown>)[locale] as object
           ).length > 0
       ).length,
+      products: allProducts.filter(
+        (p) =>
+          ["published", "draft"].includes(String(p.status)) &&
+          (p.translations as Record<string, unknown>)?.[locale] &&
+          Boolean(
+            (p.translations as Record<string, { name?: string }>)[locale]?.name
+          )
+      ).length,
+      productsTotal: productTotal,
     };
   }
 

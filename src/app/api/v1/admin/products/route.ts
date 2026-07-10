@@ -55,7 +55,11 @@ export const POST = withAuth(async (request: NextRequest) => {
     await connectDB();
     const body = await request.json();
     const parsed = productSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.issues[0].message);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const field = issue.path.length ? `${issue.path.join(".")}: ` : "";
+      return apiError(`${field}${issue.message}`);
+    }
 
     const { categoryIds, brandId, media, weight, dimensions, ...rest } = parsed.data;
     const slug = rest.slug ?? slugify(rest.name);

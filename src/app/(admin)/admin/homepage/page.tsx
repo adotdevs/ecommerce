@@ -11,6 +11,8 @@ import { renderSectionEditor } from "@/components/admin/homepage/SectionEditor";
 import { Loader2, Save, Languages, ChevronDown, ChevronUp, Plus, Zap } from "lucide-react";
 import { defaultLocale, localeConfig, type LanguageEntry } from "@/config/locales";
 import { toastSaveSuccess, toastError, toast } from "@/hooks/use-toast";
+import { AiAssistButton, postAiSuggest } from "@/components/admin/AiAssistButton";
+import { Input } from "@/components/ds/input";
 
 type Locale = string;
 
@@ -56,6 +58,8 @@ export default function AdminHomepagePage() {
   const [activeLocale, setActiveLocale] = useState<Record<string, Locale>>({});
   const [siteLanguages, setSiteLanguages] = useState<LanguageEntry[]>([]);
   const [addingFlash, setAddingFlash] = useState(false);
+  const [aiPrompts, setAiPrompts] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const loadLanguages = () => {
     fetch("/api/v1/settings/languages")
@@ -237,6 +241,40 @@ export default function AdminHomepagePage() {
 
   const hasFlashSale = sections.some((s) => s.type === "flash_sale");
 
+  const generateSectionFromAi = async (section: Section) => {
+    if (!accessToken) return;
+    const prompt = aiPrompts[section._id]?.trim();
+    if (!prompt) {
+      toastError("Enter a prompt", 'e.g. "Generate a hero banner for summer sale"');
+      return;
+    }
+    setAiLoading(section._id);
+    try {
+      const res = await postAiSuggest<{ config: Record<string, unknown> }>(
+        accessToken,
+        "/api/v1/admin/ai/suggest-homepage-section",
+        {
+          sectionType: section.type,
+          prompt,
+          currentConfig: drafts[section._id] ?? section.config,
+        }
+      );
+      if (res.success && res.data?.config) {
+        setDrafts((d) => ({
+          ...d,
+          [section._id]: res.data!.config,
+        }));
+        toast({ variant: "success", title: "AI generated section content" });
+      } else {
+        toastError("AI failed", res.error ?? "Could not generate section.");
+      }
+    } catch {
+      toastError("AI failed", "Network error.");
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   const addFlashSaleSection = async () => {
     if (!accessToken || hasFlashSale) return;
     setAddingFlash(true);
@@ -313,8 +351,8 @@ export default function AdminHomepagePage() {
         <div>
           <h1 className="text-display-h2 text-foreground">Homepage Builder</h1>
           <p className="mt-1 text-body text-muted-foreground">
-            Edit all homepage text and images. Auto-translate uses{" "}
-            <strong>MyMemory (free)</strong> — no API key or credit card needed.
+            Edit all homepage text and images. Use AI to generate sections from a short prompt,
+            then Save &amp; Auto-translate for all languages.
           </p>
         </div>
         {!hasFlashSale && (
@@ -383,6 +421,25 @@ export default function AdminHomepagePage() {
 
               {isOpen && (
                 <CardContent className="space-y-6 border-t border-border pt-6">
+                  <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Label className="text-[12px]">Describe what you want</Label>
+                      <Input
+                        value={aiPrompts[section._id] ?? ""}
+                        onChange={(e) =>
+                          setAiPrompts((p) => ({ ...p, [section._id]: e.target.value }))
+                        }
+                        placeholder='e.g. "Hero banner for summer sale — 20% off shoes"'
+                      />
+                    </div>
+                    <AiAssistButton
+                      label="AI generate"
+                      variant="primary"
+                      loading={aiLoading === section._id}
+                      onClick={() => generateSectionFromAi(section)}
+                    />
+                  </div>
+
                   {renderSectionEditor(section.type, {
                     config: draft,
                     onChange: (config) =>

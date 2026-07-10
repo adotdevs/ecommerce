@@ -10,27 +10,30 @@ export const maxDuration = 300;
 
 const bodySchema = z.object({
   targetLocale: z.string().min(2),
+  provider: z.enum(["openai", "mymemory", "google", "none"]).optional(),
 });
 
 export const POST = withAuth(async (request: NextRequest) => {
-  if (!isAutoTranslationAvailable()) {
-    return apiError(
-      "Auto-translate is disabled. Set TRANSLATION_PROVIDER=mymemory in .env.local",
-      400
-    );
-  }
-
   try {
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return apiError(parsed.error.issues[0].message);
 
-    const { targetLocale } = parsed.data;
+    const { targetLocale, provider } = parsed.data;
     if (targetLocale === "en") {
       return apiError("English is the source language — pick another locale.", 400);
     }
 
-    const result = await runFullSiteTranslation(targetLocale);
+    if (!isAutoTranslationAvailable(provider)) {
+      return apiError(
+        provider === "openai"
+          ? "OpenAI not configured. Add OPENAI_API_KEY to .env.local"
+          : "Auto-translate is disabled for the selected provider.",
+        400
+      );
+    }
+
+    const result = await runFullSiteTranslation(targetLocale, provider);
     return apiSuccess(result);
   } catch (err) {
     console.error(err);

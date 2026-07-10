@@ -6,8 +6,13 @@ import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Badge } from "@/components/ds/badge";
 import { Input } from "@/components/ds/input";
+import { Label } from "@/components/ds/label";
+import { Textarea } from "@/components/ds/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
+import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, Search, Star, Sparkles, Tag } from "lucide-react";
+import { toast, toastError } from "@/hooks/use-toast";
+import { Loader2, Search, Star, Sparkles, Tag, Upload } from "lucide-react";
 
 interface Product {
   _id: string;
@@ -23,12 +28,24 @@ interface Product {
   media?: { url: string }[];
 }
 
+interface BulkImportResult {
+  name: string;
+  success: boolean;
+  productId?: string;
+  error?: string;
+}
+
 export default function AdminProductsPage() {
   const { accessToken } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkInput, setBulkInput] = useState("");
+  const [bulkPublish, setBulkPublish] = useState(false);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResults, setBulkResults] = useState<BulkImportResult[] | null>(null);
 
   const load = () => {
     if (!accessToken) return;
@@ -57,6 +74,41 @@ export default function AdminProductsPage() {
     p.pricing.compareAtPrice != null &&
     p.pricing.compareAtPrice > p.pricing.price;
 
+  const runBulkImport = async () => {
+    if (!accessToken || !bulkInput.trim()) return;
+    setBulkImporting(true);
+    setBulkResults(null);
+    try {
+      const res = await fetch("/api/v1/admin/products/bulk-import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          input: bulkInput,
+          publish: bulkPublish,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBulkResults(data.data?.results ?? []);
+        toast({
+          variant: "success",
+          title: "Bulk import complete",
+          description: `${data.data?.created ?? 0} created, ${data.data?.failed ?? 0} failed`,
+        });
+        load();
+      } else {
+        toastError("Import failed", data.error ?? "Could not import products.");
+      }
+    } catch {
+      toastError("Import failed", "Network error.");
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -70,10 +122,82 @@ export default function AdminProductsPage() {
             to curate Best Sellers, New Arrivals, and Deals.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/products/new">Add product</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkOpen((o) => !o)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk AI import
+          </Button>
+          <Button asChild>
+            <Link href="/admin/products/new">Add product</Link>
+          </Button>
+        </div>
       </div>
+
+      {bulkOpen && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Bulk AI product import
+            </CardTitle>
+            <p className="text-[13px] text-muted-foreground">
+              Paste product names (one per line or comma-separated). AI generates full catalog
+              entries — up to 30 at a time.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Product names</Label>
+              <Textarea
+                value={bulkInput}
+                onChange={(e) => setBulkInput(e.target.value)}
+                rows={8}
+                placeholder={`Nike Air Max 90\nAdidas Ultraboost\nLevi's 501 Jeans`}
+                disabled={bulkImporting}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="bulk-publish"
+                checked={bulkPublish}
+                onCheckedChange={setBulkPublish}
+                disabled={bulkImporting}
+              />
+              <Label htmlFor="bulk-publish" className="cursor-pointer">
+                Publish immediately (otherwise saved as drafts)
+              </Label>
+            </div>
+            <Button onClick={runBulkImport} disabled={bulkImporting || !bulkInput.trim()}>
+              {bulkImporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              {bulkImporting ? "Generating products…" : "Generate all with AI"}
+            </Button>
+            {bulkResults && (
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-3 text-[12px]">
+                {bulkResults.map((r) => (
+                  <div
+                    key={r.name}
+                    className={r.success ? "text-green-700" : "text-destructive"}
+                  >
+                    {r.success ? "✓" : "✗"} {r.name}
+                    {r.error ? ` — ${r.error}` : r.productId ? (
+                      <Link
+                        href={`/admin/products/${r.productId}`}
+                        className="ml-1 underline"
+                      >
+                        Edit
+                      </Link>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <div className="relative min-w-[200px] flex-1 max-w-sm">

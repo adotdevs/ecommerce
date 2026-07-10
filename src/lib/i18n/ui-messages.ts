@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { defaultLocale, type Locale } from "@/config/locales";
-import { translateTexts } from "@/lib/i18n/translate";
+import { translateTexts, type TranslationProvider } from "@/lib/i18n/translate";
 import {
   collectTranslatableStrings,
   applyTranslationsToObject,
@@ -105,7 +105,8 @@ export async function getUiTranslationsForLocales(locales: string[]) {
 
 export async function translateUiMessagesToLocale(
   targetLocale: Locale,
-  sourceLocale: Locale = defaultLocale
+  sourceLocale: Locale = defaultLocale,
+  provider?: TranslationProvider
 ): Promise<{ translated: number; locale: string }> {
   if (targetLocale === sourceLocale) {
     return { translated: 0, locale: targetLocale };
@@ -121,7 +122,8 @@ export async function translateUiMessagesToLocale(
   const translatedValues = await translateTexts(
     fields.map((f) => f.value),
     targetLocale,
-    sourceLocale
+    sourceLocale,
+    provider
   );
 
   const pathMap: Record<string, string> = {};
@@ -138,7 +140,8 @@ export async function translateUiMessagesToLocale(
 export async function translateConfigToLocale(
   config: Record<string, unknown>,
   targetLocale: Locale,
-  sourceLocale: Locale = defaultLocale
+  sourceLocale: Locale = defaultLocale,
+  provider?: TranslationProvider
 ): Promise<Record<string, unknown>> {
   const fields = collectTranslatableStrings(config);
   if (fields.length === 0) return {};
@@ -146,7 +149,8 @@ export async function translateConfigToLocale(
   const translatedValues = await translateTexts(
     fields.map((f) => f.value),
     targetLocale,
-    sourceLocale
+    sourceLocale,
+    provider
   );
 
   const pathMap: Record<string, string> = {};

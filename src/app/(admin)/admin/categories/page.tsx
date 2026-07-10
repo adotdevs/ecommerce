@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ds/label";
 import { Textarea } from "@/components/ds/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { ImageUpload } from "@/components/admin/homepage/ImageUpload";
+import { AiAssistButton, postAiSuggest } from "@/components/admin/AiAssistButton";
 import { Loader2, Pencil, Plus, Trash2, ExternalLink } from "lucide-react";
 import { toast, toastError, toastSaveSuccess } from "@/hooks/use-toast";
 
@@ -44,6 +45,8 @@ export default function AdminCategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () => {
     if (!accessToken) return;
@@ -78,6 +81,50 @@ export default function AdminCategoriesPage() {
     setEditingId(null);
     setForm(emptyForm);
   };
+
+  const fillFromAi = async (name: string, parentId?: string) => {
+    if (!accessToken || !name.trim()) return;
+    setAiLoading(true);
+    try {
+      const parentName = parentId
+        ? categories.find((c) => c._id === parentId)?.name
+        : undefined;
+      const res = await postAiSuggest<{
+        description: string;
+        seoTitle: string;
+        seoDescription: string;
+      }>(accessToken, "/api/v1/admin/ai/suggest-category", {
+        name: name.trim(),
+        parentName,
+      });
+      if (res.success && res.data) {
+        setForm((f) => ({
+          ...f,
+          description: res.data!.description || f.description,
+          seoTitle: res.data!.seoTitle || f.seoTitle,
+          seoDescription: res.data!.seoDescription || f.seoDescription,
+        }));
+        toast({ variant: "success", title: "AI filled category copy" });
+      } else {
+        toastError("AI failed", res.error ?? "Could not generate content.");
+      }
+    } catch {
+      toastError("AI failed", "Network error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editingId || !form.name.trim() || form.description.trim()) return;
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    aiDebounceRef.current = setTimeout(() => {
+      void fillFromAi(form.name, form.parentId || undefined);
+    }, 1200);
+    return () => {
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    };
+  }, [form.name, form.parentId, editingId]);
 
   const payload = () => ({
     name: form.name,
@@ -213,7 +260,15 @@ export default function AdminCategoriesPage() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label>Description</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Description</Label>
+                  <AiAssistButton
+                    label="AI write"
+                    loading={aiLoading}
+                    disabled={!form.name.trim()}
+                    onClick={() => fillFromAi(form.name, form.parentId || undefined)}
+                  />
+                </div>
                 <Textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}

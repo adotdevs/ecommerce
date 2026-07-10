@@ -8,6 +8,7 @@ import {
 } from "@/lib/cms/resolve-links";
 import { toProductCardData } from "@/lib/catalog/product-card";
 import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
+import type { Locale } from "@/config/locales";
 
 export function isSectionVisible(section: IHomepageSection): boolean {
   if (!section.enabled) return false;
@@ -22,36 +23,46 @@ export function isSectionVisible(section: IHomepageSection): boolean {
 }
 
 export async function resolveSectionProducts(
-  productIds: string[]
+  productIds: string[],
+  locale?: Locale
 ): Promise<ReturnType<typeof toProductCardData>[]> {
   if (!productIds.length) return [];
   const products = await Product.find({
     _id: { $in: productIds },
     status: "published",
   }).lean();
-  return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
+  return products.map((p) =>
+    toProductCardData(p as unknown as Record<string, unknown>, locale)
+  );
 }
 
-export async function resolveFeaturedProducts(limit = 8) {
+export async function resolveFeaturedProducts(limit = 8, locale?: Locale) {
   const products = await Product.find({ status: "published", featured: true })
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
-  return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
+  return products.map((p) =>
+    toProductCardData(p as unknown as Record<string, unknown>, locale)
+  );
 }
 
-export async function resolveHomepageProducts(config: Record<string, unknown>) {
+export async function resolveHomepageProducts(
+  config: Record<string, unknown>,
+  locale?: Locale
+) {
   const mode = (config.selectionMode as string) ?? "auto";
   const links = (config.productLinks as string[]) ?? [];
 
   if (mode === "manual" && links.length > 0) {
     const products = await resolveProductsByLinks(links);
     if (products.length > 0) {
-      return products.map((p) => toProductCardData(p as unknown as Record<string, unknown>));
+      return products.map((p) =>
+        toProductCardData(p as unknown as Record<string, unknown>, locale)
+      );
     }
   }
 
-  return resolveFeaturedProducts((config.limit as number) ?? 8);
+  return resolveFeaturedProducts((config.limit as number) ?? 8, locale);
 }
 
 export async function resolveHomepageCategories(config: Record<string, unknown>) {

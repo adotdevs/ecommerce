@@ -5,42 +5,67 @@ import { getTranslations } from "next-intl/server";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import { ProductDetailView } from "@/components/storefront/products/ProductDetailView";
 import { toProductCardData } from "@/lib/catalog/product-card";
+import { computeReviewSummary, syncProductRating } from "@/lib/reviews/sync-rating";
+import { localizeProductDoc } from "@/lib/i18n/product";
+import type { Locale } from "@/config/locales";
 import type { Metadata } from "next";
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: Locale; slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   await connectDB();
-  const { slug } = await params;
-  const product = await Product.findOne({ slug, status: "published" }).lean();
-  if (!product) return { title: "Product Not Found" };
+  const { slug, locale } = await params;
+  const raw = await Product.findOne({ slug, status: "published" }).lean();
+  if (!raw) return { title: "Product Not Found" };
+
+  const product = localizeProductDoc(
+    raw as unknown as Record<string, unknown>,
+    locale
+  );
 
   return {
-    title: product.seo?.title ?? product.name,
-    description: product.seo?.description ?? product.shortDescription,
-    keywords: product.seo?.keywords,
+    title: (product.seo as { title?: string })?.title ?? String(product.name),
+    description:
+      (product.seo as { description?: string })?.description ??
+      String(product.shortDescription ?? ""),
+    keywords: (product.seo as { keywords?: string[] })?.keywords,
     openGraph: {
-      title: product.seo?.title ?? product.name,
-      description: product.seo?.description,
-      images: product.media?.[0]?.url ? [product.media[0].url] : [],
+      title: (product.seo as { title?: string })?.title ?? String(product.name),
+      description: (product.seo as { description?: string })?.description,
+      images: Array.isArray(product.media) && product.media[0]
+        ? [(product.media[0] as { url: string }).url]
+        : [],
     },
   };
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
   await connectDB();
-  const { slug } = await params;
-  const product = await Product.findOne({ slug, status: "published" }).lean();
-  if (!product) notFound();
+  const { slug, locale } = await params;
+  const raw = await Product.findOne({ slug, status: "published" }).lean();
+  if (!raw) notFound();
+
+  const product = localizeProductDoc(
+    raw as unknown as Record<string, unknown>,
+    locale
+  );
+
+  const reviewSummary = await computeReviewSummary(raw._id);
+  if (
+    reviewSummary.count !== (raw.rating?.count ?? 0) ||
+    reviewSummary.average !== (raw.rating?.average ?? 0)
+  ) {
+    await syncProductRating(raw._id);
+  }
 
   const t = await getTranslations("products");
 
-  const related = await Product.find({
-    _id: { $ne: product._id },
+  const relatedRaw = await Product.find({
+    _id: { $ne: raw._id },
     status: "published",
-    categoryIds: { $in: product.categoryIds },
+    categoryIds: { $in: raw.categoryIds },
   })
     .limit(4)
     .lean();
@@ -52,64 +77,120 @@ export default async function ProductDetailPage({ params }: PageProps) {
     description: product.description,
     sku: product.sku,
     brand: { "@type": "Brand", name: product.brandName },
-    image: product.media?.map((m) => m.url),
+    image: (product.media as { url: string }[])?.map((m) => m.url),
     offers: {
       "@type": "Offer",
-      price: product.pricing.price,
-      priceCurrency: product.pricing.currency ?? "USD",
+      price: (product.pricing as { price: number }).price,
+      priceCurrency:
+        (product.pricing as { currency?: string }).currency ?? "USD",
       availability:
-        product.inventory.stock > 0
+        (product.inventory as { stock: number }).stock > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
     },
   };
 
+  const p = product as Record<string, unknown>;
+  const pricing = p.pricing as Record<string, unknown>;
+  const inventory = p.inventory as Record<string, unknown>;
+
   const productData = {
-    _id: product._id.toString(),
-    name: product.name,
-    slug: product.slug,
-    sku: product.sku,
-    brandName: product.brandName,
-    description: product.description,
-    shortDescription: product.shortDescription,
-    media: (product.media ?? []).map((m) => ({
-      url: String(m.url),
-      alt: m.alt ? String(m.alt) : undefined,
-      sortOrder: m.sortOrder,
-    })),
-    variants: (product.variants ?? []).map((v) => ({
-      id: String(v.id),
-      name: String(v.name),
-      sku: String(v.sku),
-      price: Number(v.price),
-      compareAtPrice: v.compareAtPrice != null ? Number(v.compareAtPrice) : undefined,
-      stock: Number(v.stock),
-      attributes: Object.fromEntries(
-        Object.entries(v.attributes ?? {}).map(([k, val]) => [k, String(val)])
-      ),
-    })),
+    _id: String(p._id),
+    name: String(p.name),
+    slug: String(p.slug),
+    sku: String(p.sku),
+    brandName: p.brandName != null ? String(p.brandName) : undefined,
+    description: p.description != null ? String(p.description) : undefined,
+    shortDescription:
+      p.shortDescription != null ? String(p.shortDescription) : undefined,
+    media: ((p.media as unknown[]) ?? []).map((m) => {
+      const item = m as Record<string, unknown>;
+      return {
+        url: String(item.url),
+        alt: item.alt ? String(item.alt) : undefined,
+        sortOrder: item.sortOrder as number | undefined,
+      };
+    }),
+    variantOptions: ((p.variantOptions as unknown[]) ?? []).map((g) => {
+      const group = g as Record<string, unknown>;
+      return {
+        id: String(group.id),
+        name: String(group.name),
+        type: group.type as
+          | "color"
+          | "size"
+          | "shoe_size"
+          | "apparel_size"
+          | "material"
+          | "style"
+          | "capacity"
+          | "custom",
+        values: ((group.values as unknown[]) ?? []).map((v) => {
+          const val = v as Record<string, unknown>;
+          return {
+            value: String(val.value),
+            label: String(val.label ?? val.value),
+            hex: val.hex ? String(val.hex) : undefined,
+          };
+        }),
+      };
+    }),
+    variants: ((p.variants as unknown[]) ?? []).map((v) => {
+      const variant = v as Record<string, unknown>;
+      return {
+        id: String(variant.id),
+        name: String(variant.name),
+        sku: String(variant.sku),
+        price: Number(variant.price),
+        compareAtPrice:
+          variant.compareAtPrice != null
+            ? Number(variant.compareAtPrice)
+            : undefined,
+        stock: Number(variant.stock),
+        attributes: Object.fromEntries(
+          Object.entries(
+            (variant.attributes as Record<string, unknown>) ?? {}
+          ).map(([k, val]) => [k, String(val)])
+        ),
+      };
+    }),
     pricing: {
-      price: Number(product.pricing.price),
+      price: Number(pricing.price),
       compareAtPrice:
-        product.pricing.compareAtPrice != null
-          ? Number(product.pricing.compareAtPrice)
+        pricing.compareAtPrice != null
+          ? Number(pricing.compareAtPrice)
           : undefined,
-      currency: product.pricing.currency
-        ? String(product.pricing.currency)
-        : undefined,
+      currency: pricing.currency != null ? String(pricing.currency) : undefined,
     },
     inventory: {
-      stock: Number(product.inventory.stock),
+      stock: Number(inventory.stock),
     },
-    specifications: (product.specifications ?? []).map((s) => ({
-      key: String(s.key),
-      value: String(s.value),
-    })),
-    faqs: (product.faqs ?? []).map((f) => ({
-      question: String(f.question),
-      answer: String(f.answer),
-    })),
+    specifications: ((p.specifications as unknown[]) ?? []).map((s) => {
+      const spec = s as Record<string, unknown>;
+      return { key: String(spec.key), value: String(spec.value) };
+    }),
+    faqs: ((p.faqs as unknown[]) ?? []).map((f) => {
+      const faq = f as Record<string, unknown>;
+      return {
+        question: String(faq.question),
+        answer: String(faq.answer),
+      };
+    }),
+    rating: {
+      average: reviewSummary.average,
+      count: reviewSummary.count,
+    },
   };
+
+  if (productData.rating.count > 0) {
+    Object.assign(jsonLd, {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: productData.rating.average,
+        reviewCount: productData.rating.count,
+      },
+    });
+  }
 
   return (
     <>
@@ -120,14 +201,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <div className="container-store py-8 md:py-12">
         <ProductDetailView product={productData} />
 
-        {related.length > 0 && (
+        {relatedRaw.length > 0 && (
           <section className="mt-16 border-t border-border pt-16 md:mt-24 md:pt-24">
             <h2 className="mb-8 text-display-h3 text-foreground">{t("related")}</h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-              {related.map((p) => (
+              {relatedRaw.map((rel) => (
                 <ProductCard
-                  key={String(p._id)}
-                  product={toProductCardData(p as unknown as Record<string, unknown>)}
+                  key={String(rel._id)}
+                  product={toProductCardData(
+                    rel as unknown as Record<string, unknown>,
+                    locale
+                  )}
                 />
               ))}
             </div>

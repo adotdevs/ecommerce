@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Upload,
   X,
@@ -26,6 +26,30 @@ interface ProductMediaGalleryProps {
   value: ProductMediaItem[];
   onChange: (media: ProductMediaItem[]) => void;
   accessToken: string;
+  /** Product name — AI writes alt text on upload */
+  productName?: string;
+}
+
+async function fetchAiAltText(
+  accessToken: string,
+  productName: string,
+  imageIndex: number
+): Promise<string | null> {
+  try {
+    const res = await fetch("/api/v1/admin/ai/suggest-alt-text", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ productName, imageIndex }),
+    });
+    const json = await res.json();
+    if (!json.success) return null;
+    return (json.data?.alt as string) || null;
+  } catch {
+    return null;
+  }
 }
 
 function isHttpUrl(value: string) {
@@ -41,74 +65,88 @@ export function ProductMediaGallery({
   value,
   onChange,
   accessToken,
+  productName,
 }: ProductMediaGalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const valueRef = useRef(value);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [uploadIndex, setUploadIndex] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
 
-  const uploadFile = (file: File) => {
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  const uploadSingle = (file: File): Promise<string | null> =>
+    new Promise((resolve) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "products");
+
+      const xhr = new XMLHttpRequest();
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data.success && data.data?.url ? data.data.url : null);
+          } catch {
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      });
+      xhr.addEventListener("error", () => resolve(null));
+      xhr.open("POST", "/api/v1/admin/upload");
+      xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+      xhr.send(formData);
+    });
+
+  const uploadFiles = async (files: File[]) => {
+    if (!files.length) return;
     setError(null);
     setUploading(true);
-    setProgress(0);
+    setUploadIndex({ done: 0, total: files.length });
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("folder", "products");
+    const startLength = valueRef.current.length;
+    const added: ProductMediaItem[] = [];
+    let failed = 0;
 
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        setProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    });
-
-    xhr.addEventListener("load", () => {
-      setUploading(false);
-      setProgress(0);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          if (data.success && data.data?.url) {
-            const newItem: ProductMediaItem = {
-              url: data.data.url,
-              alt: "",
-              type: "image",
-              sortOrder: value.length,
-            };
-            onChange([...value, newItem]);
-          } else {
-            setError(data.error ?? "Upload failed");
-          }
-        } catch {
-          setError("Invalid server response");
-        }
+    for (let i = 0; i < files.length; i++) {
+      const url = await uploadSingle(files[i]);
+      if (url) {
+        const imageIndex = startLength + added.length;
+        const alt =
+          productName?.trim() && accessToken
+            ? (await fetchAiAltText(accessToken, productName.trim(), imageIndex)) ?? ""
+            : "";
+        added.push({
+          url,
+          alt,
+          type: "image",
+          sortOrder: imageIndex,
+        });
       } else {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          setError(data.error ?? `Upload failed (${xhr.status})`);
-        } catch {
-          setError(`Upload failed (${xhr.status})`);
-        }
+        failed++;
       }
-    });
+      setUploadIndex({ done: i + 1, total: files.length });
+    }
 
-    xhr.addEventListener("error", () => {
-      setUploading(false);
-      setProgress(0);
-      setError("Network error during upload");
-    });
+    if (added.length) {
+      onChange([...valueRef.current, ...added]);
+    }
+    if (failed > 0) {
+      setError(`${failed} file(s) failed to upload.`);
+    }
 
-    xhr.open("POST", "/api/v1/admin/upload");
-    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-    xhr.send(formData);
+    setUploading(false);
+    setUploadIndex({ done: 0, total: 0 });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-    Array.from(files).forEach(uploadFile);
+    void uploadFiles(Array.from(files));
     e.target.value = "";
   };
 
@@ -135,13 +173,23 @@ export function ProductMediaGallery({
     onChange(next.map((item, i) => ({ ...item, sortOrder: i })));
   };
 
-  const addUrl = (url: string) => {
+  const addUrl = async (url: string) => {
     if (!isHttpUrl(url)) return;
+    const imageIndex = value.length;
+    const alt =
+      productName?.trim() && accessToken
+        ? (await fetchAiAltText(accessToken, productName.trim(), imageIndex)) ?? ""
+        : "";
     onChange([
       ...value,
-      { url, alt: "", type: "image", sortOrder: value.length },
+      { url, alt, type: "image", sortOrder: imageIndex },
     ]);
   };
+
+  const progressPct =
+    uploadIndex.total > 0
+      ? Math.round((uploadIndex.done / uploadIndex.total) * 100)
+      : 0;
 
   return (
     <div className="space-y-4">
@@ -149,7 +197,8 @@ export function ProductMediaGallery({
         <div>
           <Label>Product images</Label>
           <p className="text-[12px] text-muted-foreground">
-            First image is the primary thumbnail. Drag order with arrows.
+            Select multiple files at once. First image is the primary thumbnail.
+            {productName?.trim() ? " AI writes alt text on upload." : ""}
           </p>
         </div>
         <Button
@@ -171,13 +220,15 @@ export function ProductMediaGallery({
       {uploading && (
         <div className="space-y-1">
           <div className="flex justify-between text-[12px] text-muted-foreground">
-            <span>Uploading…</span>
-            <span>{progress}%</span>
+            <span>
+              Uploading {uploadIndex.done} of {uploadIndex.total}…
+            </span>
+            <span>{progressPct}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-border">
             <div
               className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progressPct}%` }}
             />
           </div>
         </div>
@@ -197,7 +248,7 @@ export function ProductMediaGallery({
         >
           <Upload className="h-10 w-10 text-muted-foreground" />
           <span className="text-small text-muted-foreground">
-            Upload product images (JPEG, PNG, WebP — max 5MB each)
+            Upload product images (JPEG, PNG, WebP — max 5MB each, multiple allowed)
           </span>
         </button>
       ) : (
@@ -284,7 +335,7 @@ export function ProductMediaGallery({
               if (e.key === "Enter") {
                 e.preventDefault();
                 const input = e.currentTarget;
-                addUrl(input.value);
+                void addUrl(input.value);
                 input.value = "";
               }
             }}
@@ -297,7 +348,7 @@ export function ProductMediaGallery({
                 "media-url-input"
               ) as HTMLInputElement;
               if (input?.value) {
-                addUrl(input.value);
+                void addUrl(input.value);
                 input.value = "";
               }
             }}

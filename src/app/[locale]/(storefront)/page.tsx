@@ -52,7 +52,7 @@ async function getHomepageSections(locale: Locale) {
         localizedConfig = await enrichConfigFromProductLink(localizedConfig);
       }
       if (section.type === "featured_products" || section.type === "flash_sale") {
-        localizedConfig.products = await resolveHomepageProducts(localizedConfig);
+        localizedConfig.products = await resolveHomepageProducts(localizedConfig, locale);
       }
       if (section.type === "category_showcase") {
         localizedConfig.categories = await resolveHomepageCategories(localizedConfig);

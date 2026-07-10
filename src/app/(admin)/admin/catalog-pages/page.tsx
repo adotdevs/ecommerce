@@ -13,6 +13,7 @@ import { defaultLocale, localeConfig, type LanguageEntry } from "@/config/locale
 import { toastSaveSuccess, toastError, toast } from "@/hooks/use-toast";
 import { CATALOG_PAGE_META } from "@/lib/cms/catalog-pages";
 import { ImageUpload } from "@/components/admin/homepage/ImageUpload";
+import { AiAssistButton, postAiSuggest } from "@/components/admin/AiAssistButton";
 
 type Locale = string;
 
@@ -76,6 +77,8 @@ export default function AdminCatalogPagesPage() {
   const [translating, setTranslating] = useState<string | null>(null);
   const [siteLanguages, setSiteLanguages] = useState<LanguageEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiHints, setAiHints] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const loadLanguages = () => {
     fetch("/api/v1/settings/languages")
@@ -188,6 +191,34 @@ export default function AdminCatalogPagesPage() {
     }
   };
 
+  const fillCatalogFromAi = async (page: CatalogPageDoc) => {
+    if (!accessToken) return;
+    setAiLoading(page._id);
+    try {
+      const res = await postAiSuggest<Record<string, string>>(
+        accessToken,
+        "/api/v1/admin/ai/suggest-catalog-page",
+        {
+          slug: page.slug,
+          hint: aiHints[page._id]?.trim() || undefined,
+        }
+      );
+      if (res.success && res.data) {
+        setDrafts((d) => ({
+          ...d,
+          [page._id]: { ...d[page._id], ...res.data },
+        }));
+        toast({ variant: "success", title: "AI filled page copy" });
+      } else {
+        toastError("AI failed", res.error ?? "Could not generate copy.");
+      }
+    } catch {
+      toastError("AI failed", "Network error.");
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   const saveTranslation = async (id: string, locale: Locale) => {
     setSaving(id);
     try {
@@ -287,6 +318,24 @@ export default function AdminCatalogPagesPage() {
 
               {isOpen && (
                 <CardContent className="space-y-6 border-t border-border pt-6">
+                  <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border bg-secondary/30 p-4 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Label className="text-[12px]">AI prompt (optional)</Label>
+                      <Input
+                        value={aiHints[page._id] ?? ""}
+                        onChange={(e) =>
+                          setAiHints((h) => ({ ...h, [page._id]: e.target.value }))
+                        }
+                        placeholder='e.g. "Summer sale — bold, urgent tone"'
+                      />
+                    </div>
+                    <AiAssistButton
+                      label="AI write all fields"
+                      loading={aiLoading === page._id}
+                      onClick={() => fillCatalogFromAi(page)}
+                    />
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     {FIELDS.filter((f) => !f.skip).map((f) => (
                       <Field

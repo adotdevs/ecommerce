@@ -20,6 +20,19 @@ const productMediaSchema = z.object({
   sortOrder: z.number().default(0),
 });
 
+const variantOptionValueSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+  hex: z.string().optional(),
+});
+
+const variantOptionGroupSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  type: z.string(),
+  values: z.array(variantOptionValueSchema),
+});
+
 const productVariantSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -52,6 +65,7 @@ const productFieldsSchema = z.object({
   tags: z.array(z.string()).optional(),
   media: z.array(productMediaSchema).optional(),
   variants: z.array(productVariantSchema).optional(),
+  variantOptions: z.array(variantOptionGroupSchema).optional(),
   pricing: z.object({
     price: z.number().min(0),
     compareAtPrice: z.number().optional().nullable(),
@@ -117,6 +131,13 @@ export const brandSchema = z.object({
   logo: z.string().optional(),
   description: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),
+  seo: z
+    .object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      keywords: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const homepageSectionSchema = z.object({

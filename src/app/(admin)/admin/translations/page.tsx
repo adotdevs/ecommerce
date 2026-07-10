@@ -19,7 +19,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Package,
 } from "lucide-react";
+import type { TranslationProvider } from "@/lib/i18n/translate";
 
 interface TranslationEntry {
   namespace: string;
@@ -34,10 +36,18 @@ interface LocaleCoverage {
   uiTotal: number;
   homepage: number;
   catalog: number;
+  products: number;
+  productsTotal: number;
 }
 
 interface TranslationData {
-  provider: { provider: string; available: boolean };
+  provider: {
+    provider: string;
+    activeProvider?: string;
+    availableProviders?: string[];
+    openAiConfigured?: boolean;
+    available: boolean;
+  };
   languages: LanguageEntry[];
   namespaces: string[];
   totalKeys: number;
@@ -55,6 +65,7 @@ export default function AdminTranslationsPage() {
   const [loading, setLoading] = useState(true);
   const [translating, setTranslating] = useState(false);
   const [targetLocale, setTargetLocale] = useState("");
+  const [provider, setProvider] = useState<TranslationProvider>("openai");
   const [search, setSearch] = useState("");
   const [namespaceFilter, setNamespaceFilter] = useState("all");
 
@@ -68,6 +79,9 @@ export default function AdminTranslationsPage() {
       .then((d) => {
         if (d.success) {
           setData(d.data);
+          const avail = (d.data.provider?.availableProviders ?? []) as TranslationProvider[];
+          if (avail.includes("openai")) setProvider("openai");
+          else if (avail.includes("mymemory")) setProvider("mymemory");
           setTargetLocale((prev) => {
             if (prev) return prev;
             const langs = (d.data.languages as LanguageEntry[]).filter(
@@ -115,7 +129,7 @@ export default function AdminTranslationsPage() {
     if (!accessToken || !targetLocale) return;
     if (
       !confirm(
-        `Translate ALL website text to ${localeConfig[targetLocale]?.label ?? targetLocale}?\n\nThis includes UI labels, homepage sections, and catalog pages. It may take several minutes.`
+        `Translate the ENTIRE website to ${localeConfig[targetLocale]?.label ?? targetLocale}?\n\nProvider: ${provider}\n\nIncludes: UI labels, homepage, catalog pages, and ALL product titles/descriptions. May take several minutes.`
       )
     ) {
       return;
@@ -129,7 +143,7 @@ export default function AdminTranslationsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ targetLocale }),
+        body: JSON.stringify({ targetLocale, provider }),
       });
       const result = await res.json();
 
@@ -138,7 +152,7 @@ export default function AdminTranslationsPage() {
         toast({
           variant: "success",
           title: "Translation complete",
-          description: `UI: ${r.ui.translated} strings · Homepage: ${r.homepage.sections} sections · Catalog: ${r.catalogPages.pages} pages`,
+          description: `UI: ${r.ui.translated} · Homepage: ${r.homepage.sections} · Catalog: ${r.catalogPages.pages} · Products: ${r.products?.products ?? 0}`,
         });
         load();
       } else {
@@ -176,6 +190,25 @@ export default function AdminTranslationsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select
+            className="flex h-10 min-w-[140px] rounded-lg border border-border bg-background px-3 text-sm"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as TranslationProvider)}
+            disabled={translating}
+            title="Translation provider"
+          >
+            {(data?.provider.availableProviders ?? ["mymemory"]).map((p) => (
+              <option key={p} value={p}>
+                {p === "openai"
+                  ? "OpenAI (recommended)"
+                  : p === "mymemory"
+                    ? "MyMemory (free)"
+                    : p === "google"
+                      ? "Google Translate"
+                      : "Manual"}
+              </option>
+            ))}
+          </select>
+          <select
             className="flex h-10 min-w-[160px] rounded-lg border border-border bg-background px-3 text-sm"
             value={targetLocale}
             onChange={(e) => setTargetLocale(e.target.value)}
@@ -198,7 +231,7 @@ export default function AdminTranslationsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardContent className="flex items-center gap-3 pt-6">
             <Languages className="h-8 w-8 text-primary" />
@@ -236,13 +269,45 @@ export default function AdminTranslationsPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 pt-6">
+            <CheckCircle2 className="h-8 w-8 text-indigo-600" />
+            <div>
+              <p className="text-2xl font-bold">
+                {coverage
+                  ? `${coverage.catalog}/${data?.cms.catalogPages.length ?? 0}`
+                  : "—"}
+              </p>
+              <p className="text-[12px] text-muted-foreground">Catalog pages</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <Package className="h-8 w-8 text-violet-600" />
+            <div>
+              <p className="text-2xl font-bold">
+                {coverage
+                  ? `${coverage.products}/${coverage.productsTotal}`
+                  : "—"}
+              </p>
+              <p className="text-[12px] text-muted-foreground">
+                Products ({targetLabel})
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-6">
             <AlertCircle className="h-8 w-8 text-amber-600" />
             <div>
               <p className="text-sm font-medium">
                 {data?.provider.provider ?? "—"}
               </p>
               <p className="text-[12px] text-muted-foreground">
-                {data?.provider.available ? "Auto-translate on" : "Manual only"}
+                {data?.provider.openAiConfigured
+                  ? "OpenAI ready"
+                  : data?.provider.available
+                    ? "Auto-translate on"
+                    : "Manual only"}
               </p>
             </div>
           </CardContent>
@@ -357,9 +422,9 @@ export default function AdminTranslationsPage() {
           </div>
 
           <p className="text-[12px] text-muted-foreground">
-            Showing {filteredEntries.length} of {data?.totalKeys ?? 0} strings.
-            CMS homepage & catalog page copy is translated in the background
-            when you click &quot;Translate all&quot;.
+            Showing {filteredEntries.length} of {data?.totalKeys ?? 0} UI strings.
+            Product names & descriptions are translated via &quot;Translate all&quot;
+            (stored per product). Published products auto-translate when you publish.
           </p>
         </CardContent>
       </Card>

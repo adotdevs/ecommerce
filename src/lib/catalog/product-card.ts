@@ -1,3 +1,6 @@
+import type { Locale } from "@/config/locales";
+import { localizeProductDoc } from "@/lib/i18n/product";
+
 /** Plain product shape safe to pass into Client Components (no ObjectIds). */
 export interface ProductCardData {
   _id: string;
@@ -8,14 +11,19 @@ export interface ProductCardData {
   brandName?: string;
   featured?: boolean;
   inventory?: { stock: number };
+  rating?: { average: number; count: number };
 }
 
 /** Pick only card fields and coerce Mongo ObjectIds / Dates to plain values. */
-export function toProductCardData(product: Record<string, unknown> | null | undefined): ProductCardData {
-  const p = product ?? {};
+export function toProductCardData(
+  product: Record<string, unknown> | null | undefined,
+  locale?: Locale
+): ProductCardData {
+  const p = locale ? localizeProductDoc(product ?? {}, locale) : (product ?? {});
   const pricing = (p.pricing as Record<string, unknown> | undefined) ?? {};
   const inventory = (p.inventory as Record<string, unknown> | undefined) ?? {};
   const media = Array.isArray(p.media) ? p.media : [];
+  const rating = p.rating as Record<string, unknown> | undefined;
 
   return {
     _id: String(p._id ?? ""),
@@ -41,6 +49,10 @@ export function toProductCardData(product: Record<string, unknown> | null | unde
     featured: Boolean(p.featured),
     inventory: {
       stock: Number(inventory.stock ?? 0),
+    },
+    rating: {
+      average: Number(rating?.average ?? 0),
+      count: Number(rating?.count ?? 0),
     },
   };
 }

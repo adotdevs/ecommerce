@@ -5,8 +5,11 @@ import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
+import { Textarea } from "@/components/ds/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
+import { AiAssistButton, postAiSuggest } from "@/components/admin/AiAssistButton";
 import { toast, toastError } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface Category {
   _id: string;
@@ -21,16 +24,30 @@ interface Brand {
   logo?: string;
   description?: string;
   categoryIds?: string[];
+  seo?: {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+  };
 }
+
+const emptyForm = {
+  name: "",
+  description: "",
+  seoTitle: "",
+  seoDescription: "",
+  categoryIds: [] as string[],
+};
 
 export default function AdminBrandsPage() {
   const { accessToken } = useAuthStore();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: "", categoryIds: [] as string[] });
+  const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCats, setEditCats] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const load = () => {
     Promise.all([
@@ -64,6 +81,39 @@ export default function AdminBrandsPage() {
     }));
   };
 
+  const fillBrandFromAi = async () => {
+    if (!accessToken || !form.name.trim()) return;
+    setAiLoading(true);
+    try {
+      const catNames = form.categoryIds
+        .map((id) => categories.find((c) => c._id === id)?.name)
+        .filter(Boolean) as string[];
+      const res = await postAiSuggest<{
+        description: string;
+        seoTitle: string;
+        seoDescription: string;
+      }>(accessToken, "/api/v1/admin/ai/suggest-brand", {
+        name: form.name.trim(),
+        categories: catNames,
+      });
+      if (res.success && res.data) {
+        setForm((f) => ({
+          ...f,
+          description: res.data!.description || f.description,
+          seoTitle: res.data!.seoTitle || f.seoTitle,
+          seoDescription: res.data!.seoDescription || f.seoDescription,
+        }));
+        toast({ variant: "success", title: "AI filled brand copy" });
+      } else {
+        toastError("AI failed", res.error ?? "Could not generate content.");
+      }
+    } catch {
+      toastError("AI failed", "Network error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -74,12 +124,20 @@ export default function AdminBrandsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || undefined,
+          categoryIds: form.categoryIds,
+          seo: {
+            title: form.seoTitle || undefined,
+            description: form.seoDescription || undefined,
+          },
+        }),
       });
       const data = await res.json();
       if (data.success) {
         toast({ variant: "success", title: "Brand created" });
-        setForm({ name: "", categoryIds: [] });
+        setForm(emptyForm);
         load();
       } else {
         toastError("Create failed", data.error);
@@ -138,6 +196,38 @@ export default function AdminBrandsPage() {
                 />
               </div>
               <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Description</Label>
+                  <AiAssistButton
+                    label="AI write"
+                    loading={aiLoading}
+                    disabled={!form.name.trim()}
+                    onClick={fillBrandFromAi}
+                  />
+                </div>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  placeholder="Brand story — click AI write after name + categories"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>SEO title</Label>
+                <Input
+                  value={form.seoTitle}
+                  onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>SEO description</Label>
+                <Textarea
+                  value={form.seoDescription}
+                  onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Categories</Label>
                 <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2">
                   {categories.map((c) => (
@@ -156,6 +246,7 @@ export default function AdminBrandsPage() {
                 </div>
               </div>
               <Button type="submit" disabled={saving || form.categoryIds.length === 0}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Create
               </Button>
               {form.categoryIds.length === 0 && (

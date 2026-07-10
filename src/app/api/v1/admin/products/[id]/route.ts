@@ -24,7 +24,11 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     await connectDB();
     const body = await request.json();
     const parsed = productUpdateSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.issues[0].message);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const field = issue.path.length ? `${issue.path.join(".")}: ` : "";
+      return apiError(`${field}${issue.message}`);
+    }
 
     const existing = await Product.findById(params?.id);
     if (!existing) return apiNotFound();

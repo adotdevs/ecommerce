@@ -45,6 +45,7 @@ export const POST = withAuth(async (request: NextRequest, { params }) => {
           name: product.name,
           description: product.description,
           shortDescription: product.shortDescription,
+          highlights: product.highlights as string[] | undefined,
           warranty: product.warranty,
           seo: product.seo,
           specifications: product.specifications,

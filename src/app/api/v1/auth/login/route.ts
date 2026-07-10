@@ -5,9 +5,12 @@ import { verifyPassword } from "@/lib/auth/password";
 import {
   signAccessToken,
   signRefreshToken,
-  REFRESH_COOKIE,
-  ACCESS_COOKIE,
 } from "@/lib/auth/jwt";
+import {
+  REFRESH_TOKEN_JWT_EXPIRES_IN,
+  REFRESH_TOKEN_REMEMBER_ME_JWT_EXPIRES_IN,
+} from "@/lib/auth/session-config";
+import { appendAuthCookies } from "@/lib/auth/cookies";
 import { loginSchema } from "@/lib/validators";
 import { apiSuccess, apiError } from "@/lib/api/response";
 
@@ -41,8 +44,11 @@ export async function POST(request: NextRequest) {
       permissions,
     };
 
+    const refreshExpiresIn = parsed.data.rememberMe
+      ? REFRESH_TOKEN_REMEMBER_ME_JWT_EXPIRES_IN
+      : REFRESH_TOKEN_JWT_EXPIRES_IN;
     const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
+    const refreshToken = signRefreshToken(payload, refreshExpiresIn);
 
     const response = apiSuccess({
       user: {
@@ -56,15 +62,7 @@ export async function POST(request: NextRequest) {
       accessToken,
     });
 
-    const maxAge = parsed.data.rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
-    response.headers.append(
-      "Set-Cookie",
-      `${ACCESS_COOKIE}=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 15}`
-    );
-    response.headers.append(
-      "Set-Cookie",
-      `${REFRESH_COOKIE}=${refreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`
-    );
+    appendAuthCookies(response, accessToken, refreshToken, parsed.data.rememberMe);
 
     return response;
   } catch (err) {

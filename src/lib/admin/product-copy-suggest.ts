@@ -7,6 +7,39 @@ export interface ProductCopyInput {
   brand?: string;
 }
 
+const TITLE_LOWER_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "for",
+  "with",
+  "in",
+  "on",
+  "to",
+  "of",
+  "by",
+]);
+
+/** Title-case product names for storefront display. */
+export function formatProductTitle(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((word, i) => {
+      if (!word) return word;
+      const lower = word.toLowerCase();
+      if (i > 0 && TITLE_LOWER_WORDS.has(lower)) return lower;
+      if (/^\d/.test(word) || word.includes("GB") || word.includes("TB")) {
+        return word.toUpperCase() === word ? word : word;
+      }
+      if (word === word.toUpperCase() && word.length <= 4) return word;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
 export interface ProductCopySuggestion {
   shortDescription: string;
   description: string;
@@ -132,4 +165,11 @@ export function nameToSku(name: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 24);
   return sku || "SKU";
+}
+
+/** Unique catalog SKU — not derived from product title. */
+export function generateUniqueSku(prefix = "PRD"): string {
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const ts = Date.now().toString(36).slice(-4).toUpperCase();
+  return `${prefix}-${ts}${rand}`.slice(0, 24);
 }

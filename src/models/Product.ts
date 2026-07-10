@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   tags: string[];
   description?: string;
   shortDescription?: string;
+  highlights?: string[];
   media: {
     url: string;
     alt?: string;
@@ -45,7 +46,7 @@ export interface IProduct extends Document {
   };
   weight?: number;
   dimensions?: { length: number; width: number; height: number; unit: string };
-  specifications: { key: string; value: string }[];
+  specifications: { section?: string; key: string; value: string }[];
   faqs: { question: string; answer: string }[];
   warranty?: string;
   translations?: Record<
@@ -77,6 +78,25 @@ export interface IProduct extends Document {
   };
 }
 
+const VariantOptionValueSchema = new Schema(
+  {
+    value: String,
+    label: String,
+    hex: String,
+  },
+  { _id: false }
+);
+
+const VariantOptionGroupSchema = new Schema(
+  {
+    id: String,
+    name: String,
+    type: { type: String },
+    values: { type: [VariantOptionValueSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
@@ -90,6 +110,7 @@ const ProductSchema = new Schema<IProduct>(
     tags: [String],
     description: String,
     shortDescription: String,
+    highlights: [String],
     media: [
       {
         url: String,
@@ -109,20 +130,7 @@ const ProductSchema = new Schema<IProduct>(
         attributes: Schema.Types.Mixed,
       },
     ],
-    variantOptions: [
-      {
-        id: String,
-        name: String,
-        type: String,
-        values: [
-          {
-            value: String,
-            label: String,
-            hex: String,
-          },
-        ],
-      },
-    ],
+    variantOptions: { type: [VariantOptionGroupSchema], default: [] },
     pricing: {
       price: { type: Number, required: true },
       compareAtPrice: Number,
@@ -140,7 +148,7 @@ const ProductSchema = new Schema<IProduct>(
       height: Number,
       unit: { type: String, default: "cm" },
     },
-    specifications: [{ key: String, value: String }],
+    specifications: [{ section: String, key: String, value: String }],
     faqs: [{ question: String, answer: String }],
     warranty: String,
     translations: Schema.Types.Mixed,
@@ -171,6 +179,11 @@ ProductSchema.index({ sku: 1 }, { unique: true });
 ProductSchema.index({ status: 1, featured: 1 });
 ProductSchema.index({ name: "text", description: "text", shortDescription: "text", brandName: "text", categoryNames: "text", tags: "text", sku: "text", "seo.title": "text" });
 
-export const Product: Model<IProduct> =
-  mongoose.models.Product ??
-  mongoose.model<IProduct>("Product", ProductSchema);
+if (mongoose.models.Product) {
+  delete mongoose.models.Product;
+}
+
+export const Product: Model<IProduct> = mongoose.model<IProduct>(
+  "Product",
+  ProductSchema
+);

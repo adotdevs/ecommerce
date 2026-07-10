@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db/mongoose";
 import { Product } from "@/models";
 import { openAiChatJson } from "@/lib/ai/openai-client";
@@ -50,10 +51,19 @@ export async function computeMerchandisingSuggestions(): Promise<MerchandisingAu
     .slice(0, 15);
 
   const newArrivalRanked = [...inStock]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    .sort((a, b) => {
+      const ta =
+        (a as { createdAt?: Date }).createdAt?.getTime() ??
+        (typeof a._id === "object" && "getTimestamp" in a._id
+          ? (a._id as mongoose.Types.ObjectId).getTimestamp().getTime()
+          : 0);
+      const tb =
+        (b as { createdAt?: Date }).createdAt?.getTime() ??
+        (typeof b._id === "object" && "getTimestamp" in b._id
+          ? (b._id as mongoose.Types.ObjectId).getTimestamp().getTime()
+          : 0);
+      return tb - ta;
+    })
     .slice(0, 12);
 
   const dealCandidates = inStock
@@ -77,7 +87,7 @@ export async function computeMerchandisingSuggestions(): Promise<MerchandisingAu
       id: String(p._id),
       name: p.name,
       sku: p.sku,
-      createdAt: p.createdAt,
+      createdAt: (p as { createdAt?: Date }).createdAt,
     })),
     dealCandidates: dealCandidates.map((p) => ({
       id: String(p._id),

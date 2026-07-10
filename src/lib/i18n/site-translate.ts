@@ -144,6 +144,7 @@ export async function runFullSiteTranslation(
           name: product.name,
           description: product.description,
           shortDescription: product.shortDescription,
+          highlights: product.highlights as string[] | undefined,
           warranty: product.warranty,
           seo: product.seo,
           specifications: product.specifications,

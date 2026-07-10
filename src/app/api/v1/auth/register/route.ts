@@ -5,9 +5,8 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   signAccessToken,
   signRefreshToken,
-  REFRESH_COOKIE,
-  ACCESS_COOKIE,
 } from "@/lib/auth/jwt";
+import { appendAuthCookies } from "@/lib/auth/cookies";
 import { registerSchema, loginSchema } from "@/lib/validators";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import crypto from "crypto";
@@ -27,15 +26,7 @@ function setAuthCookies(
   refreshToken: string,
   rememberMe = false
 ) {
-  const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
-  response.headers.append(
-    "Set-Cookie",
-    `${ACCESS_COOKIE}=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 15}`
-  );
-  response.headers.append(
-    "Set-Cookie",
-    `${REFRESH_COOKIE}=${refreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`
-  );
+  appendAuthCookies(response, accessToken, refreshToken, rememberMe);
 }
 
 export async function POST(request: NextRequest) {

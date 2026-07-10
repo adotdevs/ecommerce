@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { motion } from "framer-motion";
 import { Flame, ShoppingBag, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ds/button";
@@ -77,7 +77,7 @@ export function FlashSaleCard({
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
         <div className="relative aspect-[5/4] overflow-hidden bg-[#16120c]">
           {image ? (
-            <Image
+            <RemoteImage
               src={image.url}
               alt={image.alt ?? product.name}
               fill

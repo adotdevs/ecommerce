@@ -6,13 +6,14 @@ export interface ProductTranslationFields {
   name?: string;
   description?: string;
   shortDescription?: string;
+  highlights?: string[];
   warranty?: string;
   seo?: {
     title?: string;
     description?: string;
     keywords?: string[];
   };
-  specifications?: { key: string; value: string }[];
+  specifications?: { section?: string; key: string; value: string }[];
   faqs?: { question: string; answer: string }[];
   variantOptions?: {
     id: string;
@@ -26,13 +27,14 @@ export interface TranslatableProduct {
   name: string;
   description?: string;
   shortDescription?: string;
+  highlights?: string[];
   warranty?: string;
   seo?: {
     title?: string;
     description?: string;
     keywords?: string[];
   };
-  specifications?: { key: string; value: string }[];
+  specifications?: { section?: string; key: string; value: string }[];
   faqs?: { question: string; answer: string }[];
   variantOptions?: VariantOptionGroup[];
   variants?: { id: string; name: string }[];
@@ -61,6 +63,13 @@ export async function buildProductTranslationOverlay(
       targetLocale,
       sourceLocale,
       provider
+    );
+  }
+  if (product.highlights?.length) {
+    overlay.highlights = await Promise.all(
+      product.highlights.map((h) =>
+        translateText(h, targetLocale, sourceLocale, provider)
+      )
     );
   }
   if (product.description?.trim()) {
@@ -110,6 +119,9 @@ export async function buildProductTranslationOverlay(
   if (product.specifications?.length) {
     overlay.specifications = await Promise.all(
       product.specifications.map(async (s) => ({
+        section: s.section
+          ? await translateText(s.section, targetLocale, sourceLocale, provider)
+          : undefined,
         key: await translateText(s.key, targetLocale, sourceLocale, provider),
         value: await translateText(s.value, targetLocale, sourceLocale, provider),
       }))

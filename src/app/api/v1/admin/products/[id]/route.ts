@@ -4,12 +4,15 @@ import { Product } from "@/models";
 import { withAuth } from "@/lib/api/authMiddleware";
 import { PERMISSIONS } from "@/config/permissions";
 import { productUpdateSchema } from "@/lib/validators";
-import { slugify } from "@/lib/utils";
 import { apiSuccess, apiError, apiNotFound } from "@/lib/api/response";
 import {
   normalizeMedia,
   resolveBrandFields,
   resolveCategoryFields,
+  resolveProductSlug,
+  resolveProductSku,
+  duplicateProductFieldMessage,
+  ProductFieldConflictError,
 } from "@/lib/admin/product-helpers";
 
 export const GET = withAuth(async (_request, { params }) => {
@@ -39,8 +42,21 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     if (weight !== undefined) update.weight = weight ?? undefined;
     if (dimensions !== undefined) update.dimensions = dimensions ?? undefined;
 
-    if (rest.name && !rest.slug) {
-      update.slug = slugify(rest.name);
+    if (parsed.data.slug !== undefined) {
+      const resolved = await resolveProductSlug({
+        name: rest.name ?? existing.name,
+        requestedSlug: rest.slug,
+        excludeProductId: String(existing._id),
+      });
+      update.slug = resolved.slug;
+    }
+
+    if (parsed.data.sku !== undefined && rest.sku) {
+      const resolved = await resolveProductSku({
+        sku: rest.sku,
+        excludeProductId: String(existing._id),
+      });
+      update.sku = resolved.sku;
     }
 
     if (categoryIds !== undefined) {
@@ -80,11 +96,14 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     return apiSuccess(product);
   } catch (err) {
     console.error(err);
-    const message =
-      err instanceof Error && err.message.includes("duplicate")
-        ? "SKU or slug already exists"
-        : "Failed to update product";
-    return apiError(message, 500);
+    if (err instanceof ProductFieldConflictError) {
+      return apiError(err.message, 409);
+    }
+    const duplicate = duplicateProductFieldMessage(err);
+    return apiError(
+      duplicate ?? "Failed to update product",
+      duplicate ? 409 : 500
+    );
   }
 }, PERMISSIONS.PRODUCTS_WRITE);
 

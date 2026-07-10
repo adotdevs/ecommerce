@@ -4,12 +4,15 @@ import { Product } from "@/models";
 import { withAuth } from "@/lib/api/authMiddleware";
 import { PERMISSIONS } from "@/config/permissions";
 import { productSchema } from "@/lib/validators";
-import { slugify } from "@/lib/utils";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import {
   normalizeMedia,
   resolveBrandFields,
   resolveCategoryFields,
+  resolveProductSlug,
+  resolveProductSku,
+  duplicateProductFieldMessage,
+  ProductFieldConflictError,
 } from "@/lib/admin/product-helpers";
 
 export const GET = withAuth(async (request: NextRequest) => {
@@ -62,7 +65,12 @@ export const POST = withAuth(async (request: NextRequest) => {
     }
 
     const { categoryIds, brandId, media, weight, dimensions, ...rest } = parsed.data;
-    const slug = rest.slug ?? slugify(rest.name);
+
+    const [{ slug, autoAdjusted: slugAdjusted }, { sku, autoAdjusted: skuAdjusted }] =
+      await Promise.all([
+        resolveProductSlug({ name: rest.name, requestedSlug: rest.slug }),
+        resolveProductSku({ sku: rest.sku }),
+      ]);
 
     const [categoryFields, brandFields] = await Promise.all([
       resolveCategoryFields(categoryIds ?? []),
@@ -72,6 +80,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     const product = await Product.create({
       ...rest,
       slug,
+      sku,
       weight: weight ?? undefined,
       dimensions: dimensions ?? undefined,
       media: normalizeMedia(media),
@@ -82,13 +91,27 @@ export const POST = withAuth(async (request: NextRequest) => {
         compareAtPrice: rest.pricing.compareAtPrice ?? undefined,
       },
     });
-    return apiSuccess(product, 201);
+    return apiSuccess(
+      {
+        ...product.toObject(),
+        _meta: {
+          slugAdjusted,
+          skuAdjusted,
+          ...(slugAdjusted ? { slug } : {}),
+          ...(skuAdjusted ? { sku } : {}),
+        },
+      },
+      201
+    );
   } catch (err) {
     console.error(err);
+    if (err instanceof ProductFieldConflictError) {
+      return apiError(err.message, 409);
+    }
+    const duplicate = duplicateProductFieldMessage(err);
     const message =
-      err instanceof Error && err.message.includes("duplicate")
-        ? "SKU or slug already exists"
-        : "Failed to create product";
-    return apiError(message, 500);
+      duplicate ??
+      (err instanceof Error ? err.message : "Failed to create product");
+    return apiError(message, duplicate ? 409 : 500);
   }
 }, PERMISSIONS.PRODUCTS_WRITE);

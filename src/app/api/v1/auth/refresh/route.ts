@@ -6,8 +6,8 @@ import {
   signRefreshToken,
   verifyRefreshToken,
   REFRESH_COOKIE,
-  ACCESS_COOKIE,
 } from "@/lib/auth/jwt";
+import { appendAuthCookies, appendClearAuthCookies } from "@/lib/auth/cookies";
 import { apiSuccess, apiError } from "@/lib/api/response";
 
 async function getUserPermissions(roles: string[]): Promise<string[]> {
@@ -42,14 +42,7 @@ export async function POST(request: NextRequest) {
     const newRefreshToken = signRefreshToken(newPayload);
 
     const response = apiSuccess({ accessToken });
-    response.headers.append(
-      "Set-Cookie",
-      `${ACCESS_COOKIE}=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 15}`
-    );
-    response.headers.append(
-      "Set-Cookie",
-      `${REFRESH_COOKIE}=${newRefreshToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`
-    );
+    appendAuthCookies(response, accessToken, newRefreshToken);
     return response;
   } catch {
     return apiError("Invalid refresh token", 401);
@@ -58,13 +51,6 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const response = NextResponse.json({ success: true });
-  response.headers.append(
-    "Set-Cookie",
-    `${ACCESS_COOKIE}=; Path=/; HttpOnly; Max-Age=0`
-  );
-  response.headers.append(
-    "Set-Cookie",
-    `${REFRESH_COOKIE}=; Path=/; HttpOnly; Max-Age=0`
-  );
+  appendClearAuthCookies(response);
   return response;
 }

@@ -1,5 +1,8 @@
 import type { Locale } from "@/config/locales";
-import type { VariantOptionGroup } from "@/lib/catalog/variant-options";
+import {
+  type VariantOptionGroup,
+  defaultAttributeKey,
+} from "@/lib/catalog/variant-options";
 import type { ProductTranslationFields } from "@/lib/i18n/product-translate";
 
 export interface LocalizableProduct {
@@ -12,8 +15,9 @@ export interface LocalizableProduct {
     description?: string;
     keywords?: string[];
   };
-  specifications?: { key: string; value: string }[];
+  specifications?: { section?: string; key: string; value: string }[];
   faqs?: { question: string; answer: string }[];
+  highlights?: string[];
   variantOptions?: VariantOptionGroup[];
   variants?: {
     id: string;
@@ -40,6 +44,7 @@ function mergeVariantOptions(
     return {
       ...g,
       name: tr.name ?? g.name,
+      attributeKey: g.attributeKey ?? defaultAttributeKey(g),
       values: g.values.map((v) => {
         const trVal = tr.values?.find((tv) => tv.value === v.value);
         return trVal?.label ? { ...v, label: trVal.label } : v;
@@ -57,7 +62,16 @@ function mergeVariants(
 
   return base.map((v) => {
     const tr = translated.find((t) => t.id === v.id);
-    return tr?.name ? { ...v, name: tr.name } : v;
+    if (!tr?.name) return v;
+    return {
+      ...v,
+      name: tr.name,
+      sku: v.sku,
+      price: v.price,
+      compareAtPrice: v.compareAtPrice,
+      stock: v.stock,
+      attributes: v.attributes,
+    };
   });
 }
 
@@ -75,6 +89,7 @@ export function localizeProduct<T extends LocalizableProduct>(
     name: tr.name ?? product.name,
     description: tr.description ?? product.description,
     shortDescription: tr.shortDescription ?? product.shortDescription,
+    highlights: tr.highlights?.length ? tr.highlights : product.highlights,
     warranty: tr.warranty ?? product.warranty,
     seo: { ...product.seo, ...tr.seo },
     specifications: tr.specifications?.length

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import Image from "next/image";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 
@@ -70,7 +70,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           : "border-border opacity-70 hover:border-muted-foreground hover:opacity-100"
       )}
     >
-      <Image src={img.url} alt="" fill className="object-cover" sizes="72px" />
+      <RemoteImage src={img.url} alt="" fill className="object-contain p-1" sizes="72px" />
     </button>
   );
 
@@ -88,16 +88,16 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         <div className="relative min-w-0 flex-1 overflow-visible">
           <div
             ref={containerRef}
-            className="relative aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-secondary"
+            className="relative aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-white p-3"
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
             onMouseMove={(e) => updateLens(e.clientX, e.clientY)}
           >
-            <Image
+            <RemoteImage
               src={current.url}
               alt={current.alt ?? productName}
               fill
-              className="object-cover"
+              className="object-contain p-2"
               priority
               sizes="(max-width:1024px) 100vw, 45vw"
             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ds/badge";
@@ -11,9 +11,15 @@ import { ProductReviews } from "@/components/storefront/products/ProductReviews"
 import { StarRating } from "@/components/storefront/products/StarRating";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { cn } from "@/components/ds/utils";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { ProductVariantSelector } from "@/components/storefront/products/ProductVariantSelector";
 import type { VariantOptionGroup } from "@/lib/catalog/variant-options";
+
+interface ProductSpecification {
+  section?: string;
+  key: string;
+  value: string;
+}
 
 interface ProductData {
   _id: string;
@@ -23,6 +29,8 @@ interface ProductData {
   brandName?: string;
   description?: string;
   shortDescription?: string;
+  highlights?: string[];
+  warranty?: string;
   media: { url: string; alt?: string; sortOrder?: number }[];
   variantOptions?: VariantOptionGroup[];
   variants: {
@@ -36,13 +44,47 @@ interface ProductData {
   }[];
   pricing: { price: number; compareAtPrice?: number; currency?: string };
   inventory: { stock: number };
-  specifications: { key: string; value: string }[];
+  specifications: ProductSpecification[];
   faqs: { question: string; answer: string }[];
   rating: { average: number; count: number };
 }
 
+function groupSpecifications(specs: ProductSpecification[]) {
+  const groups = new Map<string, ProductSpecification[]>();
+  for (const spec of specs) {
+    const section = spec.section?.trim() || "Additional details";
+    if (!groups.has(section)) groups.set(section, []);
+    groups.get(section)!.push(spec);
+  }
+  return Array.from(groups.entries());
+}
+
 function scrollToReviews() {
   document.getElementById("customer-reviews")?.scrollIntoView({ behavior: "smooth" });
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border last:border-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-4 py-4 text-left"
+      >
+        <span className="font-medium text-foreground">{question}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      {open && (
+        <p className="pb-4 text-body leading-relaxed text-muted-foreground">{answer}</p>
+      )}
+    </div>
+  );
 }
 
 export function ProductDetailView({ product }: { product: ProductData }) {
@@ -61,22 +103,44 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   >(() => product.variants[0] ?? null);
 
   const handleVariantChange = useCallback(
-    (variant: typeof product.variants[0] | undefined) => {
+    (variant: (typeof product.variants)[0] | undefined) => {
       setSelectedVariant(variant ?? null);
     },
     []
   );
+
   const price = selectedVariant?.price ?? product.pricing.price;
   const compareAt = selectedVariant?.compareAtPrice ?? product.pricing.compareAtPrice;
-  const stock = selectedVariant?.stock ?? product.inventory.stock;
-  const inStock = stock > 0;
+  const totalStock = useMemo(() => {
+    if (product.variants.length) {
+      return product.variants.reduce(
+        (sum, v) => sum + (Number(v.stock) || 0),
+        0
+      );
+    }
+    return Number(product.inventory.stock) || 0;
+  }, [product.variants, product.inventory.stock]);
+
+  const stock =
+    selectedVariant != null
+      ? Number(selectedVariant.stock) || 0
+      : totalStock;
+  const inStock = totalStock > 0;
+  const canAddToCart =
+    inStock && (!selectedVariant || (Number(selectedVariant.stock) || 0) > 0);
 
   const { average: ratingAvg, count: reviewCount } = product.rating;
   const hasDescription = Boolean(product.description || product.shortDescription);
+  const hasHighlights = (product.highlights?.length ?? 0) > 0;
   const hasSpecs = product.specifications?.length > 0;
+  const hasFaqs = product.faqs?.length > 0;
+  const specGroups = useMemo(
+    () => groupSpecifications(product.specifications ?? []),
+    [product.specifications]
+  );
 
   const handleAddToCart = () => {
-    if (!inStock || justAdded) return;
+    if (!canAddToCart || justAdded) return;
     addToCart({
       productId: product._id,
       variantId: selectedVariant?.id ?? undefined,
@@ -90,7 +154,6 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   return (
     <div className="space-y-0">
-      {/* Buy box — gallery + purchase column */}
       <div className="grid gap-10 overflow-visible lg:grid-cols-2 lg:gap-14">
         <ProductGallery
           images={sortedMedia.map((m) => ({ url: m.url, alt: m.alt }))}
@@ -127,6 +190,17 @@ export function ProductDetailView({ product }: { product: ProductData }) {
             {product.shortDescription}
           </p>
 
+          {hasHighlights && (
+            <ul className="mt-4 space-y-1.5 text-body text-foreground">
+              {product.highlights!.map((h) => (
+                <li key={h} className="flex gap-2">
+                  <span className="text-primary">•</span>
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <div className="mt-4">
             {inStock ? (
               <Badge variant="success">
@@ -156,7 +230,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
               )}
               variant={justAdded ? "accent" : "primary"}
               onClick={handleAddToCart}
-              disabled={!inStock}
+              disabled={!canAddToCart}
             >
               {justAdded ? (
                 <>
@@ -171,10 +245,16 @@ export function ProductDetailView({ product }: { product: ProductData }) {
               <Link href="/checkout">{t("buyNow")}</Link>
             </Button>
           </div>
+
+          {product.warranty && (
+            <p className="mt-6 text-[13px] text-muted-foreground">
+              <span className="font-medium text-foreground">Warranty: </span>
+              {product.warranty}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Amazon-style stacked sections */}
       <div className="mt-14 border-t border-border lg:mt-16">
         {hasDescription && (
           <section className="border-b border-border py-10 md:py-12">
@@ -192,25 +272,47 @@ export function ProductDetailView({ product }: { product: ProductData }) {
             <h2 className="text-lg font-semibold text-foreground md:text-xl">
               {tp("productInformation")}
             </h2>
-            <div className="mt-5 max-w-2xl overflow-hidden rounded-[var(--radius-md)] border border-border">
-              <table className="w-full text-small">
-                <tbody>
-                  {product.specifications.map((spec, i) => (
-                    <tr
-                      key={spec.key}
-                      className={cn(
-                        "border-b border-border last:border-0",
-                        i % 2 === 0 ? "bg-secondary/40" : "bg-card"
-                      )}
-                    >
-                      <th className="w-[40%] px-4 py-3 text-left font-medium text-muted-foreground">
-                        {spec.key}
-                      </th>
-                      <td className="px-4 py-3 font-medium text-foreground">{spec.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-6 space-y-8">
+              {specGroups.map(([section, items]) => (
+                <div key={section}>
+                  <h3 className="mb-3 text-base font-semibold text-foreground">{section}</h3>
+                  <div className="max-w-3xl overflow-hidden rounded-[var(--radius-md)] border border-border">
+                    <table className="w-full text-small">
+                      <tbody>
+                        {items.map((spec, i) => (
+                          <tr
+                            key={`${section}-${spec.key}`}
+                            className={cn(
+                              "border-b border-border last:border-0",
+                              i % 2 === 0 ? "bg-secondary/40" : "bg-card"
+                            )}
+                          >
+                            <th className="w-[42%] px-4 py-3 text-left font-medium text-muted-foreground">
+                              {spec.key}
+                            </th>
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              {spec.value}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {hasFaqs && (
+          <section className="border-b border-border py-10 md:py-12">
+            <h2 className="text-lg font-semibold text-foreground md:text-xl">
+              Questions &amp; answers
+            </h2>
+            <div className="mt-5 max-w-3xl divide-y divide-border rounded-[var(--radius-md)] border border-border px-4">
+              {product.faqs.map((faq) => (
+                <FaqItem key={faq.question} question={faq.question} answer={faq.answer} />
+              ))}
             </div>
           </section>
         )}

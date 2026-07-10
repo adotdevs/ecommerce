@@ -7,11 +7,24 @@ import {
   generateVariantsFromOptions,
   sanitizeOptionGroups,
 } from "@/lib/catalog/variant-options";
-import { nameToSku, type ProductCopyInput } from "@/lib/admin/product-copy-suggest";
+import { resolveColorHex } from "@/lib/catalog/color-hex";
+import {
+  generateUniqueSku,
+  formatProductTitle,
+  type ProductCopyInput,
+} from "@/lib/admin/product-copy-suggest";
+
+export interface ProductSpecification {
+  section?: string;
+  key: string;
+  value: string;
+}
 
 export interface FullProductSuggestion {
+  name: string;
   shortDescription: string;
   description: string;
+  highlights: string[];
   tags: string[];
   seo: {
     title: string;
@@ -33,15 +46,17 @@ export interface FullProductSuggestion {
     stock: number;
     attributes: Record<string, string>;
   }[];
-  specifications: { key: string; value: string }[];
+  specifications: ProductSpecification[];
   faqs: { question: string; answer: string }[];
   warranty?: string;
   weight?: number;
 }
 
 interface AiFullResponse {
+  name?: string;
   shortDescription?: string;
   description?: string;
+  highlights?: string[];
   tags?: string[];
   seo?: { title?: string; description?: string; keywords?: string[] };
   pricing?: { price?: number; compareAtPrice?: number; currency?: string };
@@ -56,7 +71,7 @@ interface AiFullResponse {
     compareAtPrice?: number;
     stock?: number;
   }[];
-  specifications?: { key: string; value: string }[];
+  specifications?: { section?: string; key: string; value: string }[];
   faqs?: { question: string; answer: string }[];
   warranty?: string;
   weight?: number;
@@ -73,6 +88,17 @@ const VALID_TYPES = new Set<string>([
   "custom",
 ]);
 
+const SPEC_SECTIONS = [
+  "Additional details",
+  "Camera",
+  "Battery",
+  "Display",
+  "Connectivity",
+  "Navigation",
+  "Dimensions",
+  "Materials",
+];
+
 function inferOptionsFromName(name: string): VariantOptionGroup[] {
   const lower = name.toLowerCase();
   if (/shoe|sneaker|boot|sandal|footwear|trainer/i.test(lower)) {
@@ -81,7 +107,7 @@ function inferOptionsFromName(name: string): VariantOptionGroup[] {
   if (/shirt|dress|jacket|hoodie|pants|jeans|apparel|clothing|top|blouse/i.test(lower)) {
     return [newOptionGroup("color"), newOptionGroup("apparel_size")];
   }
-  if (/phone|laptop|tablet|ssd|storage|usb|drive/i.test(lower)) {
+  if (/phone|laptop|tablet|ssd|storage|usb|drive|iphone|ipad|macbook|galaxy|pixel/i.test(lower)) {
     return [newOptionGroup("color"), newOptionGroup("capacity")];
   }
   if (/bag|wallet|belt|leather/i.test(lower)) {
@@ -94,7 +120,7 @@ function templateFullSuggest(
   input: ProductCopyInput,
   sku: string
 ): FullProductSuggestion {
-  const name = input.name.trim();
+  const name = formatProductTitle(input.name.trim());
   const variantOptions = inferOptionsFromName(name);
   const basePrice = 49.99;
   const compareAt = 69.99;
@@ -107,32 +133,43 @@ function templateFullSuggest(
   );
 
   return {
-    shortDescription: `Premium ${name.toLowerCase()} — quality you can trust.`,
-    description: `Discover ${name}. Built for everyday use with reliable performance and great value.`,
+    name,
+    shortDescription: `Premium ${name} — engineered for performance, backed by our store guarantee.`,
+    description: `Discover the ${name}.\n\nBuilt for everyday excellence with reliable performance and thoughtful design. Customers choose this product for its quality, value, and dependable support.\n\n• Premium build quality\n• Fast, free shipping on eligible orders\n• Easy returns within 30 days`,
+    highlights: [
+      "Premium build quality",
+      "Reliable everyday performance",
+      "Backed by manufacturer warranty",
+    ],
     tags: name
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => w.length > 2)
       .slice(0, 5),
     seo: {
-      title: `${name} | Shop Now`,
-      description: `Buy ${name} online with fast shipping.`,
+      title: `${name} | Buy Online`,
+      description: `Shop ${name} with fast shipping and easy returns.`,
       keywords: [name.split(" ")[0]?.toLowerCase(), "shop", "buy"].filter(Boolean) as string[],
     },
     pricing: { price: basePrice, compareAtPrice: compareAt, currency: "USD" },
     variantOptions,
     variants,
     specifications: [
-      { key: "Brand", value: input.brand ?? "Store brand" },
-      { key: "Condition", value: "New" },
+      { section: "Additional details", key: "Brand", value: input.brand ?? "Store brand" },
+      { section: "Additional details", key: "Condition", value: "New" },
+      { section: "Additional details", key: "Color", value: "Multiple options" },
     ],
     faqs: [
       {
-        question: "What is included?",
-        answer: "You receive the product as described with standard packaging.",
+        question: "What is included in the box?",
+        answer: "You receive the product as described with standard packaging and accessories.",
+      },
+      {
+        question: "What is the return policy?",
+        answer: "30-day hassle-free returns on unused items in original packaging.",
       },
     ],
-    warranty: "1-year limited warranty",
+    warranty: "1-year limited manufacturer warranty",
     weight: 0.5,
   };
 }
@@ -145,32 +182,56 @@ function mapAiOptions(
   return raw
     .map((g, i) => {
       const type = VALID_TYPES.has(g.type) ? (g.type as VariantOptionType) : "custom";
-      const preset = VARIANT_OPTION_PRESETS[type];
+      const isColor =
+        type === "color" || /color|colour/i.test(g.name ?? "");
+      const resolvedType: VariantOptionType = isColor ? "color" : type;
+      const preset = VARIANT_OPTION_PRESETS[resolvedType];
       const values = (g.values ?? [])
         .filter((v) => v.value?.trim() && v.label?.trim())
         .map((v) => ({
           value: v.value.trim().toLowerCase().replace(/\s+/g, "-"),
           label: v.label.trim(),
-          hex: v.hex ?? (type === "color" ? "#888888" : undefined),
+          hex:
+            resolvedType === "color"
+              ? resolveColorHex(v.label.trim(), v.hex)
+              : undefined,
         }));
 
       if (!values.length && preset.values.length) {
         return {
           id: `opt-ai-${i}`,
-          name: g.name?.trim() || preset.label,
-          type,
-          values: preset.values.slice(0, 6).map((v) => ({ ...v })),
+          name: resolvedType === "color" ? "Color" : g.name?.trim() || preset.label,
+          type: resolvedType,
+          values: preset.values.slice(0, 6).map((v) => ({
+            ...v,
+            hex:
+              resolvedType === "color"
+                ? resolveColorHex(v.label, v.hex)
+                : undefined,
+          })),
         };
       }
 
       return {
         id: `opt-ai-${i}`,
-        name: g.name?.trim() || preset.label,
-        type,
+        name: resolvedType === "color" ? "Color" : g.name?.trim() || preset.label,
+        type: resolvedType,
         values,
       };
     })
     .filter((g) => g.values.length > 0);
+}
+
+function mapSpecifications(
+  raw: AiFullResponse["specifications"]
+): ProductSpecification[] {
+  return (raw ?? [])
+    .filter((s) => s.key && s.value)
+    .map((s) => ({
+      section: s.section?.trim() || "Additional details",
+      key: String(s.key).trim(),
+      value: String(s.value).trim(),
+    }));
 }
 
 async function openAiFullSuggest(
@@ -186,26 +247,30 @@ async function openAiFullSuggest(
     .join("\n");
 
   const parsed = await openAiChatJson<AiFullResponse>(
-    `You are an expert e-commerce catalog manager. Given a product name, return complete product data as JSON:
+    `You are an expert e-commerce catalog manager (Amazon-style listings). Return complete product JSON:
 {
-  "shortDescription": string (max 160 chars),
-  "description": string (2-4 paragraphs, bullet highlights),
+  "name": string — full retail product title with brand, model, key specs (e.g. "Apple iPhone 12 Pro Max — 256GB, Deep Blue, Unlocked"). Proper Title Case. Be specific and detailed.
+  "shortDescription": string (max 200 chars, compelling),
+  "description": string (4-6 paragraphs + bullet highlights, rich and authentic),
+  "highlights": string[] (5-8 key feature bullets),
   "tags": string[],
   "seo": { "title", "description", "keywords": string[] },
-  "pricing": { "price": number (realistic USD), "compareAtPrice": number (optional sale), "currency": "USD" },
-  "variantOptions": [{ "type": "color"|"shoe_size"|"apparel_size"|"size"|"material"|"style"|"capacity"|"custom", "name": string, "values": [{ "value", "label", "hex" (for colors) }] }],
-  "variantPrices": [{ "attributes": { optionKey: value }, "price": number, "compareAtPrice": number, "stock": number }],
-  "specifications": [{ "key", "value" }],
-  "faqs": [{ "question", "answer" }],
+  "pricing": { "price": number (realistic USD), "compareAtPrice": number, "currency": "USD" },
+  "variantOptions": [{ "type": "color"|"shoe_size"|"apparel_size"|"size"|"material"|"style"|"capacity"|"custom", "name": "Color" for colors, "values": [{ "value", "label", "hex": "#RRGGBB" unique per color }] }],
+  "variantPrices": [{ "attributes": { optionKey: value }, "price", "compareAtPrice", "stock" }],
+  "specifications": [{ "section": string, "key": string, "value": string }] — MINIMUM 18 specs across sections like: ${SPEC_SECTIONS.join(", ")}. Use realistic technical values for this exact product.
+  "faqs": [{ "question", "answer" }] — 6-8 helpful customer FAQs,
   "warranty": string,
   "weight": number (kg)
 }
 Rules:
-- Shoes: color + shoe_size (US 7-12). Clothing: color + apparel_size. Electronics: color + capacity.
-- variantPrices must cover all meaningful combinations with realistic price differences (premium colors/sizes cost more).
-- Use 3-6 colors for fashion, 4-8 sizes where relevant.
-- Prices must be realistic for the product category.`,
-    `Product: ${input.name}\n${context}\nBase SKU: ${sku}`,
+- name must be a complete, professional product title — not just the input keyword.
+- Each color MUST have a distinct accurate hex (never all white).
+- Phones/electronics: color + capacity with realistic specs (OS, RAM, camera MP, battery mAh, etc.).
+- Shoes: color + shoe_size. Clothing: color + apparel_size.
+- variantPrices cover combinations; premium variants cost more.
+- specifications must be category-appropriate and detailed like Amazon product information.`,
+    `Product seed name: ${input.name}\n${context}\nBase SKU: ${sku}`,
     { temperature: 0.65 }
   );
 
@@ -231,10 +296,7 @@ Rules:
 
   if (parsed.variantPrices?.length) {
     const priceMap = new Map(
-      parsed.variantPrices.map((vp) => [
-        JSON.stringify(vp.attributes),
-        vp,
-      ])
+      parsed.variantPrices.map((vp) => [JSON.stringify(vp.attributes), vp])
     );
     variants = variants.map((v) => {
       const vp = priceMap.get(JSON.stringify(v.attributes));
@@ -248,12 +310,38 @@ Rules:
     });
   }
 
+  const aiName = parsed.name?.trim()
+    ? formatProductTitle(parsed.name.trim())
+    : formatProductTitle(input.name.trim());
+
+  const highlights = Array.isArray(parsed.highlights)
+    ? parsed.highlights.map(String).filter(Boolean).slice(0, 10)
+    : [];
+
+  let description = String(parsed.description);
+  if (highlights.length && !description.includes("•") && !description.includes("- ")) {
+    description += `\n\nKey features:\n${highlights.map((h) => `• ${h}`).join("\n")}`;
+  }
+
+  const specs = mapSpecifications(parsed.specifications);
+  const finalSpecs =
+    specs.length >= 8
+      ? specs
+      : [
+          ...specs,
+          { section: "Additional details", key: "Brand", value: input.brand ?? "Official" },
+          { section: "Additional details", key: "Model", value: aiName.split("—")[0]?.trim() ?? aiName },
+          { section: "Additional details", key: "Condition", value: "New" },
+        ];
+
   return {
-    shortDescription: String(parsed.shortDescription).slice(0, 200),
-    description: String(parsed.description),
+    name: aiName,
+    shortDescription: String(parsed.shortDescription).slice(0, 220),
+    description,
+    highlights,
     tags: Array.isArray(parsed.tags) ? parsed.tags.map(String).slice(0, 10) : [],
     seo: {
-      title: String(parsed.seo?.title ?? `${input.name} | Buy Online`),
+      title: String(parsed.seo?.title ?? `${aiName} | Buy Online`),
       description: String(parsed.seo?.description ?? parsed.shortDescription).slice(0, 200),
       keywords: Array.isArray(parsed.seo?.keywords)
         ? parsed.seo.keywords.map(String)
@@ -266,12 +354,11 @@ Rules:
     },
     variantOptions,
     variants,
-    specifications: (parsed.specifications ?? [])
-      .filter((s) => s.key && s.value)
-      .map((s) => ({ key: String(s.key), value: String(s.value) })),
+    specifications: finalSpecs,
     faqs: (parsed.faqs ?? [])
       .filter((f) => f.question && f.answer)
-      .map((f) => ({ question: String(f.question), answer: String(f.answer) })),
+      .map((f) => ({ question: String(f.question), answer: String(f.answer) }))
+      .slice(0, 10),
     warranty: parsed.warranty ? String(parsed.warranty) : undefined,
     weight: parsed.weight != null ? Number(parsed.weight) : undefined,
   };
@@ -280,7 +367,7 @@ Rules:
 export async function suggestFullProduct(
   input: ProductCopyInput
 ): Promise<FullProductSuggestion> {
-  const sku = input.sku?.trim() || nameToSku(input.name);
+  const sku = input.sku?.trim() || generateUniqueSku();
 
   const ai = await openAiFullSuggest(input, sku);
   if (ai) return ai;

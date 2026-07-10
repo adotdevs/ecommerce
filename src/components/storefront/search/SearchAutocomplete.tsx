@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import Image from "next/image";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import {
   Search,
   Loader2,
@@ -197,7 +197,7 @@ export function SearchAutocomplete({
                 >
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
                     {item.image ? (
-                      <Image
+                      <RemoteImage
                         src={item.image}
                         alt=""
                         fill

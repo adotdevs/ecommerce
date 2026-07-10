@@ -20,6 +20,8 @@ import {
   AlertCircle,
   Sparkles,
   Package,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { TranslationProvider } from "@/lib/i18n/translate";
 
@@ -59,6 +61,25 @@ interface TranslationData {
   };
 }
 
+interface ProductTranslationItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  fields: {
+    key: string;
+    label: string;
+    source: string;
+    translated?: string;
+  }[];
+  highlights: string[];
+  translatedHighlights: string[];
+  specCount: number;
+  faqCount: number;
+  translated: boolean;
+  coverage: number;
+}
+
 export default function AdminTranslationsPage() {
   const { accessToken } = useAuthStore();
   const [data, setData] = useState<TranslationData | null>(null);
@@ -68,6 +89,12 @@ export default function AdminTranslationsPage() {
   const [provider, setProvider] = useState<TranslationProvider>("openai");
   const [search, setSearch] = useState("");
   const [namespaceFilter, setNamespaceFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<"ui" | "products">("ui");
+  const [productItems, setProductItems] = useState<ProductTranslationItem[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
+  const [translatingProducts, setTranslatingProducts] = useState(false);
 
   const load = useCallback(() => {
     if (!accessToken) return;
@@ -106,6 +133,105 @@ export default function AdminTranslationsPage() {
       ),
     [data]
   );
+
+  const loadProducts = useCallback(() => {
+    if (!accessToken) return;
+    const locale = targetLocale || targetLanguages[0]?.code;
+    if (!locale) return;
+    setProductsLoading(true);
+    const params = new URLSearchParams({
+      locale,
+      limit: "50",
+    });
+    if (productSearch.trim()) params.set("q", productSearch.trim());
+
+    fetch(`/api/v1/admin/translations/products?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setProductItems(d.data?.products ?? []);
+        } else {
+          toastError("Could not load products", d.error ?? "Request failed");
+          setProductItems([]);
+        }
+      })
+      .catch(() => {
+        toastError("Could not load products", "Network error.");
+        setProductItems([]);
+      })
+      .finally(() => setProductsLoading(false));
+  }, [accessToken, targetLocale, targetLanguages, productSearch]);
+
+  useEffect(() => {
+    if (activeTab === "products" && accessToken) {
+      const timer = setTimeout(loadProducts, productSearch ? 300 : 0);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, loadProducts, accessToken, productSearch]);
+
+  const handleTranslateAllProducts = async () => {
+    if (!accessToken || !targetLocale) return;
+    if (
+      !confirm(
+        `Translate ALL products to ${targetLabel}?\n\nIncludes names, descriptions, specs, FAQs, and highlights.`
+      )
+    ) {
+      return;
+    }
+    setTranslatingProducts(true);
+    try {
+      const res = await fetch("/api/v1/admin/translations/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ targetLocale, provider }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast({
+          variant: "success",
+          title: "Products translated",
+          description: `${result.data?.translated ?? 0} products updated.`,
+        });
+        load();
+        loadProducts();
+      } else {
+        toastError("Translation failed", result.error);
+      }
+    } catch {
+      toastError("Translation failed", "Network error.");
+    } finally {
+      setTranslatingProducts(false);
+    }
+  };
+
+  const handleTranslateOneProduct = async (productId: string) => {
+    if (!accessToken || !targetLocale) return;
+    try {
+      const res = await fetch("/api/v1/admin/translations/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ targetLocale, provider, productId }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast({ variant: "success", title: "Product translated" });
+        loadProducts();
+        load();
+      } else {
+        toastError("Failed", result.error);
+      }
+    } catch {
+      toastError("Failed", "Network error.");
+    }
+  };
 
   const coverage = targetLocale ? data?.localeCoverage?.[targetLocale] : null;
 
@@ -314,6 +440,158 @@ export default function AdminTranslationsPage() {
         </Card>
       </div>
 
+      <div className="flex gap-2 border-b border-border">
+        <Button
+          type="button"
+          variant={activeTab === "ui" ? "primary" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("ui")}
+        >
+          <Languages className="mr-1.5 h-3.5 w-3.5" />
+          UI text
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "products" ? "primary" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("products")}
+        >
+          <Package className="mr-1.5 h-3.5 w-3.5" />
+          Products
+        </Button>
+      </div>
+
+      {activeTab === "products" ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Product translations</CardTitle>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Each product&apos;s name, descriptions, specs, FAQs, and highlights for{" "}
+                {targetLabel}.
+              </p>
+            </div>
+            <Button
+              onClick={handleTranslateAllProducts}
+              disabled={translatingProducts || !targetLocale}
+            >
+              {translatingProducts ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Translate all products
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Search products…"
+                className="pl-9"
+              />
+            </div>
+
+            {productsLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : productItems.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">No products found.</p>
+            ) : (
+              <div className="space-y-2">
+                {productItems.map((p) => {
+                  const open = expandedProduct === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className="overflow-hidden rounded-lg border border-border"
+                    >
+                      <div className="flex items-center justify-between gap-3 px-4 py-3">
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                          onClick={() => setExpandedProduct(open ? null : p.id)}
+                        >
+                          {open ? (
+                            <ChevronUp className="h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{p.name}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {p.specCount} specs · {p.faqCount} FAQs · {p.highlights.length}{" "}
+                              highlights
+                            </p>
+                          </div>
+                        </button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge variant={p.translated ? "default" : "secondary"}>
+                            {p.coverage}% · {p.translated ? "Done" : "Missing"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTranslateOneProduct(p.id)}
+                          >
+                            <Sparkles className="mr-1 h-3 w-3" />
+                            Translate
+                          </Button>
+                        </div>
+                      </div>
+                      {open && (
+                        <div className="space-y-3 border-t border-border bg-secondary/20 px-4 py-4">
+                          {p.fields
+                            .filter((f) => f.source?.trim())
+                            .map((f) => (
+                              <div key={f.key} className="grid gap-2 sm:grid-cols-2">
+                                <div>
+                                  <p className="text-[11px] font-medium text-muted-foreground">
+                                    {f.label} (English)
+                                  </p>
+                                  <p className="mt-0.5 text-small line-clamp-4">{f.source}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-medium text-muted-foreground">
+                                    {f.label} ({targetLabel})
+                                  </p>
+                                  <p className="mt-0.5 text-small line-clamp-4">
+                                    {f.translated?.trim() ? (
+                                      f.translated
+                                    ) : (
+                                      <span className="italic text-muted-foreground">
+                                        Not translated
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          {p.highlights.length > 0 && (
+                            <div>
+                              <p className="text-[11px] font-medium text-muted-foreground">
+                                Highlights ({p.highlights.length})
+                              </p>
+                              <ul className="mt-1 list-inside list-disc text-small">
+                                {p.highlights.map((h) => (
+                                  <li key={h}>{h}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle>Website text</CardTitle>
@@ -428,6 +706,7 @@ export default function AdminTranslationsPage() {
           </p>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

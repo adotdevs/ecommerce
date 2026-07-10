@@ -5,7 +5,7 @@ import {
   type VariantOptionGroup,
   type VariantOptionValue,
   type ProductVariantInput,
-  optionKey,
+  inferAttributeKeyForGroup,
   findVariantByAttributes,
   getAvailableValues,
 } from "@/lib/catalog/variant-options";
@@ -25,7 +25,7 @@ export function ProductVariantSelector({
   const groups = useMemo(() => {
     if (variantOptions.length > 0) {
       return variantOptions.map((g) => ({
-        key: optionKey(g.name),
+        key: inferAttributeKeyForGroup(g, variants),
         name: g.name,
         type: g.type,
         values: g.values,
@@ -111,7 +111,10 @@ export function ProductVariantSelector({
                         isSelected
                           ? "border-primary ring-2 ring-primary/30"
                           : "border-border hover:border-muted-foreground",
-                        !isAvailable && "cursor-not-allowed opacity-35"
+                        !isAvailable && "cursor-not-allowed opacity-35",
+                        ["#f5f5f5", "#ffffff", "#fff", "#fffff0", "#fffdd0", "#f7e7ce", "#e8dcc8", "#f5f0e8"].includes(
+                          hex.toLowerCase()
+                        ) && "ring-1 ring-inset ring-black/10"
                       )}
                       style={{ backgroundColor: hex }}
                       aria-label={opt.label}

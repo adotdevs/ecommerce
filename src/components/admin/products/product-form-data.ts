@@ -14,6 +14,7 @@ export interface ProductFormData {
   barcode: string;
   description: string;
   shortDescription: string;
+  highlights: string[];
   brandId: string;
   categoryIds: string[];
   tags: string;
@@ -37,7 +38,7 @@ export interface ProductFormData {
     height: string;
     unit: string;
   };
-  specifications: { key: string; value: string }[];
+  specifications: { section: string; key: string; value: string }[];
   faqs: { question: string; answer: string }[];
   warranty: string;
   status: "draft" | "published" | "archived";
@@ -71,6 +72,7 @@ export const emptyProductForm = (): ProductFormData => ({
   barcode: "",
   description: "",
   shortDescription: "",
+  highlights: [],
   brandId: "",
   categoryIds: [],
   tags: "",
@@ -105,6 +107,7 @@ export function productToFormData(product: Record<string, any>): ProductFormData
     barcode: product.barcode ?? "",
     description: product.description ?? "",
     shortDescription: product.shortDescription ?? "",
+    highlights: product.highlights ?? [],
     brandId: product.brandId ? String(product.brandId) : "",
     categoryIds: (product.categoryIds ?? []).map((id: { toString(): string }) =>
       String(id)
@@ -203,6 +206,7 @@ export function formToPayload(form: ProductFormData) {
     barcode: form.barcode.trim() || undefined,
     description: form.description.trim() || undefined,
     shortDescription: form.shortDescription.trim() || undefined,
+    highlights: form.highlights.filter((h) => h.trim()),
     brandId: form.brandId || null,
     categoryIds: form.categoryIds,
     tags: form.tags

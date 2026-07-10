@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { Product } from "@/models";
 import { suggestFullProduct } from "@/lib/admin/product-ai-suggest";
-import { nameToSku, type ProductCopyInput } from "@/lib/admin/product-copy-suggest";
+import { generateUniqueSku, type ProductCopyInput } from "@/lib/admin/product-copy-suggest";
 import { slugify } from "@/lib/utils";
 import {
   resolveBrandFields,
@@ -41,12 +41,14 @@ export async function bulkImportProducts(
 
   for (const name of names) {
     try {
-      const input: ProductCopyInput = { name, sku: nameToSku(name) };
+      const input: ProductCopyInput = { name, sku: generateUniqueSku() };
       const suggestion = await suggestFullProduct(input);
 
-      const slug = slugify(name);
+      const displayName = suggestion.name?.trim() || name.trim();
+      const slug = slugify(displayName);
+      const baseSku = suggestion.variants[0]?.sku ?? input.sku;
       const existing = await Product.findOne({
-        $or: [{ slug }, { sku: suggestion.variants[0]?.sku ?? nameToSku(name) }],
+        $or: [{ slug }, { sku: baseSku }],
       }).lean();
 
       if (existing) {
@@ -62,11 +64,12 @@ export async function bulkImportProducts(
       const totalStock = suggestion.variants.reduce((s, v) => s + v.stock, 0);
 
       const product = await Product.create({
-        name: name.trim(),
+        name: displayName,
         slug,
-        sku: suggestion.variants[0]?.sku ?? nameToSku(name),
+        sku: baseSku,
         shortDescription: suggestion.shortDescription,
         description: suggestion.description,
+        highlights: suggestion.highlights ?? [],
         tags: suggestion.tags,
         variantOptions: suggestion.variantOptions,
         variants: suggestion.variants,

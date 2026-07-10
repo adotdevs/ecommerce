@@ -167,8 +167,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
     },
     specifications: ((p.specifications as unknown[]) ?? []).map((s) => {
       const spec = s as Record<string, unknown>;
-      return { key: String(spec.key), value: String(spec.value) };
+      return {
+        section: spec.section ? String(spec.section) : undefined,
+        key: String(spec.key),
+        value: String(spec.value),
+      };
     }),
+    highlights: ((p.highlights as string[]) ?? []).map(String),
+    warranty: p.warranty ? String(p.warranty) : undefined,
     faqs: ((p.faqs as unknown[]) ?? []).map((f) => {
       const faq = f as Record<string, unknown>;
       return {

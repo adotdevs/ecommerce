@@ -19,10 +19,10 @@ import {
   formToPayload,
 } from "./product-form-data";
 import { Loader2, Plus, Trash2, ChevronLeft, ChevronRight, Check, Sparkles } from "lucide-react";
-import { toastError, toastSaveSuccess } from "@/hooks/use-toast";
+import { toast, toastError, toastSaveSuccess } from "@/hooks/use-toast";
 import { slugify } from "@/lib/utils";
 import { cn } from "@/components/ds/utils";
-import { nameToSku } from "@/lib/admin/product-copy-suggest";
+import { generateUniqueSku } from "@/lib/admin/product-copy-suggest";
 
 export type { ProductFormData } from "./product-form-data";
 export {
@@ -74,10 +74,17 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     productIdProp
   );
   const productId = savedProductId ?? productIdProp;
-  const [form, setForm] = useState<ProductFormData>(
-    initialData ?? emptyProductForm()
-  );
+  const [form, setForm] = useState<ProductFormData>(() => {
+    const base = initialData ?? emptyProductForm();
+    if (!productIdProp && !base.sku.trim()) {
+      return { ...base, sku: generateUniqueSku() };
+    }
+    return base;
+  });
   const [stepIndex, setStepIndex] = useState(0);
+  const [maxStepReached, setMaxStepReached] = useState(() =>
+    productIdProp ? PRODUCT_FORM_STEPS.length - 1 : 0
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [saving, setSaving] = useState(false);
@@ -121,7 +128,6 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
       ...f,
       name,
       slug: autoSlug ? slugify(name) : f.slug,
-      sku: autoSku && !productIdProp ? nameToSku(name) : f.sku,
     }));
   };
 
@@ -161,12 +167,20 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
         lastSuggestedName.current = name.trim();
         setForm((current) => ({
           ...current,
+          name:
+            s.name && (opts?.force || current.name.trim() === name.trim())
+              ? s.name
+              : current.name,
           shortDescription: opts?.force || !current.shortDescription.trim()
             ? s.shortDescription
             : current.shortDescription,
           description: opts?.force || !current.description.trim()
             ? s.description
             : current.description,
+          highlights:
+            s.highlights?.length && (opts?.force || !current.highlights.length)
+              ? s.highlights
+              : current.highlights,
           tags: opts?.force || !current.tags.trim()
             ? (s.tags ?? []).join(", ")
             : current.tags,
@@ -246,6 +260,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     if (!accessToken) return false;
 
     const draft = opts?.draft ?? false;
+    const navigate = opts?.navigate ?? false;
     if (!draft) {
       const err = validateStep("basic", form);
       if (err) {
@@ -288,6 +303,27 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
         if (!savedProductId && data.data?._id) {
           setSavedProductId(String(data.data._id));
         }
+
+        const meta = data.data?._meta as
+          | { slugAdjusted?: boolean; skuAdjusted?: boolean; slug?: string; sku?: string }
+          | undefined;
+        if (meta?.slugAdjusted && meta.slug) {
+          setAutoSlug(false);
+          setForm((f) => ({ ...f, slug: meta.slug! }));
+          toast({
+            variant: "info",
+            title: "URL slug adjusted",
+            description: `Another product already used that slug. Saved as "${meta.slug}".`,
+          });
+        } else if (data.data?.slug && data.data.slug !== form.slug) {
+          setAutoSlug(false);
+          setForm((f) => ({ ...f, slug: String(data.data.slug) }));
+        }
+        if (meta?.skuAdjusted && meta.sku) {
+          setAutoSku(false);
+          setForm((f) => ({ ...f, sku: meta.sku! }));
+        }
+
         toastSaveSuccess({
           sectionName: draft
             ? "Draft saved"
@@ -296,7 +332,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
               : "Product created",
           englishOnly: true,
         });
-        if (opts?.navigate !== false && !productIdProp && id) {
+        if (navigate && !productIdProp && id) {
           router.replace(`/admin/products/${id}`);
         }
         if (!draft && payload.status === "published" && id) {
@@ -321,6 +357,12 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     }
   };
 
+  const goToStep = (index: number) => {
+    if (index < 0 || index >= PRODUCT_FORM_STEPS.length) return;
+    if (index > maxStepReached) return;
+    setStepIndex(index);
+  };
+
   const goNext = async () => {
     const err = validateStep(currentStep.id, form);
     if (err) {
@@ -331,10 +373,12 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
       const ok = await saveProduct({ draft: true, navigate: false });
       if (!ok) return;
     }
-    setStepIndex((i) => Math.min(i + 1, PRODUCT_FORM_STEPS.length - 1));
+    const nextIndex = Math.min(stepIndex + 1, PRODUCT_FORM_STEPS.length - 1);
+    setMaxStepReached((max) => Math.max(max, nextIndex));
+    setStepIndex(nextIndex);
   };
 
-  const goBack = () => setStepIndex((i) => Math.max(i - 1, 0));
+  const goBack = () => goToStep(stepIndex - 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,19 +406,21 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
       <nav aria-label="Product form progress" className="rounded-xl border border-border bg-card p-4">
         <ol className="flex flex-wrap items-center gap-2 md:gap-0">
           {PRODUCT_FORM_STEPS.map((step, i) => {
-            const done = i < stepIndex;
             const active = i === stepIndex;
+            const reachable = i <= maxStepReached;
+            const done = reachable && !active;
             return (
               <li key={step.id} className="flex items-center">
                 <button
                   type="button"
-                  onClick={() => i <= stepIndex && setStepIndex(i)}
-                  disabled={i > stepIndex}
+                  onClick={() => reachable && goToStep(i)}
+                  disabled={!reachable}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors md:px-3",
                     active && "bg-primary/10 text-primary",
                     done && "text-foreground hover:bg-secondary",
-                    i > stepIndex && "cursor-not-allowed text-muted-foreground opacity-60"
+                    reachable && !active && "hover:bg-secondary/60",
+                    !reachable && "cursor-not-allowed text-muted-foreground opacity-60"
                   )}
                 >
                   <span
@@ -458,10 +504,10 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                     size="sm"
                     onClick={() => {
                       setAutoSku(true);
-                      update("sku", nameToSku(form.name));
+                      update("sku", generateUniqueSku());
                     }}
                   >
-                    Auto
+                    Generate
                   </Button>
                 </div>
               </div>
@@ -514,9 +560,56 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
               <Textarea
                 value={form.description}
                 onChange={(e) => update("description", e.target.value)}
-                rows={6}
-                placeholder="Detailed product description"
+                rows={8}
+                placeholder="Detailed product description (AI generates 4-6 paragraphs)"
               />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Feature highlights</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    update("highlights", [...form.highlights, ""])
+                  }
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Add
+                </Button>
+              </div>
+              {form.highlights.length === 0 ? (
+                <p className="text-[12px] text-muted-foreground">
+                  Bullet points shown on the product page. AI fills these automatically.
+                </p>
+              ) : (
+                form.highlights.map((h, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={h}
+                      onChange={(e) => {
+                        const next = [...form.highlights];
+                        next[i] = e.target.value;
+                        update("highlights", next);
+                      }}
+                      placeholder="e.g. 48MP camera with night mode"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        update(
+                          "highlights",
+                          form.highlights.filter((_, j) => j !== i)
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Tags</Label>
@@ -801,7 +894,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                 onClick={() =>
                   update("specifications", [
                     ...form.specifications,
-                    { key: "", value: "" },
+                    { section: "Additional details", key: "", value: "" },
                   ])
                 }
               >
@@ -813,7 +906,17 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                 <p className="text-small text-muted-foreground">No specifications yet.</p>
               ) : (
                 form.specifications.map((spec, i) => (
-                  <div key={i} className="flex gap-2">
+                  <div key={i} className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center">
+                    <Input
+                      value={spec.section ?? ""}
+                      onChange={(e) => {
+                        const next = [...form.specifications];
+                        next[i] = { ...next[i], section: e.target.value };
+                        update("specifications", next);
+                      }}
+                      placeholder="Section (e.g. Camera)"
+                      className="sm:max-w-[140px]"
+                    />
                     <Input
                       value={spec.key}
                       onChange={(e) => {
@@ -821,7 +924,8 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                         next[i] = { ...next[i], key: e.target.value };
                         update("specifications", next);
                       }}
-                      placeholder="Key"
+                      placeholder="Spec name"
+                      className="sm:flex-1"
                     />
                     <Input
                       value={spec.value}
@@ -831,6 +935,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                         update("specifications", next);
                       }}
                       placeholder="Value"
+                      className="sm:flex-1"
                     />
                     <Button
                       type="button"
@@ -1042,7 +1147,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
           <Button
             type="button"
             variant="outline"
-            onClick={() => saveProduct({ draft: true })}
+            onClick={() => saveProduct({ draft: true, navigate: false })}
             disabled={saving}
           >
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

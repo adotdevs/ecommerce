@@ -44,6 +44,7 @@ const productVariantSchema = z.object({
 });
 
 const keyValueSchema = z.object({
+  section: z.string().optional(),
   key: z.string().min(1),
   value: z.string().min(1),
 });
@@ -60,6 +61,7 @@ const productFieldsSchema = z.object({
   barcode: z.string().optional(),
   description: z.string().optional(),
   shortDescription: z.string().optional(),
+  highlights: z.array(z.string()).optional(),
   brandId: z.string().optional().nullable(),
   categoryIds: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),

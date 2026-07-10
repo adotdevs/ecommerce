@@ -8,7 +8,7 @@ interface AiAssistButtonProps {
   loading?: boolean;
   disabled?: boolean;
   label?: string;
-  size?: "sm" | "default";
+  size?: "sm" | "md";
   variant?: "outline" | "primary";
 }
 

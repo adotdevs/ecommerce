@@ -1,3 +1,5 @@
+import { resolveColorHex } from "@/lib/catalog/color-hex";
+
 export type VariantOptionType =
   | "color"
   | "size"
@@ -19,6 +21,8 @@ export interface VariantOptionGroup {
   name: string;
   type: VariantOptionType;
   values: VariantOptionValue[];
+  /** Stable key used in variant.attributes — survives locale translation of name. */
+  attributeKey?: string;
 }
 
 export interface ProductVariantInput {
@@ -117,6 +121,37 @@ export function optionKey(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
+export function defaultAttributeKey(group: VariantOptionGroup): string {
+  if (group.attributeKey?.trim()) return group.attributeKey.trim();
+  if (group.type === "color") return "color";
+  return optionKey(group.name);
+}
+
+/** Match a translated option group to the attribute keys stored on variants. */
+export function inferAttributeKeyForGroup(
+  group: VariantOptionGroup,
+  variants: ProductVariantInput[]
+): string {
+  const preset = defaultAttributeKey(group);
+  const groupValues = new Set(group.values.map((v) => v.value));
+  if (!groupValues.size || !variants.length) return preset;
+
+  const attrKeys = [
+    ...new Set(variants.flatMap((v) => Object.keys(v.attributes ?? {}))),
+  ];
+
+  for (const key of attrKeys) {
+    const variantValues = new Set(
+      variants.map((v) => v.attributes?.[key]).filter(Boolean) as string[]
+    );
+    if ([...groupValues].every((val) => variantValues.has(val))) {
+      return key;
+    }
+  }
+
+  return preset;
+}
+
 export function newOptionGroup(type: VariantOptionType): VariantOptionGroup {
   const preset = VARIANT_OPTION_PRESETS[type];
   return {
@@ -139,8 +174,17 @@ export function sanitizeOptionGroups(groups: VariantOptionGroup[]): VariantOptio
   return groups
     .map((g) => ({
       ...g,
-      name: g.name.trim(),
-      values: g.values.filter((v) => v.value.trim() && v.label.trim()),
+      name: g.type === "color" ? "Color" : g.name.trim(),
+      attributeKey: defaultAttributeKey(g),
+      values: g.values
+        .filter((v) => v.value.trim() && v.label.trim())
+        .map((v) => ({
+          ...v,
+          hex:
+            g.type === "color"
+              ? resolveColorHex(v.label.trim(), v.hex)
+              : v.hex,
+        })),
     }))
     .filter((g) => g.name && g.values.length > 0);
 }
@@ -188,7 +232,7 @@ export function suggestVariantPrice(
   let delta = 0;
 
   for (const [key, val] of Object.entries(attributes)) {
-    const group = groups.find((g) => optionKey(g.name) === key);
+    const group = groups.find((g) => defaultAttributeKey(g) === key);
     if (!group) continue;
     const normalized = val.toLowerCase();
 
@@ -253,7 +297,7 @@ export function generateVariantsFromOptions(
     active.map((g) =>
       g.values.map((v) => ({
         groupName: g.name,
-        key: optionKey(g.name),
+        key: defaultAttributeKey(g),
         value: v.value,
         label: v.label,
       }))

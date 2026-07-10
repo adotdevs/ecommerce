@@ -66,7 +66,7 @@ export function FlashSaleCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl",
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl",
         "border border-amber-500/25 bg-gradient-to-b from-[#1a1208] to-[#0c0a08]",
         "shadow-[0_0_0_1px_rgba(245,158,11,0.08),0_20px_40px_-20px_rgba(0,0,0,0.6)]",
         className
@@ -82,7 +82,7 @@ export function FlashSaleCard({
               alt={image.alt ?? product.name}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-              sizes="(max-width:640px) 80vw, 25vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
             />
           ) : (

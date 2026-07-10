@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import { ProductDetailView } from "@/components/storefront/products/ProductDetailView";
 import { toProductCardData } from "@/lib/catalog/product-card";
+import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 import { computeReviewSummary, syncProductRating } from "@/lib/reviews/sync-rating";
 import { localizeProductDoc } from "@/lib/i18n/product";
 import type { Locale } from "@/config/locales";
@@ -210,7 +211,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         {relatedRaw.length > 0 && (
           <section className="mt-16 border-t border-border pt-16 md:mt-24 md:pt-24">
             <h2 className="mb-8 text-display-h3 text-foreground">{t("related")}</h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+            <div className={PRODUCT_GRID_CLASS}>
               {relatedRaw.map((rel) => (
                 <ProductCard
                   key={String(rel._id)}

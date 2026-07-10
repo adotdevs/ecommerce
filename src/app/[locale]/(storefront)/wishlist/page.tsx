@@ -9,6 +9,7 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { Button } from "@/components/ds/button";
+import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 
 export default function WishlistPage() {
   const t = useTranslations("wishlist");
@@ -38,7 +39,7 @@ export default function WishlistPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={PRODUCT_GRID_CLASS}>
         {items.map((item) => {
           const isAdded = addedId === item.productId;
           return (

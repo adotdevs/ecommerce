@@ -19,6 +19,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
+import { cn } from "@/components/ds/utils";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import {
   FlashSaleCard,
@@ -34,6 +35,7 @@ import {
   slideFromLeft,
   slideFromRight,
 } from "@/components/storefront/homepage/motion";
+import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 
 interface SectionProps {
   config: Record<string, unknown>;
@@ -313,7 +315,7 @@ export function FlashSaleSection({ config }: SectionProps) {
           </div>
         </motion.div>
 
-        <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-4 lg:gap-5">
+        <div className={PRODUCT_GRID_CLASS}>
           {products.map((product, i) => (
             <motion.div
               key={product._id}
@@ -321,7 +323,7 @@ export function FlashSaleSection({ config }: SectionProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={viewportOnce}
               transition={{ duration: 0.45, delay: i * 0.07 }}
-              className="w-[78vw] shrink-0 sm:w-[300px] md:w-auto"
+              className="w-full"
             >
               <FlashSaleCard product={product} />
             </motion.div>
@@ -365,7 +367,7 @@ export function FeaturedProductsSection({ config }: SectionProps) {
           </Button>
         </motion.div>
 
-        <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-none md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-4 lg:gap-6">
+        <div className={cn(PRODUCT_GRID_CLASS, "lg:gap-6")}>
           {products.map((product, i) => (
             <motion.div
               key={product._id}
@@ -373,7 +375,7 @@ export function FeaturedProductsSection({ config }: SectionProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={viewportOnce}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="w-[72vw] shrink-0 sm:w-[280px] md:w-auto"
+              className="w-full"
             >
               <ProductCard product={product} />
             </motion.div>

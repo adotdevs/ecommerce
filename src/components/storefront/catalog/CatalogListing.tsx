@@ -11,6 +11,7 @@ import type { CatalogPageSlug } from "@/models/CatalogPage";
 import type { ProductCardData } from "@/lib/catalog/product-card";
 import { CatalogSearchBar } from "@/components/storefront/search/CatalogSearchBar";
 import { cn } from "@/components/ds/utils";
+import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 
 type Accent = "indigo" | "emerald" | "amber" | "rose" | "sky";
 
@@ -21,7 +22,6 @@ const THEMES: Record<
     hero: string;
     badge: string;
     glow: string;
-    grid: string;
   }
 > = {
   all: {
@@ -29,42 +29,36 @@ const THEMES: Record<
     hero: "from-indigo-500/15 via-background to-background",
     badge: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
     glow: "bg-indigo-500/20",
-    grid: "grid-cols-2 md:grid-cols-3 lg:grid-cols-3",
   },
   "new-arrivals": {
     accent: "sky",
     hero: "from-sky-500/20 via-cyan-500/5 to-background",
     badge: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
     glow: "bg-sky-500/25",
-    grid: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
   },
   bestsellers: {
     accent: "amber",
     hero: "from-amber-500/20 via-orange-500/5 to-background",
     badge: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
     glow: "bg-amber-500/25",
-    grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
   },
   deals: {
     accent: "rose",
     hero: "from-rose-500/20 via-red-500/5 to-background",
     badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
     glow: "bg-rose-500/25",
-    grid: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
   },
   search: {
     accent: "emerald",
     hero: "from-emerald-500/15 via-background to-background",
     badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     glow: "bg-emerald-500/20",
-    grid: "grid-cols-2 md:grid-cols-3 lg:grid-cols-3",
   },
   categories: {
     accent: "indigo",
     hero: "from-indigo-500/15 via-background to-background",
     badge: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
     glow: "bg-indigo-500/20",
-    grid: "grid-cols-2 md:grid-cols-3 lg:grid-cols-3",
   },
 };
 
@@ -175,7 +169,7 @@ export function CatalogListing({
             </div>
           ) : (
             <>
-              <div className={cn("grid gap-4 md:gap-5", theme.grid)}>
+              <div className={PRODUCT_GRID_CLASS}>
                 {products.map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}

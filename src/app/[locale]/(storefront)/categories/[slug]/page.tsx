@@ -12,6 +12,7 @@ import { CatalogFilters } from "@/components/storefront/catalog/CatalogFilters";
 import { queryCatalogProducts } from "@/lib/catalog/query";
 import type { CatalogSearchParams } from "@/lib/catalog/render-page";
 import { cn } from "@/components/ds/utils";
+import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string }>;
@@ -150,7 +151,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5">
+              <div className={PRODUCT_GRID_CLASS}>
                 {result.products.map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}

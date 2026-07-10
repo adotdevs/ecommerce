@@ -57,7 +57,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-[var(--radius-md)] border border-border/80 bg-card shadow-[var(--shadow-subtle)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[var(--shadow-card)]",
+        "group relative flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-border/80 bg-card shadow-[var(--shadow-subtle)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[var(--shadow-card)]",
         className
       )}
     >
@@ -69,7 +69,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               alt={image.alt ?? product.name}
               fill
               className="object-contain p-1 transition-transform duration-500 group-hover:scale-[1.03]"
-              sizes="(max-width:640px) 50vw, 25vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
             />
           ) : (

@@ -9,12 +9,20 @@ import { Textarea } from "@/components/ds/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { builtInLocaleCodes, localeConfig, type LanguageEntry } from "@/config/locales";
-import { Plus, Trash2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Plus, Trash2, Loader2 } from "lucide-react";
+import { toast, toastError } from "@/hooks/use-toast";
 
 export default function AdminSettingsPage() {
-  const { accessToken } = useAuthStore();
+  const { accessToken, user, setAuth } = useAuthStore();
   const [saved, setSaved] = useState(false);
+  const [emailForm, setEmailForm] = useState({ newEmail: "", currentPassword: "" });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [form, setForm] = useState({
     announcement: "",
     deliveryInfo: "",
@@ -79,6 +87,89 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken) return;
+    setChangingEmail(true);
+    try {
+      const res = await fetch("/api/v1/auth/account", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "email",
+          newEmail: emailForm.newEmail.trim(),
+          currentPassword: emailForm.currentPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toastError("Email change failed", data.error);
+        return;
+      }
+      setAuth(data.data.accessToken, data.data.user);
+      setEmailForm({ newEmail: "", currentPassword: "" });
+      toast({
+        variant: "success",
+        title: "Email updated",
+        description: `Your sign-in email is now ${data.data.user.email}.`,
+      });
+    } catch {
+      toastError("Email change failed", "Network error. Please try again.");
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken) return;
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toastError("Password change failed", "New passwords do not match.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const res = await fetch("/api/v1/auth/account", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "password",
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toastError("Password change failed", data.error);
+        return;
+      }
+      setAuth(data.data.accessToken, data.data.user);
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      toast({
+        variant: "success",
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+    } catch {
+      toastError("Password change failed", "Network error. Please try again.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const addLanguage = () => {
     const code = newLang.code.trim().toLowerCase();
     if (!code || languages.some((l) => l.code === code)) return;
@@ -109,6 +200,121 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <h1 className="text-3xl font-bold">Site Settings</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <p className="text-[13px] text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{user?.email}</span>
+          </p>
+
+          <form onSubmit={handleChangeEmail} className="space-y-4 border-b border-border pb-8">
+            <h3 className="text-sm font-semibold text-foreground">Change email</h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-email">New email</Label>
+              <Input
+                id="new-email"
+                type="email"
+                required
+                value={emailForm.newEmail}
+                onChange={(e) =>
+                  setEmailForm({ ...emailForm, newEmail: e.target.value })
+                }
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email-current-password">Current password</Label>
+              <Input
+                id="email-current-password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={emailForm.currentPassword}
+                onChange={(e) =>
+                  setEmailForm({ ...emailForm, currentPassword: e.target.value })
+                }
+              />
+            </div>
+            <Button type="submit" disabled={changingEmail}>
+              {changingEmail ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating email...
+                </>
+              ) : (
+                "Update email"
+              )}
+            </Button>
+          </form>
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Change password</h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="password-current">Current password</Label>
+              <Input
+                id="password-current"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={passwordForm.currentPassword}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    currentPassword: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password-new">New password</Label>
+              <Input
+                id="password-new"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={passwordForm.newPassword}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    newPassword: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password-confirm">Confirm new password</Label>
+              <Input
+                id="password-confirm"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    confirmPassword: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <Button type="submit" disabled={changingPassword}>
+              {changingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating password...
+                </>
+              ) : (
+                "Update password"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Languages</CardTitle></CardHeader>

@@ -13,6 +13,29 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
+export const changeEmailSchema = z.object({
+  action: z.literal("email"),
+  newEmail: z.string().email(),
+  currentPassword: z.string().min(1),
+});
+
+export const changePasswordSchema = z
+  .object({
+    action: z.literal("password"),
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const changeAccountSchema = z.discriminatedUnion("action", [
+  changeEmailSchema,
+  changePasswordSchema,
+]);
+
 const productMediaSchema = z.object({
   url: z.string().min(1),
   alt: z.string().optional(),

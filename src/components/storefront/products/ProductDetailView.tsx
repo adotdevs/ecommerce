@@ -8,6 +8,7 @@ import { Button } from "@/components/ds/button";
 import { ProductGallery } from "@/components/storefront/products/ProductGallery";
 import { ProductDetailPrice } from "@/components/storefront/products/ProductDetailPrice";
 import { ProductReviews } from "@/components/storefront/products/ProductReviews";
+import { ProductDetailSectionNav } from "@/components/storefront/products/ProductDetailSectionNav";
 import { StarRating } from "@/components/storefront/products/StarRating";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { cn } from "@/components/ds/utils";
@@ -139,6 +140,37 @@ export function ProductDetailView({ product }: { product: ProductData }) {
     [product.specifications]
   );
 
+  const detailSections = useMemo(
+    () => [
+      {
+        id: "about-item",
+        label: tp("aboutItem"),
+        icon: "about" as const,
+        show: hasDescription,
+      },
+      {
+        id: "product-specs",
+        label: tp("productInformation"),
+        icon: "specs" as const,
+        show: hasSpecs,
+      },
+      {
+        id: "product-faqs",
+        label: "Q&A",
+        icon: "faq" as const,
+        show: hasFaqs,
+      },
+      {
+        id: "customer-reviews",
+        label: tr("customerReviews"),
+        icon: "reviews" as const,
+        show: true,
+        badge: reviewCount,
+      },
+    ],
+    [tp, tr, hasDescription, hasSpecs, hasFaqs, reviewCount]
+  );
+
   const handleAddToCart = () => {
     if (!canAddToCart || justAdded) return;
     addToCart({
@@ -154,7 +186,10 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   return (
     <div className="space-y-0">
-      <div className="grid gap-10 overflow-visible lg:grid-cols-2 lg:gap-14">
+      <div
+        id="product-detail-hero"
+        className="grid gap-10 overflow-visible lg:grid-cols-2 lg:gap-14"
+      >
         <ProductGallery
           images={sortedMedia.map((m) => ({ url: m.url, alt: m.alt }))}
           productName={product.name}
@@ -255,9 +290,14 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         </div>
       </div>
 
-      <div className="mt-14 border-t border-border lg:mt-16">
+      <div id="product-detail-sections" className="mt-10 border-t border-border lg:mt-12">
+        <ProductDetailSectionNav sections={detailSections} />
+
         {hasDescription && (
-          <section className="border-b border-border py-10 md:py-12">
+          <section
+            id="about-item"
+            className="scroll-mt-[calc(var(--site-header-height,6.5rem)+3.5rem)] border-b border-border py-10 md:py-12"
+          >
             <h2 className="text-lg font-semibold text-foreground md:text-xl">
               {tp("aboutItem")}
             </h2>
@@ -268,7 +308,10 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         )}
 
         {hasSpecs && (
-          <section className="border-b border-border py-10 md:py-12">
+          <section
+            id="product-specs"
+            className="scroll-mt-[calc(var(--site-header-height,6.5rem)+3.5rem)] border-b border-border py-10 md:py-12"
+          >
             <h2 className="text-lg font-semibold text-foreground md:text-xl">
               {tp("productInformation")}
             </h2>
@@ -305,7 +348,10 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         )}
 
         {hasFaqs && (
-          <section className="border-b border-border py-10 md:py-12">
+          <section
+            id="product-faqs"
+            className="scroll-mt-[calc(var(--site-header-height,6.5rem)+3.5rem)] border-b border-border py-10 md:py-12"
+          >
             <h2 className="text-lg font-semibold text-foreground md:text-xl">
               Questions &amp; answers
             </h2>
@@ -317,7 +363,10 @@ export function ProductDetailView({ product }: { product: ProductData }) {
           </section>
         )}
 
-        <section id="customer-reviews" className="py-10 md:py-12">
+        <section
+          id="customer-reviews"
+          className="scroll-mt-[calc(var(--site-header-height,6.5rem)+3.5rem)] py-10 md:py-12"
+        >
           <h2 className="text-lg font-semibold text-foreground md:text-xl">
             {tr("customerReviews")}
             {reviewCount > 0 && (

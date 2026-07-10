@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/mongoose";
 import { Product, ProductReview } from "@/models";
 import { getAuthUser } from "@/lib/auth/session";
 import { syncProductRating, computeReviewSummary } from "@/lib/reviews/sync-rating";
+import { maskReviewerName } from "@/lib/reviews/mask-reviewer";
 import { apiSuccess, apiError, apiUnauthorized } from "@/lib/api/response";
 
 interface RouteParams {
@@ -23,7 +24,7 @@ function formatReview(review: {
   return {
     _id: review._id.toString(),
     userId: review.userId.toString(),
-    userName: review.userName,
+    userName: maskReviewerName(review.userName),
     rating: review.rating,
     title: review.title,
     body: review.body,

@@ -17,6 +17,7 @@ import { Input } from "@/components/ds/input";
 import { Textarea } from "@/components/ds/textarea";
 import { Label } from "@/components/ds/label";
 import { StarRating } from "@/components/storefront/products/StarRating";
+import { reviewerInitial } from "@/lib/reviews/mask-reviewer";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/components/ds/utils";
 
@@ -120,6 +121,7 @@ function formatReviewDate(iso: string) {
 
 function ReviewCard({ review }: { review: ReviewItem }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const displayName = review.userName;
 
   return (
     <article className="border-b border-border py-6 last:border-0">
@@ -127,10 +129,12 @@ function ReviewCard({ review }: { review: ReviewItem }) {
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {review.userName.charAt(0).toUpperCase()}
+              {reviewerInitial(displayName)}
             </div>
             <div>
-              <p className="text-small font-medium text-foreground">{review.userName}</p>
+              <p className="font-mono text-small font-medium text-foreground">
+                {displayName}
+              </p>
               <p className="text-[12px] text-muted-foreground">
                 {formatReviewDate(review.createdAt)}
               </p>

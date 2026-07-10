@@ -7,7 +7,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { ProductForm, productToFormData } from "@/components/admin/products/ProductForm";
 import { Button } from "@/components/ds/button";
 import { Badge } from "@/components/ds/badge";
-import { Loader2, ExternalLink, Trash2 } from "lucide-react";
+import { Loader2, ExternalLink, Trash2, MessageSquare } from "lucide-react";
+import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
 import { toast, toastError } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +20,7 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Record<string, unknown> | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
 
   useEffect(() => {
     if (!accessToken || !productId) return;
@@ -94,6 +96,14 @@ export default function EditProductPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowReviews((v) => !v)}
+          >
+            <MessageSquare className="mr-2 h-4 w-4" />
+            {showReviews ? "Hide reviews" : "Reviews"}
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <a
               href={`/products/${product.slug}`}
@@ -120,6 +130,14 @@ export default function EditProductPage() {
           </Button>
         </div>
       </div>
+
+      {showReviews && accessToken && (
+        <ProductReviewsManager
+          productId={productId}
+          productName={String(product.name)}
+          accessToken={accessToken}
+        />
+      )}
 
       <ProductForm
         productId={productId}

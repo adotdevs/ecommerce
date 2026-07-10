@@ -36,6 +36,21 @@ export const changeAccountSchema = z.discriminatedUnion("action", [
   changePasswordSchema,
 ]);
 
+export const adminGenerateReviewsSchema = z.object({
+  count: z.number().int().min(1).max(50),
+  targetAverage: z.number().min(1).max(5),
+  dateRangeDays: z.number().int().min(1).max(730).default(90),
+  notes: z.string().max(500).optional(),
+});
+
+export const adminManualReviewSchema = z.object({
+  userName: z.string().min(2).max(40),
+  rating: z.number().min(1).max(5),
+  title: z.string().min(3).max(120),
+  body: z.string().min(10).max(2000),
+  createdAt: z.string().optional(),
+});
+
 const productMediaSchema = z.object({
   url: z.string().min(1),
   alt: z.string().optional(),

@@ -9,6 +9,9 @@ export interface IProductReview extends Document {
   body: string;
   images: { url: string; alt?: string }[];
   status: "published" | "hidden";
+  source: "customer" | "admin";
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const ProductReviewSchema = new Schema<IProductReview>(
@@ -40,13 +43,26 @@ const ProductReviewSchema = new Schema<IProductReview>(
       enum: ["published", "hidden"],
       default: "published",
     },
+    source: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
   },
   { timestamps: true }
 );
 
 ProductReviewSchema.index({ productId: 1, createdAt: -1 });
-ProductReviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+ProductReviewSchema.index(
+  { productId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { source: "customer" } }
+);
 
-export const ProductReview: Model<IProductReview> =
-  mongoose.models.ProductReview ??
-  mongoose.model<IProductReview>("ProductReview", ProductReviewSchema);
+if (mongoose.models.ProductReview) {
+  delete mongoose.models.ProductReview;
+}
+
+export const ProductReview: Model<IProductReview> = mongoose.model<IProductReview>(
+  "ProductReview",
+  ProductReviewSchema
+);

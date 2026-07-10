@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
-import { Loader2, Search, Star, Sparkles, Tag, Upload } from "lucide-react";
+import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare } from "lucide-react";
+import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
 
 interface Product {
   _id: string;
@@ -46,6 +47,7 @@ export default function AdminProductsPage() {
   const [bulkPublish, setBulkPublish] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkResults, setBulkResults] = useState<BulkImportResult[] | null>(null);
+  const [reviewsProduct, setReviewsProduct] = useState<Product | null>(null);
 
   const load = () => {
     if (!accessToken) return;
@@ -199,6 +201,20 @@ export default function AdminProductsPage() {
         </Card>
       )}
 
+      {reviewsProduct && accessToken && (
+        <Card className="border-primary/25">
+          <CardContent className="pt-6">
+            <ProductReviewsManager
+              productId={reviewsProduct._id}
+              productName={reviewsProduct.name}
+              accessToken={accessToken}
+              onClose={() => setReviewsProduct(null)}
+              compact
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-wrap gap-3">
         <div className="relative min-w-[200px] flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -324,9 +340,19 @@ export default function AdminProductsPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/products/${p._id}`}>Edit</Link>
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setReviewsProduct(p)}
+                        >
+                          <MessageSquare className="mr-1 h-3.5 w-3.5" />
+                          Reviews
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/admin/products/${p._id}`}>Edit</Link>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

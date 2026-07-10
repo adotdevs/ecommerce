@@ -87,7 +87,7 @@ export function Header({ settings }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md">
+      <header id="site-header" className="sticky top-0 z-50 bg-background/95 backdrop-blur-md">
         {/* Top bar — locale, theme, secondary actions */}
         <div className="hidden border-b border-border sm:block">
           <div className="container-store flex h-9 items-center justify-between gap-4">

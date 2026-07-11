@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Sparkles,
   Languages,
+  Users,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -24,6 +25,7 @@ import { Button } from "@/components/ds/button";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/visitors", label: "Visitors", icon: Users },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/merchandising", label: "Merchandising", icon: Sparkles },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
@@ -35,7 +37,13 @@ const navItems = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({
+  storeName = "",
+  adminBrandShort = "",
+}: {
+  storeName?: string;
+  adminBrandShort?: string;
+}) {
   const pathname = usePathname();
   const { user, clearAuth } = useAuthStore();
 
@@ -50,10 +58,10 @@ export function AdminSidebar() {
       <div className="border-b border-border p-6">
         <Link href="/admin" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-primary text-white text-small font-bold">
-            YS
+            {adminBrandShort || "—"}
           </div>
           <div>
-            <p className="text-body font-semibold text-foreground">YourStore</p>
+            <p className="text-body font-semibold text-foreground">{storeName || "Admin"}</p>
             <p className="text-[11px] text-muted-foreground">Admin</p>
           </div>
         </Link>

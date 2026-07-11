@@ -24,6 +24,11 @@ export default function AdminSettingsPage() {
   const [changingEmail, setChangingEmail] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [form, setForm] = useState({
+    storeName: "",
+    storeTagline: "",
+    adminBrandShort: "",
+    logo: "",
+    logoDark: "",
     announcement: "",
     deliveryInfo: "",
     supportPhone: "",
@@ -40,6 +45,11 @@ export default function AdminSettingsPage() {
       .then((d) => {
         if (d.data) {
           setForm({
+            storeName: d.data.storeName ?? "",
+            storeTagline: d.data.storeTagline ?? "",
+            adminBrandShort: d.data.adminBrandShort ?? "",
+            logo: d.data.logo ?? "",
+            logoDark: d.data.logoDark ?? "",
             announcement: d.data.announcement ?? "",
             deliveryInfo: d.data.deliveryInfo ?? "",
             supportPhone: d.data.supportPhone ?? "",
@@ -71,6 +81,11 @@ export default function AdminSettingsPage() {
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
+        storeName: form.storeName.trim(),
+        storeTagline: form.storeTagline.trim(),
+        adminBrandShort: form.adminBrandShort.trim(),
+        logo: form.logo.trim() || undefined,
+        logoDark: form.logoDark.trim() || undefined,
         announcement: form.announcement,
         deliveryInfo: form.deliveryInfo,
         supportPhone: form.supportPhone,
@@ -388,6 +403,64 @@ export default function AdminSettingsPage() {
               <Plus className="h-4 w-4" /> Add language
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Store branding</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <Label>Store name</Label>
+              <Input
+                value={form.storeName}
+                onChange={(e) => setForm({ ...form, storeName: e.target.value })}
+                placeholder="Shown in header, footer, browser title, and admin"
+                required
+              />
+            </div>
+            <div>
+              <Label>Store tagline</Label>
+              <Textarea
+                value={form.storeTagline}
+                onChange={(e) => setForm({ ...form, storeTagline: e.target.value })}
+                placeholder="Short description in footer and registration page"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Admin badge letters</Label>
+                <Input
+                  value={form.adminBrandShort}
+                  onChange={(e) =>
+                    setForm({ ...form, adminBrandShort: e.target.value.slice(0, 3) })
+                  }
+                  placeholder="e.g. YS (auto-generated if empty)"
+                  maxLength={3}
+                />
+              </div>
+              <div>
+                <Label>Logo URL</Label>
+                <Input
+                  value={form.logo}
+                  onChange={(e) => setForm({ ...form, logo: e.target.value })}
+                  placeholder="https://... or /brand/logo.svg"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Logo URL (dark mode)</Label>
+              <Input
+                value={form.logoDark}
+                onChange={(e) => setForm({ ...form, logoDark: e.target.value })}
+                placeholder="Optional — used in dark theme"
+              />
+            </div>
+            <Button type="submit">{saved ? "Saved!" : "Save branding"}</Button>
+          </form>
         </CardContent>
       </Card>
 

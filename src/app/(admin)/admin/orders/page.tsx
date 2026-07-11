@@ -13,7 +13,7 @@ import {
 } from "@/components/ds/table";
 import { Input } from "@/components/ds/input";
 import { Skeleton } from "@/components/ds/skeleton";
-import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
+import { formatMoney } from "@/lib/currency/format";
 
 interface Order {
   _id: string;
@@ -131,7 +131,7 @@ export default function AdminOrdersPage() {
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
                 <TableCell className="text-muted-foreground">{order.email}</TableCell>
                 <TableCell>
-                  <PriceDisplay amountUsd={order.total} />
+                  {formatMoney(order.total, "USD", "en", { USD: 1 })}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{order.status}</Badge>

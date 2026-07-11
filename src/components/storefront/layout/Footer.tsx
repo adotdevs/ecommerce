@@ -8,18 +8,21 @@ interface FooterProps {
 
 export async function Footer({ settings }: FooterProps) {
   const t = await getTranslations("footer");
-  const tc = await getTranslations("common");
   const tn = await getTranslations("nav");
+  const storeName = settings?.storeName ?? "";
+  const storeTagline = settings?.storeTagline ?? "";
 
   return (
     <footer className="mt-auto border-t border-border bg-secondary">
       <div className="container-store py-16">
         <div className="grid gap-12 md:grid-cols-4">
           <div>
-            <h3 className="mb-4 text-body font-semibold text-foreground">{tc("brand")}</h3>
-            <p className="text-small text-muted-foreground leading-relaxed">
-              Premium shopping experience with curated products worldwide.
-            </p>
+            {storeName && (
+              <h3 className="mb-4 text-body font-semibold text-foreground">{storeName}</h3>
+            )}
+            {storeTagline && (
+              <p className="text-small text-muted-foreground leading-relaxed">{storeTagline}</p>
+            )}
           </div>
           <div>
             <h4 className="mb-4 text-small font-semibold text-foreground">{t("shop")}</h4>
@@ -48,9 +51,11 @@ export async function Footer({ settings }: FooterProps) {
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t border-border pt-8 text-center text-small text-muted-foreground">
-          © {new Date().getFullYear()} {tc("brand")}. {t("rights")}
-        </div>
+        {storeName && (
+          <div className="mt-12 border-t border-border pt-8 text-center text-small text-muted-foreground">
+            © {new Date().getFullYear()} {storeName}. {t("rights")}
+          </div>
+        )}
       </div>
     </footer>
   );

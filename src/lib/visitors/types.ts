@@ -37,4 +37,5 @@ export interface FirstVisitContext extends FirstVisitClientPayload {
   acceptLanguage?: string;
   geo: VisitorGeoDetails | null;
   visitedAt: string;
+  storeName?: string;
 }

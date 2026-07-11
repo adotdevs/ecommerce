@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import { Globe, ChevronDown } from "lucide-react";
+import { Globe, ChevronDown, CircleDollarSign } from "lucide-react";
 import { useCurrency, useLocaleStore } from "@/stores/locale-store";
 import {
   currencies,
@@ -26,10 +26,10 @@ function setPrefCookie(name: string, value: string) {
 }
 
 const triggerClass =
-  "inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const triggerClassDefault =
-  "inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-small font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex h-9 items-center gap-2 rounded-[var(--radius-sm)] px-2.5 text-small font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function RegionSelector({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("header");
@@ -79,17 +79,20 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
           enabled: true,
         }));
 
-  const trigger = compact ? `${triggerClass} h-7` : triggerClassDefault;
+  const trigger = compact ? `${triggerClass} h-9` : triggerClassDefault;
+  const iconClass = compact ? "h-5 w-5 shrink-0" : "h-5 w-5 shrink-0";
+  const chevronClass = compact ? "h-4 w-4 shrink-0" : "h-4 w-4 shrink-0";
+  const iconStroke = 2.25;
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger className={trigger}>
-          <Globe className="h-3 w-3" />
+          <Globe className={iconClass} strokeWidth={iconStroke} />
           {!compact && (
             <span>{localeConfig[routeLocale]?.nativeLabel ?? routeLocale}</span>
           )}
-          <ChevronDown className="h-3 w-3 opacity-60" />
+          <ChevronDown className={cn(chevronClass, "opacity-60")} strokeWidth={iconStroke} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{t("selectLanguage")}</DropdownMenuLabel>
@@ -112,8 +115,9 @@ export function RegionSelector({ compact = false }: { compact?: boolean }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger className={trigger}>
+          <CircleDollarSign className={iconClass} strokeWidth={iconStroke} />
           <span>{currency}</span>
-          <ChevronDown className="h-3 w-3 opacity-60" />
+          <ChevronDown className={cn(chevronClass, "opacity-60")} strokeWidth={iconStroke} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{t("selectCurrency")}</DropdownMenuLabel>

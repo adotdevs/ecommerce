@@ -4,6 +4,7 @@ import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, e
 import { localizeHomepageSection } from "@/lib/cms/localize-homepage";
 import { HomepageRenderer } from "@/components/storefront/homepage/HomepageRenderer";
 import { getSiteSettings } from "@/lib/data/site-settings";
+import { resolveBranding } from "@/lib/site/branding";
 import type { Locale } from "@/config/locales";
 import type { Metadata } from "next";
 
@@ -11,13 +12,14 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
+  const { seoTitle, seoDescription } = resolveBranding(settings);
   return {
-    title: settings?.seo?.title ?? "YourStore — Premium Shopping",
-    description: settings?.seo?.description,
+    title: seoTitle || undefined,
+    description: seoDescription || undefined,
     keywords: settings?.seo?.keywords,
     openGraph: {
-      title: settings?.seo?.title,
-      description: settings?.seo?.description,
+      title: seoTitle || undefined,
+      description: seoDescription || undefined,
       images: settings?.seo?.ogImage ? [settings.seo.ogImage] : [],
     },
   };

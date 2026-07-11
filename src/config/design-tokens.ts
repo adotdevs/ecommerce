@@ -1,8 +1,4 @@
 export const designTokens = {
-  brand: {
-    name: "YourStore",
-    tagline: "Premium shopping, redefined.",
-  },
   radius: {
     sm: "0.375rem",
     md: "0.5rem",

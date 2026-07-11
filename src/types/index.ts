@@ -74,6 +74,9 @@ export interface SiteSettingsPublic {
   deliveryInfo?: string;
   logo?: string;
   logoDark?: string;
+  storeName?: string;
+  storeTagline?: string;
+  adminBrandShort?: string;
   currencies: { code: string; symbol: string; rate: number }[];
   languages: { code: string; label: string; nativeLabel?: string; dir?: "ltr" | "rtl"; enabled?: boolean }[];
   countries: { code: string; label: string; currency: string; language: string }[];

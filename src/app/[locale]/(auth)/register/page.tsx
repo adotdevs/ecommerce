@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,12 +14,33 @@ export default function RegisterPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [storeTagline, setStoreTagline] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
     firstName: "",
     lastName: "",
   });
+
+  useEffect(() => {
+    fetch("/api/v1/settings/site")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data) {
+          setStoreName(d.data.storeName ?? "");
+          setStoreTagline(d.data.storeTagline ?? "");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const registerDescription =
+    storeName && storeTagline
+      ? `Join ${storeName} — ${storeTagline}`
+      : storeName
+        ? `Join ${storeName}`
+        : storeTagline || undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,14 +74,16 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
-          <CardDescription>Join YourStore for a premium shopping experience</CardDescription>
+          {registerDescription && (
+            <CardDescription>{registerDescription}</CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">First name</Label>
                 <Input
                   id="firstName"
                   value={form.firstName}
@@ -68,7 +91,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">Last name</Label>
                 <Input
                   id="lastName"
                   value={form.lastName}

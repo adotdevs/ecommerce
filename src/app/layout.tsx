@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProviderWrapper } from "@/components/providers/ToastProvider";
+import { getSiteSettings } from "@/lib/data/site-settings";
+import { resolveBranding } from "@/lib/site/branding";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,13 +17,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "YourStore — Premium Shopping Experience",
-    template: "%s | YourStore",
-  },
-  description: "Discover curated premium products with fast delivery worldwide.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const { storeName, seoTitle, seoDescription } = resolveBranding(settings);
+
+  return {
+    title: {
+      default: seoTitle || storeName || "Store",
+      template: storeName ? `%s | ${storeName}` : "%s",
+    },
+    description: seoDescription || undefined,
+  };
+}
 
 export default function RootLayout({
   children,

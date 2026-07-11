@@ -85,24 +85,26 @@ export function Header({ settings }: HeaderProps) {
         { label: t("nav.deals"), href: "/deals" },
       ];
 
+  const storeName = settings?.storeName ?? "";
+
   return (
     <>
       <header id="site-header" className="sticky top-0 z-50 bg-background/95 backdrop-blur-md">
         {/* Top bar — locale, theme, secondary actions */}
         <div className="hidden border-b border-border sm:block">
-          <div className="container-store flex h-9 items-center justify-between gap-4">
+          <div className="container-store flex h-11 items-center justify-between gap-4">
             <p className="truncate text-[12px] text-muted-foreground">
               {settings?.announcement ?? settings?.deliveryInfo}
             </p>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1.5">
               <RegionSelector compact />
-              <div className="mx-1 h-4 w-px bg-border" />
+              <div className="mx-0.5 h-5 w-px bg-border" />
               <ThemeToggle />
               <TopBarIcon href="/wishlist" label={t("header.wishlist")} count={displayWishlistCount}>
-                <Heart className="h-3.5 w-3.5" />
+                <Heart className="h-5 w-5" strokeWidth={2.25} />
               </TopBarIcon>
               <TopBarIcon href="/compare" label={t("compare.title")} count={displayCompareCount}>
-                <GitCompareArrows className="h-3.5 w-3.5" />
+                <GitCompareArrows className="h-5 w-5" strokeWidth={2.25} />
               </TopBarIcon>
             </div>
           </div>
@@ -126,15 +128,15 @@ export function Header({ settings }: HeaderProps) {
                 {settings?.logo ? (
                   <Image
                     src={settings.logo}
-                    alt={t("common.brand")}
+                    alt={storeName || "Logo"}
                     width={120}
                     height={32}
                     className="h-7 w-auto md:h-8"
                     priority
                   />
-                ) : (
-                  <span className="text-body font-bold tracking-tight">{t("common.brand")}</span>
-                )}
+                ) : storeName ? (
+                  <span className="text-body font-bold tracking-tight">{storeName}</span>
+                ) : null}
               </Link>
 
               <nav className="hidden items-center lg:flex">
@@ -239,7 +241,7 @@ export function Header({ settings }: HeaderProps) {
           />
           <div className="absolute left-0 top-0 flex h-full w-[min(320px,88vw)] flex-col bg-background shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between border-b border-border p-4">
-              <span className="font-semibold">{t("common.brand")}</span>
+              <span className="font-semibold">{storeName || ""}</span>
               <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
@@ -328,11 +330,11 @@ function TopBarIcon({
     <Link
       href={href}
       aria-label={label}
-      className="relative flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      className="relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
     >
       {children}
       {count > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}

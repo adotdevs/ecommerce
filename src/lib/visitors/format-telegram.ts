@@ -33,7 +33,11 @@ export function formatFirstVisitTelegramMessage(ctx: FirstVisitContext): string 
     geo?.countryCode ? `(${geo.countryCode})` : null,
   ].filter(Boolean);
 
-  let message = "<b>🆕 New visitor — first visit</b>\n\n";
+  let message = "<b>🆕 New visitor";
+  if (ctx.storeName) {
+    message += ` — ${escapeHtml(ctx.storeName)}`;
+  }
+  message += " (first visit)</b>\n\n";
 
   message += "<b>📍 Location</b>\n";
   message += line("IP", geo?.ip ?? "Unknown");

@@ -56,6 +56,9 @@ async function seed() {
     { key: "global" },
     {
       key: "global",
+      storeName: "YourStore",
+      storeTagline: "Premium shopping experience with curated products worldwide.",
+      adminBrandShort: "YS",
       announcement: "Free express shipping on orders over $100 — Limited time only",
       deliveryInfo: "Delivered in 2-5 business days",
       supportPhone: "+1 (800) 555-0199",

@@ -9,6 +9,9 @@ export interface ISiteSettings extends Document {
   supportEmail?: string;
   logo?: string;
   logoDark?: string;
+  storeName?: string;
+  storeTagline?: string;
+  adminBrandShort?: string;
   currencies: { code: string; symbol: string; rate: number }[];
   languages: { code: string; label: string; nativeLabel?: string; dir?: "ltr" | "rtl"; enabled?: boolean }[];
   countries: {
@@ -40,6 +43,9 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
     supportEmail: String,
     logo: String,
     logoDark: String,
+    storeName: String,
+    storeTagline: String,
+    adminBrandShort: String,
     currencies: [
       { code: String, symbol: String, rate: { type: Number, default: 1 } },
     ],

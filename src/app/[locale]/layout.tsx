@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { localeConfig, type Locale } from "@/config/locales";
 import { LocaleInitializer } from "@/components/providers/LocaleInitializer";
+import { FirstVisitTracker } from "@/components/storefront/tracking/FirstVisitTracker";
 import {
   DisplayPreferencesProvider,
   type DisplayPreferences,
@@ -62,6 +63,7 @@ export default async function LocaleLayout({
             locale={locale as Locale}
             serverPreferences={serverPreferences}
           />
+          <FirstVisitTracker />
           {children}
         </DisplayPreferencesProvider>
       </NextIntlClientProvider>

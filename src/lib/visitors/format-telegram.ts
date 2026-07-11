@@ -1,6 +1,19 @@
 import { parseUserAgent } from "./user-agent";
 import type { FirstVisitContext } from "./types";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function line(label: string, value?: string | number | boolean | null): string {
+  if (value == null || value === "") return "";
+  const text = typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
+  return `<b>${escapeHtml(label)}:</b> ${escapeHtml(text)}\n`;
+}
+
 function displayValue(value?: string | null): string {
   return value?.trim() || "—";
 }

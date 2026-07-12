@@ -4,54 +4,41 @@ import {
   useCallback,
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import { RemoteImage } from "@/components/storefront/RemoteImage";
-import {
-  Search,
-  Loader2,
-  Package,
-  FolderTree,
-  Tag,
-  ArrowRight,
-} from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ds/input";
 import { cn } from "@/components/ds/utils";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import type { SearchSuggestion } from "@/lib/search/products";
-import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { startNavigationProgress } from "@/lib/navigation/progress";
 
 function highlightMatch(text: string, query: string) {
-  if (!query.trim()) return text;
+  if (!query.trim()) {
+    return <span className="font-normal text-muted-foreground">{text}</span>;
+  }
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx < 0) return text;
+  if (idx < 0) {
+    return <span className="font-normal text-muted-foreground">{text}</span>;
+  }
   return (
     <>
-      {text.slice(0, idx)}
-      <mark className="rounded-sm bg-primary/15 px-0.5 text-foreground">
+      <span className="font-normal text-muted-foreground">
+        {text.slice(0, idx)}
+      </span>
+      <span className="font-bold text-foreground">
         {text.slice(idx, idx + query.length)}
-      </mark>
-      {text.slice(idx + query.length)}
+      </span>
+      <span className="font-normal text-muted-foreground">
+        {text.slice(idx + query.length)}
+      </span>
     </>
   );
 }
-
-function SuggestionPrice({ amount }: { amount: number }) {
-  const formatted = useFormattedPrice(amount);
-  return <span className="shrink-0 text-[12px] font-semibold text-foreground">{formatted}</span>;
-}
-
-const TYPE_ICON = {
-  product: Package,
-  category: FolderTree,
-  brand: Tag,
-} as const;
 
 interface SearchAutocompleteProps {
   value: string;
@@ -86,13 +73,10 @@ export function SearchAutocomplete({
   const debouncedQuery = useDebouncedValue(value, 280);
   const { data, loading } = useSearchSuggestions(debouncedQuery, open);
 
-  const flatItems = useMemo(() => {
-    if (!data) return [] as SearchSuggestion[];
-    return [...data.products, ...data.categories, ...data.brands];
-  }, [data]);
-
-  const showPanel = open && value.trim().length >= 2;
-  const hasResults = flatItems.length > 0;
+  const products = data?.products ?? [];
+  const trimmedValue = value.trim();
+  const showPanel = open && trimmedValue.length >= 2;
+  const itemCount = 1 + products.length;
 
   const goToSearch = useCallback(
     (q: string) => {
@@ -122,7 +106,7 @@ export function SearchAutocomplete({
     [onSubmit, router]
   );
 
-  const selectItem = useCallback(
+  const selectProduct = useCallback(
     (item: SearchSuggestion) => {
       setOpen(false);
       onChange(item.name);
@@ -142,7 +126,7 @@ export function SearchAutocomplete({
 
   useEffect(() => {
     setActiveIndex(-1);
-  }, [debouncedQuery, flatItems.length]);
+  }, [debouncedQuery, products.length]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -159,7 +143,7 @@ export function SearchAutocomplete({
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, flatItems.length));
+      setActiveIndex((i) => Math.min(i + 1, itemCount - 1));
       return;
     }
     if (e.key === "ArrowUp") {
@@ -169,8 +153,10 @@ export function SearchAutocomplete({
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      if (activeIndex >= 0 && activeIndex < flatItems.length) {
-        selectItem(flatItems[activeIndex]);
+      if (activeIndex === 0) {
+        goToSearch(trimmedValue);
+      } else if (activeIndex > 0) {
+        selectProduct(products[activeIndex - 1]);
       } else {
         goToSearch(value);
       }
@@ -184,81 +170,6 @@ export function SearchAutocomplete({
   }[size];
 
   const iconClass = size === "lg" ? "h-4 w-4" : "h-4 w-4";
-
-  const renderSection = (
-    title: string,
-    items: SearchSuggestion[],
-    offset: number
-  ) => {
-    if (!items.length) return null;
-    return (
-      <div key={title} className="py-1">
-        <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {title}
-        </p>
-        <ul>
-          {items.map((item, idx) => {
-            const globalIdx = offset + idx;
-            const Icon = TYPE_ICON[item.type];
-            const isActive = activeIndex === globalIdx;
-            return (
-              <li key={`${item.type}-${item.id}`}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onMouseEnter={() => setActiveIndex(globalIdx)}
-                  onClick={() => selectItem(item)}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
-                    isActive ? "bg-secondary" : "hover:bg-secondary/70"
-                  )}
-                >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                    {item.image ? (
-                      <RemoteImage
-                        src={item.image}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-muted-foreground">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-small font-medium text-foreground">
-                      {highlightMatch(item.name, value)}
-                    </p>
-                    {item.subtitle && (
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {item.subtitle}
-                      </p>
-                    )}
-                  </div>
-                  {item.price != null && <SuggestionPrice amount={item.price} />}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  };
-
-  const trimmedValue = value.trim();
-  const viewAllHref = trimmedValue
-    ? `/products?q=${encodeURIComponent(trimmedValue)}`
-    : "#";
-
-  let sectionOffset = 0;
-  const productOffset = sectionOffset;
-  sectionOffset += data?.products.length ?? 0;
-  const categoryOffset = sectionOffset;
-  sectionOffset += data?.categories.length ?? 0;
 
   return (
     <div ref={rootRef} className={cn("relative w-full", className)}>
@@ -290,7 +201,7 @@ export function SearchAutocomplete({
             onChange(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => value.trim().length >= 2 && setOpen(true)}
+          onFocus={() => trimmedValue.length >= 2 && setOpen(true)}
           onKeyDown={handleKeyDown}
           className={cn("bg-secondary", sizeClass, inputClassName)}
         />
@@ -301,46 +212,67 @@ export function SearchAutocomplete({
 
       {showPanel && (
         <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-[200] overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-card)]"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-[200] overflow-hidden rounded-xl border border-border bg-popover py-1 shadow-[var(--shadow-card)]"
           id={listboxId}
           role="listbox"
         >
-          {loading && !data ? (
-            <div className="flex items-center gap-2 px-4 py-6 text-small text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t("searching")}
-            </div>
-          ) : hasResults ? (
-            <div className="max-h-[min(70vh,420px)] overflow-y-auto">
-              {renderSection(t("products"), data?.products ?? [], productOffset)}
-              {renderSection(t("categories"), data?.categories ?? [], categoryOffset)}
-              {renderSection(t("brands"), data?.brands ?? [], sectionOffset)}
-            </div>
-          ) : (
-            <p className="px-4 py-6 text-center text-small text-muted-foreground">
-              {t("noSuggestions")}
-            </p>
-          )}
+          <ul className="max-h-[min(70vh,360px)] overflow-y-auto">
+            <li>
+              <button
+                type="button"
+                role="option"
+                aria-selected={activeIndex === 0}
+                onMouseEnter={() => setActiveIndex(0)}
+                onClick={() => goToSearch(trimmedValue)}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                  activeIndex === 0 ? "bg-secondary" : "hover:bg-secondary/70"
+                )}
+              >
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="text-small font-bold text-foreground">
+                  {trimmedValue}
+                </span>
+              </button>
+            </li>
 
-          <div className="border-t border-border bg-muted/30 px-3 py-2">
-            <Link
-              href={viewAllHref}
-              onClick={(e) => {
-                if (!trimmedValue) {
-                  e.preventDefault();
-                  return;
-                }
-                setOpen(false);
-                onSubmit?.(trimmedValue);
-              }}
-              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-small font-medium text-primary transition hover:bg-secondary"
-            >
-              <span>
-                {t("viewAll")} “{trimmedValue}”
-              </span>
-              <ArrowRight className="h-4 w-4 shrink-0" />
-            </Link>
-          </div>
+            {products.map((item, idx) => {
+              const optionIndex = idx + 1;
+              const isActive = activeIndex === optionIndex;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isActive}
+                    onMouseEnter={() => setActiveIndex(optionIndex)}
+                    onClick={() => selectProduct(item)}
+                    className={cn(
+                      "flex w-full items-center px-4 py-2 text-left transition-colors",
+                      isActive ? "bg-secondary" : "hover:bg-secondary/70"
+                    )}
+                  >
+                    <span className="truncate text-small">
+                      {highlightMatch(item.name, trimmedValue)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+
+            {loading && products.length === 0 && (
+              <li className="flex items-center gap-2 px-4 py-2 text-[12px] text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t("searching")}
+              </li>
+            )}
+
+            {!loading && products.length === 0 && (
+              <li className="px-4 py-2 text-[12px] text-muted-foreground">
+                {t("noSuggestions")}
+              </li>
+            )}
+          </ul>
         </div>
       )}
     </div>

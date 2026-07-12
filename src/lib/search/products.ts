@@ -40,13 +40,10 @@ export interface SearchSuggestionsResult {
 
 async function collectProductSuggestions(
   queries: string[],
-  productLimit: number,
-  originalQuery?: string
+  productLimit: number
 ): Promise<SearchSuggestion[]> {
   const products: SearchSuggestion[] = [];
   const seen = new Set<string>();
-  const relevanceQuery = originalQuery ?? queries[0] ?? "";
-  const tokens = tokenizeSearchQuery(relevanceQuery);
 
   for (const searchQuery of queries) {
     let batch = await regexSuggestProducts(searchQuery, productLimit);
@@ -59,14 +56,7 @@ async function collectProductSuggestions(
         );
         const atlasSeen = new Set(batch.map((p) => p.id));
         for (const item of atlas) {
-          if (
-            !atlasSeen.has(item.id) &&
-            isProductSearchRelevant(
-              { name: item.name, slug: item.slug },
-              relevanceQuery,
-              tokens
-            )
-          ) {
+          if (!atlasSeen.has(item.id)) {
             batch.push(item);
             atlasSeen.add(item.id);
           }
@@ -86,15 +76,7 @@ async function collectProductSuggestions(
     if (products.length >= productLimit) break;
   }
 
-  return products
-    .filter((item) =>
-      isProductSearchRelevant(
-        { name: item.name, slug: item.slug },
-        relevanceQuery,
-        tokens
-      )
-    )
-    .slice(0, productLimit);
+  return products.slice(0, productLimit);
 }
 
 async function collectCategorySuggestions(
@@ -189,6 +171,85 @@ const SEARCH_SYNONYMS: Record<string, string[]> = {
   headphones: ["headphone", "earbuds", "earphone", "headset"],
 };
 
+/** Synonym keys/values whose words start with or contain a partial query (mobi → mobile). */
+function getPrefixSynonymTerms(query: string): string[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+
+  const terms = new Set<string>();
+  for (const [key, values] of Object.entries(SEARCH_SYNONYMS)) {
+    if (key.startsWith(q) || (q.length >= 3 && key.includes(q))) terms.add(key);
+    for (const value of values) {
+      if (value.startsWith(q) || (q.length >= 3 && value.includes(q))) {
+        terms.add(value);
+      }
+    }
+  }
+  return [...terms];
+}
+
+function expandedSuggestionTokens(query: string, tokens: string[]) {
+  const expanded = new Set(expandedSearchTokens(tokens));
+  for (const term of getPrefixSynonymTerms(query)) {
+    expanded.add(term);
+    for (const synonym of SEARCH_SYNONYMS[term] ?? []) expanded.add(synonym);
+  }
+  return [...expanded];
+}
+
+const SUGGESTION_TEXT_FIELDS = [
+  ...PRIMARY_SEARCH_FIELDS,
+  "shortDescription",
+] as const;
+
+/** Autocomplete DB filter: prefix + substring + synonym expansion on primary fields. */
+function buildSuggestionSearchFilter(query: string): Record<string, unknown> | null {
+  const tokens = tokenizeSearchQuery(query);
+  if (!tokens.length) return null;
+
+  const clauses: Record<string, unknown>[] = [];
+  const primary = buildFlexibleTextFilter(PRIMARY_SEARCH_FIELDS, query);
+  if (primary) clauses.push(primary);
+
+  if (tokens.length === 1 && tokens[0].length >= 2) {
+    const token = escapeRegex(tokens[0]);
+    clauses.push(
+      fieldMatchOr(
+        PRIMARY_SEARCH_FIELDS,
+        new RegExp(`(?:^|[\\s\\-_/])${token}`, "i")
+      )
+    );
+    clauses.push(
+      fieldMatchOr(PRIMARY_SEARCH_FIELDS, new RegExp(token, "i"))
+    );
+  }
+
+  const synonymTerms = new Set<string>([
+    ...getPrefixSynonymTerms(query),
+    ...(tokens.length === 1 ? (SEARCH_SYNONYMS[tokens[0]] ?? []) : []),
+  ]);
+  for (const term of synonymTerms) {
+    const synFilter = buildFlexibleTextFilter(PRIMARY_SEARCH_FIELDS, term);
+    if (synFilter) clauses.push(synFilter);
+  }
+
+  if (tokens.length === 1 && tokens[0].length >= 3 && tokens[0].length <= 6) {
+    const token = escapeRegex(tokens[0]);
+    clauses.push(
+      fieldMatchOr(
+        SUGGESTION_TEXT_FIELDS,
+        new RegExp(`(?:^|[\\s\\-_/.,])${token}`, "i")
+      )
+    );
+    clauses.push(
+      fieldMatchOr(SUGGESTION_TEXT_FIELDS, new RegExp(token, "i"))
+    );
+  }
+
+  if (!clauses.length) return null;
+  return clauses.length === 1 ? clauses[0] : { $or: clauses };
+}
+
 /** Flexible match: every token anywhere, compact gaps, or flexible spacing. */
 function buildFlexibleTextFilter(
   fields: readonly string[],
@@ -250,7 +311,11 @@ export function buildProductSearchFilter(query: string): Record<string, unknown>
 
   // Synonyms only match title-level fields so descriptions cannot broaden results.
   if (tokens.length === 1) {
-    for (const synonym of SEARCH_SYNONYMS[tokens[0]] ?? []) {
+    const synonymTerms = new Set<string>([
+      ...(SEARCH_SYNONYMS[tokens[0]] ?? []),
+      ...getPrefixSynonymTerms(query),
+    ]);
+    for (const synonym of synonymTerms) {
       const synFilter = buildFlexibleTextFilter(PRIMARY_SEARCH_FIELDS, synonym);
       if (synFilter) clauses.push(synFilter);
     }
@@ -291,6 +356,14 @@ function tokenMatchesPrimaryField(token: string, primary: string) {
   return fuzzyMatchScore(token, [primary]) >= 0.82;
 }
 
+function searchTextWords(p: Record<string, unknown>) {
+  return productSearchTexts(p)
+    .join(" ")
+    .toLowerCase()
+    .split(/[\s\-_/]+/)
+    .filter((word) => word.length >= 2);
+}
+
 /** Gate weak matches (e.g. hair → MacBook Air, computer → power bank). */
 function isProductSearchRelevant(
   p: Record<string, unknown>,
@@ -312,11 +385,40 @@ function isProductSearchRelevant(
   return fuzzyMatchScore(q, [name]) >= 0.8;
 }
 
+/** Looser relevance for autocomplete partial tokens (mobi → mobile phone). */
+function isSuggestionRelevant(
+  p: Record<string, unknown>,
+  query: string,
+  tokens: string[]
+) {
+  if (isProductSearchRelevant(p, query, tokens)) return true;
+
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return false;
+
+  if (searchTextWords(p).some((word) => word.startsWith(q))) return true;
+
+  for (const term of getPrefixSynonymTerms(query)) {
+    const primary = productPrimaryText(p);
+    if (primary.includes(term)) return true;
+    if (searchTextWords(p).some((word) => word.startsWith(term))) return true;
+  }
+
+  return false;
+}
+
 function minSearchScore(query: string) {
   const tokens = tokenizeSearchQuery(query);
   if (tokens.length === 1 && tokens[0].length <= 4) return 42;
   if (tokens.length === 1) return 34;
   return 28;
+}
+
+function minSearchScoreForSuggestions(query: string) {
+  const tokens = tokenizeSearchQuery(query);
+  if (tokens.length === 1 && tokens[0].length <= 4) return 18;
+  if (tokens.length === 1) return 22;
+  return 18;
 }
 
 function expandedSearchTokens(tokens: string[]) {
@@ -385,13 +487,20 @@ function productSearchTexts(p: Record<string, unknown>): string[] {
   ].filter(Boolean);
 }
 
-function rankProductMatch(p: Record<string, unknown>, query: string, tokens: string[]) {
+function rankProductMatch(
+  p: Record<string, unknown>,
+  query: string,
+  tokens: string[],
+  opts?: { suggestions?: boolean }
+) {
   const name = String(p.name ?? "").toLowerCase();
   const primary = productPrimaryText(p);
   const blob = productSearchBlob(p);
   const q = query.trim().toLowerCase();
   const compactQ = q.replace(/\s+/g, "");
-  const expanded = expandedSearchTokens(tokens);
+  const expanded = opts?.suggestions
+    ? expandedSuggestionTokens(query, tokens)
+    : expandedSearchTokens(tokens);
 
   let score = 0;
   if (name === q) score += 200;
@@ -402,6 +511,14 @@ function rankProductMatch(p: Record<string, unknown>, query: string, tokens: str
   if (blob.includes(q)) score += 30;
   if (expanded.some((t) => t !== q && primary.includes(t))) score += 75;
   if (primaryFieldMatchesTokens(primary, tokens)) score += 65;
+  if (tokens.length === 1) {
+    const token = tokens[0];
+    const words = primary.split(/[\s\-_/]+/);
+    if (words.some((word) => word.startsWith(token))) score += 85;
+    if (opts?.suggestions && searchTextWords(p).some((word) => word.startsWith(token))) {
+      score += 90;
+    }
+  }
   if (p.featured) score += 5;
 
   const fuzzy = fuzzyMatchScore(q, [name]);
@@ -768,6 +885,7 @@ async function atlasSuggestProducts(query: string, limit: number) {
         media: 1,
         brandName: 1,
         categoryNames: 1,
+        tags: 1,
         shortDescription: 1,
         score: { $meta: "searchScore" },
       },
@@ -777,79 +895,74 @@ async function atlasSuggestProducts(query: string, limit: number) {
   const rows = await Product.aggregate(pipeline);
   const tokens = tokenizeSearchQuery(query);
   return rows
-    .map((p) => mapProductSuggestion(p as Record<string, unknown>))
-    .filter((item) =>
-      isProductSearchRelevant(
-        { name: item.name, slug: item.slug },
-        query,
-        tokens
-      )
+    .filter((p) =>
+      isSuggestionRelevant(p as Record<string, unknown>, query, tokens)
     )
+    .map((p) => mapProductSuggestion(p as Record<string, unknown>))
+    .slice(0, limit);
+}
+
+function scoreSuggestionProducts(
+  products: Record<string, unknown>[],
+  query: string,
+  tokens: string[],
+  limit: number
+) {
+  return products
+    .map((p) => ({
+      p,
+      score: rankProductMatch(p, query, tokens, { suggestions: true }),
+    }))
+    .filter(
+      (x) =>
+        isSuggestionRelevant(x.p, query, tokens) &&
+        x.score >= minSearchScoreForSuggestions(query)
+    )
+    .sort((a, b) => b.score - a.score)
+    .map(({ p }) => p)
     .slice(0, limit);
 }
 
 async function regexSuggestProducts(query: string, limit: number) {
-  const searchFilter = buildProductSearchFilter(query);
+  const searchFilter = buildSuggestionSearchFilter(query);
   if (!searchFilter) return [];
 
   const tokens = tokenizeSearchQuery(query);
-  const fetchLimit = Math.min(limit * 4, 40);
+  const fetchLimit = Math.min(limit * 6, 60);
+  const select =
+    "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured";
 
   let products = await Product.find({
     status: "published",
     ...searchFilter,
   })
-    .select(
-      "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured"
-    )
+    .select(select)
     .limit(fetchLimit)
     .lean();
 
-  products = products
-    .map((p) => ({
-      p,
-      score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
-    }))
-    .filter(
-      (x) =>
-        isProductSearchRelevant(
-          x.p as unknown as Record<string, unknown>,
-          query,
-          tokens
-        ) && x.score >= minSearchScore(query)
-    )
-    .sort((a, b) => b.score - a.score)
-    .map(({ p }) => p)
-    .slice(0, limit);
+  products = scoreSuggestionProducts(
+    products as unknown as Record<string, unknown>[],
+    query,
+    tokens,
+    limit
+  );
 
   if (products.length === 0) {
     const prefixFilter = buildPrefixTokenFilter(query);
-    if (prefixFilter && query.length >= 5) {
+    if (prefixFilter && query.length >= 2) {
       const prefixHits = await Product.find({
         status: "published",
         ...prefixFilter,
       })
-        .select(
-          "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured"
-        )
+        .select(select)
         .limit(fetchLimit)
         .lean();
-      products = prefixHits
-        .map((p) => ({
-          p,
-          score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
-        }))
-        .filter(
-          (x) =>
-            isProductSearchRelevant(
-              x.p as unknown as Record<string, unknown>,
-              query,
-              tokens
-            ) && x.score >= minSearchScore(query)
-        )
-        .sort((a, b) => b.score - a.score)
-        .map(({ p }) => p)
-        .slice(0, limit);
+      products = scoreSuggestionProducts(
+        prefixHits as unknown as Record<string, unknown>[],
+        query,
+        tokens,
+        limit
+      );
     }
   }
 
@@ -857,33 +970,21 @@ async function regexSuggestProducts(query: string, limit: number) {
     const tq = textQuery(query);
     if (tq.length >= 2) {
       try {
-        products = await Product.find(
+        const textHits = await Product.find(
           { status: "published", $text: { $search: tq } },
           { score: { $meta: "textScore" } }
         )
-          .select(
-            "name slug pricing media brandName categoryNames tags shortDescription description featured"
-          )
+          .select(select)
           .sort({ score: { $meta: "textScore" } })
           .limit(fetchLimit)
           .lean();
 
-        products = products
-          .map((p) => ({
-            p,
-            score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
-          }))
-          .filter(
-            (x) =>
-              isProductSearchRelevant(
-                x.p as unknown as Record<string, unknown>,
-                query,
-                tokens
-              ) && x.score >= minSearchScore(query)
-          )
-          .sort((a, b) => b.score - a.score)
-          .map(({ p }) => p)
-          .slice(0, limit);
+        products = scoreSuggestionProducts(
+          textHits as unknown as Record<string, unknown>[],
+          query,
+          tokens,
+          limit
+        );
       } catch {
         /* text index may be missing on fresh DB */
       }
@@ -972,13 +1073,12 @@ export async function searchSuggestions(
     ...new Set([q, enhancement.primaryQuery].map((s) => s.trim()).filter(Boolean)),
   ];
 
-  let products = await collectProductSuggestions(primaryQueries, productLimit, q);
+  let products = await collectProductSuggestions(primaryQueries, productLimit);
 
   if (products.length < 3 && enhancement.alternateQueries.length) {
     products = await collectProductSuggestions(
       enhancement.alternateQueries,
-      productLimit,
-      q
+      productLimit
     );
   }
 

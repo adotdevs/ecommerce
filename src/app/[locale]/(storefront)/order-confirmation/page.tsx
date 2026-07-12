@@ -3,7 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { SuccessOrder } from "@/components/storefront/checkout/SuccessOrder";
-import { TrustBar } from "@/components/storefront/checkout/TrustBar";
 import type { PlacedOrderResult } from "@/lib/checkout/types";
 
 function ConfirmationContent() {
@@ -21,12 +20,7 @@ function ConfirmationContent() {
     createdAt: new Date().toISOString(),
   };
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-      <SuccessOrder order={order} />
-      <TrustBar />
-    </div>
-  );
+  return <SuccessOrder order={order} />;
 }
 
 export default function OrderConfirmationPage() {

@@ -93,13 +93,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
       )}
     >
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[4/5] overflow-hidden bg-white p-2">
+        <div className="relative aspect-[4/5] overflow-hidden bg-white">
           {image ? (
             <RemoteImage
               src={image.url}
               alt={image.alt ?? product.name}
               fill
-              className="object-contain p-1 transition-transform duration-500 group-hover:scale-[1.03]"
+              className="object-contain p-3 transition-transform duration-500 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
             />

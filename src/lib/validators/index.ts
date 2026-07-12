@@ -219,5 +219,6 @@ export const checkoutSchema = z.object({
     .enum(["standard", "express", "overnight"])
     .optional()
     .default("standard"),
+  promoCode: z.string().max(32).optional(),
   notes: z.string().optional(),
 });

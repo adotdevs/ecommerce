@@ -47,6 +47,8 @@ export interface IOrder extends Document {
   };
   paymentMethod: string;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  promoCode?: string;
+  discount?: number;
   notes?: string;
 }
 
@@ -103,6 +105,8 @@ const OrderSchema = new Schema<IOrder>(
       enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
+    promoCode: String,
+    discount: { type: Number, default: 0 },
     notes: String,
   },
   { timestamps: true }

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
-import { Order, Product } from "@/models";
+import { Order, Product, PromoCode } from "@/models";
 import { getAuthUser } from "@/lib/auth/session";
 import { checkoutSchema } from "@/lib/validators";
 import { generateOrderNumber } from "@/lib/utils";
@@ -15,6 +15,12 @@ import {
 } from "@/lib/inventory/stock.server";
 import { releaseSessionReservations } from "@/lib/inventory/reservations";
 import { calculateShippingUsd } from "@/lib/checkout/shipping";
+import { ESTIMATED_TAX_RATE } from "@/lib/cart/display";
+import {
+  calculatePromoDiscountUsd,
+  normalizePromoCode,
+  validatePromoForOrder,
+} from "@/lib/promo/validate";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +29,7 @@ export async function POST(request: NextRequest) {
     const parsed = checkoutSchema.safeParse(body);
     if (!parsed.success) return apiError(parsed.error.issues[0].message);
 
-    const { items, email, shippingAddress, paymentMethod, notes, sessionId, shippingMethod } =
+    const { items, email, shippingAddress, paymentMethod, notes, sessionId, shippingMethod, promoCode } =
       body;
     if (!items?.length) return apiError("Cart is empty");
 
@@ -72,8 +78,22 @@ export async function POST(request: NextRequest) {
       shippingMethod ??
       "standard";
     const shipping = calculateShippingUsd(subtotal, method);
-    const tax = subtotal * 0.08;
-    const total = subtotal + shipping + tax;
+
+    let discount = 0;
+    let appliedPromoCode: string | undefined;
+    const rawPromo = parsed.data.promoCode ?? promoCode;
+    if (rawPromo) {
+      const code = normalizePromoCode(String(rawPromo));
+      const promo = await PromoCode.findOne({ code }).lean();
+      const promoResult = validatePromoForOrder(promo, subtotal);
+      if (!promoResult.valid) return apiError(promoResult.error, 400);
+      discount = calculatePromoDiscountUsd(subtotal, promoResult.percentOff);
+      appliedPromoCode = promoResult.code;
+    }
+
+    const taxable = Math.max(0, subtotal - discount);
+    const tax = taxable * ESTIMATED_TAX_RATE;
+    const total = subtotal + shipping + tax - discount;
 
     const user = getAuthUser(request);
 
@@ -131,8 +151,17 @@ export async function POST(request: NextRequest) {
       shippingAddress: parsed.data.shippingAddress ?? shippingAddress,
       paymentMethod: parsed.data.paymentMethod ?? paymentMethod,
       paymentStatus: "pending",
+      promoCode: appliedPromoCode,
+      discount,
       notes: parsed.data.notes ?? notes,
     });
+
+    if (appliedPromoCode) {
+      await PromoCode.updateOne(
+        { code: appliedPromoCode },
+        { $inc: { usedCount: 1 } }
+      );
+    }
 
     return apiSuccess(order, 201);
   } catch (err) {

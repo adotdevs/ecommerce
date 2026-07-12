@@ -43,6 +43,7 @@ export function BillingAddress({
                 label={t("fullName")}
                 value={form.billingFullName}
                 onChange={(billingFullName) => onChange({ billingFullName })}
+                placeholder={t("placeholders.fullName")}
                 error={
                   errors.billingFullName
                     ? t(`errors.${errors.billingFullName}`)
@@ -55,6 +56,7 @@ export function BillingAddress({
                 label={t("street")}
                 value={form.billingStreet}
                 onChange={(billingStreet) => onChange({ billingStreet })}
+                placeholder={t("placeholders.street")}
                 error={
                   errors.billingStreet
                     ? t(`errors.${errors.billingStreet}`)
@@ -67,6 +69,7 @@ export function BillingAddress({
                 label={t("city")}
                 value={form.billingCity}
                 onChange={(billingCity) => onChange({ billingCity })}
+                placeholder={t("placeholders.city")}
                 error={
                   errors.billingCity
                     ? t(`errors.${errors.billingCity}`)
@@ -78,6 +81,7 @@ export function BillingAddress({
                 label={t("state")}
                 value={form.billingState}
                 onChange={(billingState) => onChange({ billingState })}
+                placeholder={t("placeholders.state")}
                 error={
                   errors.billingState
                     ? t(`errors.${errors.billingState}`)
@@ -89,6 +93,7 @@ export function BillingAddress({
                 label={t("postalCode")}
                 value={form.billingPostalCode}
                 onChange={(billingPostalCode) => onChange({ billingPostalCode })}
+                placeholder={t("placeholders.postalCode")}
                 error={
                   errors.billingPostalCode
                     ? t(`errors.${errors.billingPostalCode}`)

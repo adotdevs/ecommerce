@@ -17,6 +17,7 @@ import {
   Sparkles,
   Languages,
   Users,
+  TicketPercent,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -25,6 +26,7 @@ import { Button } from "@/components/ds/button";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/promos", label: "Promo Codes", icon: TicketPercent },
   { href: "/admin/visitors", label: "Visitors", icon: Users },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/merchandising", label: "Merchandising", icon: Sparkles },

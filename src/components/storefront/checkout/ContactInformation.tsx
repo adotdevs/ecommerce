@@ -28,7 +28,7 @@ export function ContactInformation({
         type="email"
         value={form.email}
         onChange={(email) => onChange({ email })}
-        placeholder="you@example.com"
+        placeholder={t("placeholders.email")}
         required
         icon={Mail}
         valid={isValidEmail(form.email)}

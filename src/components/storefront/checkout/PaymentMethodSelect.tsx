@@ -73,7 +73,7 @@ export function PaymentMethodSelect({
                   onChange={(cardNumber) =>
                     onChange({ cardNumber: formatCardNumber(cardNumber) })
                   }
-                  placeholder="1234 5678 9012 3456"
+                  placeholder={t("placeholders.cardNumber")}
                   icon={CreditCard}
                   valid={isValidCardNumber(form.cardNumber)}
                   error={
@@ -87,6 +87,7 @@ export function PaymentMethodSelect({
                   label={t("cardName")}
                   value={form.cardName}
                   onChange={(cardName) => onChange({ cardName })}
+                  placeholder={t("placeholders.cardName")}
                   error={
                     errors.cardName
                       ? t(`errors.${errors.cardName}`)
@@ -101,7 +102,7 @@ export function PaymentMethodSelect({
                     onChange={(cardExpiry) =>
                       onChange({ cardExpiry: formatExpiry(cardExpiry) })
                     }
-                    placeholder="MM/YY"
+                    placeholder={t("placeholders.cardExpiry")}
                     valid={isValidExpiry(form.cardExpiry)}
                     error={
                       errors.cardExpiry
@@ -116,7 +117,7 @@ export function PaymentMethodSelect({
                     onChange={(cardCvv) =>
                       onChange({ cardCvv: cardCvv.replace(/\D/g, "").slice(0, 4) })
                     }
-                    placeholder="123"
+                    placeholder={t("placeholders.cardCvv")}
                     type="password"
                     valid={isValidCvv(form.cardCvv)}
                     error={

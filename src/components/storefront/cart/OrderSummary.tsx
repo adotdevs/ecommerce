@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ds/button";
-import { Input } from "@/components/ds/input";
 import { Separator } from "@/components/ds/separator";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
 import { CartSupportCard } from "@/components/storefront/cart/CartSupportCard";
+import { PromoCodeInput } from "@/components/storefront/cart/PromoCodeInput";
 import { cn } from "@/components/ds/utils";
 
 interface OrderSummaryProps {
@@ -71,15 +70,6 @@ export function OrderSummary({
 }: OrderSummaryProps) {
   const t = useTranslations("cart");
   const tc = useTranslations("common");
-  const [promoOpen, setPromoOpen] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
-
-  const handleApplyPromo = () => {
-    const code = promoCode.trim();
-    if (!code) return;
-    setAppliedPromo(code);
-  };
 
   return (
     <aside
@@ -100,7 +90,6 @@ export function OrderSummary({
           amountUsd={shippingUsd}
           freeLabel={tc("free")}
         />
-        <SummaryRow label={t("tax")} amountUsd={taxUsd} />
         {discountUsd > 0 && (
           <SummaryRow
             label={t("discount")}
@@ -108,6 +97,7 @@ export function OrderSummary({
             accent
           />
         )}
+        <SummaryRow label={t("tax")} amountUsd={taxUsd} />
       </div>
 
       <Separator className="my-5" />
@@ -121,46 +111,8 @@ export function OrderSummary({
         </p>
       )}
 
-      <div className="mt-5 overflow-hidden rounded-[var(--radius-md)] border border-border">
-        <button
-          type="button"
-          onClick={() => setPromoOpen((open) => !open)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left text-small font-medium text-foreground transition-colors hover:bg-secondary/60"
-        >
-          <span>{t("promoCode")}</span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform duration-200",
-              promoOpen && "rotate-180"
-            )}
-          />
-        </button>
-
-        {promoOpen && (
-          <div className="border-t border-border px-4 py-4">
-            <div className="flex gap-2">
-              <Input
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder={t("promoPlaceholder")}
-                className="h-10"
-              />
-              <Button
-                type="button"
-                variant="primary"
-                className="shrink-0"
-                onClick={handleApplyPromo}
-              >
-                {t("applyPromo")}
-              </Button>
-            </div>
-            {appliedPromo && (
-              <p className="mt-2 text-[12px] text-muted-foreground">
-                {t("promoApplied", { code: appliedPromo })}
-              </p>
-            )}
-          </div>
-        )}
+      <div className="mt-5">
+        <PromoCodeInput subtotalUsd={subtotalUsd} />
       </div>
 
       <Button className="mt-5 w-full max-md:h-12 max-md:min-h-[48px] max-md:rounded-full" size="lg" asChild>

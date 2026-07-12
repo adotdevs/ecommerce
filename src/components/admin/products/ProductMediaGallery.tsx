@@ -77,7 +77,9 @@ export function ProductMediaGallery({
     valueRef.current = value;
   }, [value]);
 
-  const uploadSingle = (file: File): Promise<string | null> =>
+  const uploadSingle = (
+    file: File
+  ): Promise<{ url: string | null; error?: string }> =>
     new Promise((resolve) => {
       const formData = new FormData();
       formData.append("file", file);
@@ -88,15 +90,25 @@ export function ProductMediaGallery({
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const data = JSON.parse(xhr.responseText);
-            resolve(data.success && data.data?.url ? data.data.url : null);
+            resolve({
+              url: data.success && data.data?.url ? data.data.url : null,
+              error: data.error,
+            });
           } catch {
-            resolve(null);
+            resolve({ url: null, error: "Invalid server response" });
           }
         } else {
-          resolve(null);
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve({ url: null, error: data.error ?? `Upload failed (${xhr.status})` });
+          } catch {
+            resolve({ url: null, error: `Upload failed (${xhr.status})` });
+          }
         }
       });
-      xhr.addEventListener("error", () => resolve(null));
+      xhr.addEventListener("error", () =>
+        resolve({ url: null, error: "Network error during upload" })
+      );
       xhr.open("POST", "/api/v1/admin/upload");
       xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
       xhr.send(formData);
@@ -112,22 +124,25 @@ export function ProductMediaGallery({
     const added: ProductMediaItem[] = [];
     let failed = 0;
 
+    let lastError: string | undefined;
+
     for (let i = 0; i < files.length; i++) {
-      const url = await uploadSingle(files[i]);
-      if (url) {
+      const result = await uploadSingle(files[i]);
+      if (result.url) {
         const imageIndex = startLength + added.length;
         const alt =
           productName?.trim() && accessToken
             ? (await fetchAiAltText(accessToken, productName.trim(), imageIndex)) ?? ""
             : "";
         added.push({
-          url,
+          url: result.url,
           alt,
           type: "image",
           sortOrder: imageIndex,
         });
       } else {
         failed++;
+        lastError = result.error;
       }
       setUploadIndex({ done: i + 1, total: files.length });
     }
@@ -136,7 +151,11 @@ export function ProductMediaGallery({
       onChange([...valueRef.current, ...added]);
     }
     if (failed > 0) {
-      setError(`${failed} file(s) failed to upload.`);
+      setError(
+        lastError && failed === files.length
+          ? lastError
+          : `${failed} file(s) failed to upload.${lastError ? ` ${lastError}` : ""}`
+      );
     }
 
     setUploading(false);

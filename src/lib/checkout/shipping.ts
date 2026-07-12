@@ -25,7 +25,8 @@ export function calculateCheckoutTotals(
   discountUsd = 0
 ) {
   const shippingUsd = calculateShippingUsd(subtotalUsd, method);
-  const taxUsd = subtotalUsd * ESTIMATED_TAX_RATE;
+  const taxableUsd = Math.max(0, subtotalUsd - discountUsd);
+  const taxUsd = taxableUsd * ESTIMATED_TAX_RATE;
   const totalUsd = subtotalUsd + shippingUsd + taxUsd - discountUsd;
 
   return { shippingUsd, taxUsd, totalUsd, discountUsd };

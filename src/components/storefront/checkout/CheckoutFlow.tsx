@@ -27,6 +27,7 @@ import { useCurrency, useCountry } from "@/stores/locale-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { toastError } from "@/hooks/use-toast";
 import { calculateCheckoutTotals } from "@/lib/checkout/shipping";
+import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import {
   mapPaymentToApi,
   splitFullName,
@@ -80,6 +81,7 @@ export function CheckoutFlow() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
   const sessionId = useCartStore((s) => s.sessionId);
+  const appliedPromo = useCartStore((s) => s.appliedPromo);
   const clearCart = useCartStore((s) => s.clearCart);
   const hydrated = useCartHydrated();
   useCartStockLimits(hydrated);
@@ -104,7 +106,13 @@ export function CheckoutFlow() {
     () => items.reduce((sum, i) => sum + i.quantity, 0),
     [items]
   );
-  const discountUsd = 0;
+  const discountUsd = useMemo(
+    () =>
+      appliedPromo
+        ? calculatePromoDiscountUsd(subtotalUsd, appliedPromo.percentOff)
+        : 0,
+    [appliedPromo, subtotalUsd]
+  );
   const { shippingUsd, taxUsd, totalUsd } = useMemo(
     () =>
       calculateCheckoutTotals(subtotalUsd, form.shippingMethod, discountUsd),
@@ -157,6 +165,7 @@ export function CheckoutFlow() {
           currency,
           sessionId,
           shippingMethod: form.shippingMethod,
+          promoCode: appliedPromo?.code,
           items: items.map((i) => ({
             productId: i.productId,
             variantId: i.variantId,
@@ -229,12 +238,7 @@ export function CheckoutFlow() {
   }
 
   if (step === "success" && orderResult) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-        <SuccessOrder order={orderResult} />
-        <TrustBar />
-      </div>
-    );
+    return <SuccessOrder order={orderResult} />;
   }
 
   return (
@@ -274,7 +278,7 @@ export function CheckoutFlow() {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">
           {step === "shipping" && (
             <>

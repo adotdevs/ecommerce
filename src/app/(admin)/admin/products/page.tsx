@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
-import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare } from "lucide-react";
+import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2 } from "lucide-react";
 import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
 
 interface Product {
@@ -48,6 +48,9 @@ export default function AdminProductsPage() {
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkResults, setBulkResults] = useState<BulkImportResult[] | null>(null);
   const [reviewsProduct, setReviewsProduct] = useState<Product | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const load = () => {
     if (!accessToken) return;
@@ -71,6 +74,98 @@ export default function AdminProductsPage() {
     const timer = setTimeout(load, search ? 300 : 0);
     return () => clearTimeout(timer);
   }, [accessToken, search, statusFilter]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const visible = new Set(products.map((p) => p._id));
+      const next = new Set([...prev].filter((id) => visible.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [products]);
+
+  const allSelected =
+    products.length > 0 && products.every((p) => selectedIds.has(p._id));
+  const someSelected = products.some((p) => selectedIds.has(p._id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const deleteProducts = async (ids: string[], label: string) => {
+    if (!accessToken || ids.length === 0) return false;
+    const message =
+      ids.length === 1
+        ? `Delete "${label}"? This cannot be undone.`
+        : `Delete ${ids.length} selected products? This cannot be undone.`;
+    if (!confirm(message)) return false;
+
+    if (ids.length === 1) setDeletingId(ids[0]);
+    else setBulkDeleting(true);
+
+    try {
+      const res = await fetch(
+        ids.length === 1
+          ? `/api/v1/admin/products/${ids[0]}`
+          : "/api/v1/admin/products/bulk-delete",
+        {
+          method: ids.length === 1 ? "DELETE" : "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            ...(ids.length > 1 ? { "Content-Type": "application/json" } : {}),
+          },
+          body: ids.length > 1 ? JSON.stringify({ ids }) : undefined,
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        const deleted =
+          ids.length === 1 ? 1 : (data.data?.deleted ?? ids.length);
+        toast({
+          variant: "success",
+          title: deleted === 1 ? "Product deleted" : `${deleted} products deleted`,
+        });
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+        if (reviewsProduct && ids.includes(reviewsProduct._id)) {
+          setReviewsProduct(null);
+        }
+        load();
+        return true;
+      }
+      toastError("Delete failed", data.error ?? "Could not delete products.");
+      return false;
+    } catch {
+      toastError("Delete failed", "Network error.");
+      return false;
+    } finally {
+      setDeletingId(null);
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleDeleteOne = (product: Product) => {
+    void deleteProducts([product._id], product.name);
+  };
+
+  const handleBulkDelete = () => {
+    void deleteProducts([...selectedIds], "");
+  };
 
   const isOnSale = (p: Product) =>
     p.pricing.compareAtPrice != null &&
@@ -235,6 +330,20 @@ export default function AdminProductsPage() {
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
         </select>
+        {selectedIds.size > 0 && (
+          <Button
+            variant="destructive"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+          >
+            {bulkDeleting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
+            Delete selected ({selectedIds.size})
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -246,6 +355,18 @@ export default function AdminProductsPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/50">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all products"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected && !allSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium">Product</th>
                 <th className="hidden px-4 py-3 text-left font-medium md:table-cell">SKU</th>
                 <th className="px-4 py-3 text-left font-medium">Price</th>
@@ -258,13 +379,22 @@ export default function AdminProductsPage() {
             <tbody>
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                     No products found.
                   </td>
                 </tr>
               ) : (
                 products.map((p) => (
                   <tr key={p._id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${p.name}`}
+                        checked={selectedIds.has(p._id)}
+                        onChange={() => toggleSelect(p._id)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {p.media?.[0]?.url ? (
@@ -351,6 +481,19 @@ export default function AdminProductsPage() {
                         </Button>
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/admin/products/${p._id}`}>Edit</Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingId === p._id || bulkDeleting}
+                          onClick={() => handleDeleteOne(p)}
+                          aria-label={`Delete ${p.name}`}
+                        >
+                          {deletingId === p._id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          )}
                         </Button>
                       </div>
                     </td>

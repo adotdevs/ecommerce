@@ -8,6 +8,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
 import { calculateCartTotals } from "@/lib/cart/display";
+import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import { Button } from "@/components/ds/button";
 import { CartItem } from "@/components/storefront/cart/CartItem";
 import { CartPageSkeleton } from "@/components/storefront/cart/CartPageSkeleton";
@@ -22,6 +23,7 @@ export default function CartPage() {
   useCartStockLimits(hydrated);
 
   const items = useCartStore((s) => s.items);
+  const appliedPromo = useCartStore((s) => s.appliedPromo);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
 
@@ -35,9 +37,17 @@ export default function CartPage() {
     [items]
   );
 
+  const discountUsd = useMemo(
+    () =>
+      appliedPromo
+        ? calculatePromoDiscountUsd(subtotalUsd, appliedPromo.percentOff)
+        : 0,
+    [appliedPromo, subtotalUsd]
+  );
+
   const { shippingUsd, taxUsd, totalUsd } = useMemo(
-    () => calculateCartTotals(subtotalUsd),
-    [subtotalUsd]
+    () => calculateCartTotals(subtotalUsd, discountUsd),
+    [subtotalUsd, discountUsd]
   );
 
   if (!hydrated) {
@@ -97,6 +107,7 @@ export default function CartPage() {
             subtotalUsd={subtotalUsd}
             shippingUsd={shippingUsd}
             taxUsd={taxUsd}
+            discountUsd={discountUsd}
             totalUsd={totalUsd}
           />
         </div>

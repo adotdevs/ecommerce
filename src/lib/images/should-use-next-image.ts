@@ -26,6 +26,9 @@ const OPTIMIZED_HOST_PATTERNS = [
   "**.public.blob.vercel-storage.com",
   "**.gsmarena.com",
   "**.amazonaws.com",
+  "**.media-amazon.com",
+  "**.ssl-images-amazon.com",
+  "**.images-amazon.com",
   "**.googleusercontent.com",
   "**.wikimedia.org",
 ];

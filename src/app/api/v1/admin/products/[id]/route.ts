@@ -15,6 +15,7 @@ import {
   ProductFieldConflictError,
 } from "@/lib/admin/product-helpers";
 import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
+import { deleteProductsByIds } from "@/lib/admin/delete-products";
 
 export const GET = withAuth(async (_request, { params }) => {
   await connectDB();
@@ -118,7 +119,10 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
 
 export const DELETE = withAuth(async (_request, { params }) => {
   await connectDB();
-  const deleted = await Product.findByIdAndDelete(params?.id);
-  if (!deleted) return apiNotFound();
+  const id = params?.id;
+  if (!id) return apiNotFound();
+
+  const result = await deleteProductsByIds([id]);
+  if (result.deleted === 0) return apiNotFound();
   return apiSuccess({ deleted: true });
 }, PERMISSIONS.PRODUCTS_WRITE);

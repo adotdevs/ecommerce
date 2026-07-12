@@ -32,6 +32,7 @@ export function ShippingAddressForm({
           label={t("fullName")}
           value={form.fullName}
           onChange={(fullName) => onChange({ fullName })}
+          placeholder={t("placeholders.fullName")}
           required
           icon={User}
           valid={form.fullName.trim().length >= 2}
@@ -44,6 +45,7 @@ export function ShippingAddressForm({
           type="tel"
           value={form.phone}
           onChange={(phone) => onChange({ phone })}
+          placeholder={t("placeholders.phone")}
           required
           icon={Phone}
           valid={isValidPhone(form.phone)}
@@ -66,6 +68,7 @@ export function ShippingAddressForm({
           label={t("street")}
           value={form.street}
           onChange={(street) => onChange({ street })}
+          placeholder={t("placeholders.street")}
           required
           icon={MapPin}
           valid={form.street.trim().length >= 3}
@@ -77,6 +80,7 @@ export function ShippingAddressForm({
           label={t("apartment")}
           value={form.apartment}
           onChange={(apartment) => onChange({ apartment })}
+          placeholder={t("placeholders.apartment")}
           className="md:col-span-2"
         />
         <CheckoutField
@@ -84,6 +88,7 @@ export function ShippingAddressForm({
           label={t("city")}
           value={form.city}
           onChange={(city) => onChange({ city })}
+          placeholder={t("placeholders.city")}
           required
           error={errors.city ? t(`errors.${errors.city}`) : undefined}
         />
@@ -92,6 +97,7 @@ export function ShippingAddressForm({
           label={t("state")}
           value={form.state}
           onChange={(state) => onChange({ state })}
+          placeholder={t("placeholders.state")}
           required
           error={errors.state ? t(`errors.${errors.state}`) : undefined}
         />
@@ -100,6 +106,7 @@ export function ShippingAddressForm({
           label={t("postalCode")}
           value={form.postalCode}
           onChange={(postalCode) => onChange({ postalCode })}
+          placeholder={t("placeholders.postalCode")}
           required
           error={
             errors.postalCode ? t(`errors.${errors.postalCode}`) : undefined

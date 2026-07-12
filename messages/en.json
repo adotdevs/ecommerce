@@ -21,7 +21,10 @@
     "featured": "Featured",
     "inStock": "In Stock",
     "outOfStock": "Out of Stock",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "chooseOptions": "Choose options",
+    "addToWishlist": "Add to Wishlist",
+    "addedToWishlist": "Added to wishlist"
   },
   "search": {
     "products": "Products",
@@ -87,7 +90,12 @@
     "aboutItem": "About this item",
     "productInformation": "Product information",
     "specifications": "Specifications",
-    "sku": "SKU"
+    "sku": "SKU",
+    "quantity": "Quantity",
+    "lowStock": "Only {count} left in stock",
+    "lowStockShort": "Only {count} left",
+    "selectOptions": "Select your options",
+    "viewDetails": "View full details"
   },
   "reviews": {
     "tab": "Reviews",
@@ -120,14 +128,34 @@
     "title": "Shopping Cart",
     "empty": "Your cart is empty",
     "emptyDesc": "Discover our premium collection and add items to your cart.",
+    "startShopping": "Start Shopping",
     "continueShopping": "Continue Shopping",
+    "breadcrumbHome": "Home",
+    "breadcrumbCart": "Cart",
     "summary": "Order Summary",
     "subtotal": "Subtotal",
+    "subtotalItems": "Subtotal ({count} items)",
     "shipping": "Shipping",
     "tax": "Tax (est.)",
+    "discount": "Discount",
     "total": "Total",
     "checkout": "Proceed to Checkout",
-    "items": "{count} items"
+    "items": "{count} items",
+    "each": "each",
+    "removeItem": "Remove item",
+    "maxQuantityReached": "Maximum available quantity reached",
+    "promoCode": "Promo Code / Gift Card",
+    "promoPlaceholder": "Enter code",
+    "applyPromo": "Apply",
+    "promoApplied": "Code \"{code}\" saved for checkout",
+    "freeShippingAway": "You're {amount} away from free shipping!",
+    "freeShippingUnlocked": "You've unlocked free shipping!",
+    "secureCheckout": "Secure checkout",
+    "savedOnOrder": "You saved on this order:",
+    "weAccept": "We accept",
+    "needHelp": "Need help?",
+    "supportDesc": "Our support team is here to help you.",
+    "contactSupport": "Contact Support"
   },
   "checkout": {
     "title": "Checkout",
@@ -137,7 +165,9 @@
     "orderSummary": "Order Summary",
     "placeOrder": "Place Order",
     "processing": "Processing...",
-    "empty": "Nothing to checkout"
+    "empty": "Nothing to checkout",
+    "orderFailed": "Could not place order",
+    "orderFailedDesc": "Please review your cart and try again."
   },
   "order": {
     "confirmed": "Order Confirmed!",
@@ -164,7 +194,8 @@
     "empty": "Your wishlist is empty",
     "emptyDesc": "Save items you love for later.",
     "moveToCart": "Move to Cart",
-    "remove": "Remove"
+    "remove": "Remove",
+    "viewProduct": "View product"
   },
   "compare": {
     "title": "Compare Products",

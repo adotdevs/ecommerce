@@ -1,5 +1,14 @@
 import { openAiChatJson } from "@/lib/ai/openai-client";
 
+/** Replace em/en dashes with commas for catalog copy. */
+export function sanitizeAiDashes(text: string): string {
+  return text
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export interface ProductCopyInput {
   name: string;
   sku?: string;
@@ -64,7 +73,7 @@ function templateSuggest(input: ProductCopyInput): ProductCopySuggestion {
   );
 
   const description = [
-    `Introducing ${name} — a thoughtfully designed product built to deliver quality, comfort, and lasting value.`,
+    `Introducing ${name}, a thoughtfully designed product built to deliver quality, comfort, and lasting value.`,
     "",
     "Key highlights:",
     `• Premium build and reliable performance`,
@@ -121,22 +130,22 @@ async function openAiSuggest(
       seo?: Partial<ProductCopySuggestion["seo"]> & { keywords?: string[] };
     }
   >(
-    "You write concise e-commerce product copy. Return JSON with keys: shortDescription (max 160 chars), description (3-5 paragraphs with bullet highlights), tags (array of 5-8 strings), seo (object with title, description, keywords array). No markdown.",
+    "You write concise e-commerce product copy. Return JSON with keys: shortDescription (max 160 chars), description (3-5 paragraphs with bullet highlights), tags (array of 5-8 strings), seo (object with title, description, keywords array). No markdown. Never use em dashes (—) or en dashes (–); use commas, periods, or hyphens (-) instead.",
     `Product name: ${input.name}\n${context}`
   );
 
   if (!parsed?.shortDescription || !parsed.description) return null;
 
   return {
-    shortDescription: String(parsed.shortDescription).slice(0, 200),
-    description: String(parsed.description),
+    shortDescription: sanitizeAiDashes(String(parsed.shortDescription)).slice(0, 200),
+    description: sanitizeAiDashes(String(parsed.description)),
     tags: Array.isArray(parsed.tags)
-      ? parsed.tags.map(String).slice(0, 10)
+      ? parsed.tags.map((t) => sanitizeAiDashes(String(t))).slice(0, 10)
       : [],
     seo: {
-      title: String(parsed.seo?.title ?? `${input.name} | Buy Online`),
-      description: String(
-        parsed.seo?.description ?? parsed.shortDescription
+      title: sanitizeAiDashes(String(parsed.seo?.title ?? `${input.name} | Buy Online`)),
+      description: sanitizeAiDashes(
+        String(parsed.seo?.description ?? parsed.shortDescription)
       ).slice(0, 200),
       keywords: Array.isArray(parsed.seo?.keywords)
         ? parsed.seo!.keywords!.map(String)

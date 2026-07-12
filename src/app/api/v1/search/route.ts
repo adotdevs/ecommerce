@@ -30,5 +30,9 @@ export async function GET(request: NextRequest) {
 
   const result = await deepSearchProducts(q, filter, page, limit);
 
-  return apiSuccess({ ...result, source: "deep" as const });
+  return apiSuccess({
+    ...result,
+    source: result.source ?? "fallback",
+    enhancedQuery: result.enhancedQuery,
+  });
 }

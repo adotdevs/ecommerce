@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/components/ds/utils";
+import { NAVIGATION_PROGRESS_START } from "@/lib/navigation/progress";
 
 /**
  * Slim top progress bar for client navigations (Next.js App Router).
@@ -20,6 +21,7 @@ export function NavigationProgress() {
   const activeRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stallRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeKeyRef = useRef(routeKey);
 
   const clearTimers = () => {
@@ -30,6 +32,10 @@ export function NavigationProgress() {
     if (hideRef.current) {
       clearTimeout(hideRef.current);
       hideRef.current = null;
+    }
+    if (stallRef.current) {
+      clearTimeout(stallRef.current);
+      stallRef.current = null;
     }
   };
 
@@ -53,6 +59,7 @@ export function NavigationProgress() {
     setCompleting(false);
     setVisible(true);
     setProgress(8);
+    const startKey = routeKeyRef.current;
     tickRef.current = setInterval(() => {
       setProgress((p) => {
         if (p >= 88) return p;
@@ -60,6 +67,11 @@ export function NavigationProgress() {
         return Math.min(88, p + step);
       });
     }, 180);
+    stallRef.current = setTimeout(() => {
+      if (activeRef.current && routeKeyRef.current === startKey) {
+        finish();
+      }
+    }, 1500);
   };
 
   useEffect(() => {
@@ -69,6 +81,19 @@ export function NavigationProgress() {
       const target = e.target as HTMLElement | null;
       const anchor = target?.closest?.("a");
       if (!anchor) return;
+
+      // Buttons/inputs inside a card link should not start route progress
+      const interactive = target?.closest?.(
+        "button, input, select, textarea, [role='button']"
+      );
+      if (
+        interactive &&
+        anchor.contains(interactive) &&
+        interactive !== anchor
+      ) {
+        return;
+      }
+
       const href = anchor.getAttribute("href");
       if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
         return;
@@ -88,11 +113,15 @@ export function NavigationProgress() {
 
     const onPopState = () => start();
 
+    const onProgrammaticStart = () => start();
+
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState);
+    window.addEventListener(NAVIGATION_PROGRESS_START, onProgrammaticStart);
     return () => {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPopState);
+      window.removeEventListener(NAVIGATION_PROGRESS_START, onProgrammaticStart);
       clearTimers();
     };
   }, []);

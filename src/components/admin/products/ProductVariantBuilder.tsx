@@ -35,6 +35,7 @@ interface ProductVariantBuilderProps {
   variants: AdminVariantRow[];
   onOptionGroupsChange: (groups: VariantOptionGroup[]) => void;
   onVariantsChange: (variants: AdminVariantRow[]) => void;
+  onBasePriceChange?: (price: string) => void;
 }
 
 export function ProductVariantBuilder({
@@ -46,13 +47,23 @@ export function ProductVariantBuilder({
   variants,
   onOptionGroupsChange,
   onVariantsChange,
+  onBasePriceChange,
 }: ProductVariantBuilderProps) {
   const [presetType, setPresetType] = useState<VariantOptionType>("color");
   const [smartBasePrice, setSmartBasePrice] = useState(basePrice);
 
   useEffect(() => {
+    if (variants.length) {
+      const prices = variants
+        .map((v) => parseFloat(v.price))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (prices.length) {
+        setSmartBasePrice(String(Math.min(...prices)));
+        return;
+      }
+    }
     if (basePrice) setSmartBasePrice(basePrice);
-  }, [basePrice]);
+  }, [variants, basePrice]);
 
   const addOptionGroup = () => {
     onOptionGroupsChange([...optionGroups, newOptionGroup(presetType)]);
@@ -139,7 +150,7 @@ export function ProductVariantBuilder({
 
   const applySmartPrices = (basePriceStr: string) => {
     const base = parseFloat(basePriceStr);
-    if (!base || Number.isNaN(base)) return;
+    if (Number.isNaN(base) || base < 0) return;
     const compareAt = baseCompareAt.trim() ? parseFloat(baseCompareAt) : undefined;
 
     const numeric = variants.map((v) => ({
@@ -151,12 +162,15 @@ export function ProductVariantBuilder({
       attributes: v.attributes,
     }));
 
-    const updated = applySmartVariantPrices(
-      numeric,
-      base,
-      compareAt,
-      optionGroups
-    );
+    const updated =
+      variants.length === 1
+        ? numeric.map((v) => ({
+            ...v,
+            price: base,
+            compareAtPrice:
+              compareAt != null && compareAt > 0 ? compareAt : v.compareAtPrice,
+          }))
+        : applySmartVariantPrices(numeric, base, compareAt, optionGroups);
 
     onVariantsChange(
       updated.map((v, i) => ({
@@ -170,6 +184,14 @@ export function ProductVariantBuilder({
         attributes: variants[i].attributes,
       }))
     );
+    onBasePriceChange?.(basePriceStr);
+  };
+
+  const handleBasePriceChange = (value: string) => {
+    setSmartBasePrice(value);
+    if (variants.length === 1) {
+      applySmartPrices(value);
+    }
   };
 
   const handlePriceChange = (index: number, price: string) => {
@@ -333,7 +355,10 @@ export function ProductVariantBuilder({
                   min="0"
                   placeholder="0.00"
                   value={smartBasePrice}
-                  onChange={(e) => setSmartBasePrice(e.target.value)}
+                  onChange={(e) => handleBasePriceChange(e.target.value)}
+                  onBlur={() => {
+                    if (variants.length > 1) applySmartPrices(smartBasePrice);
+                  }}
                   className="h-8 w-28"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {

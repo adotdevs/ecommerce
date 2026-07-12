@@ -17,6 +17,8 @@ import {
   PRODUCT_FORM_STEPS,
   emptyProductForm,
   formToPayload,
+  productToFormData,
+  syncFormPricingFromVariants,
 } from "./product-form-data";
 import { Loader2, Plus, Trash2, ChevronLeft, ChevronRight, Check, Sparkles } from "lucide-react";
 import { toast, toastError, toastSaveSuccess } from "@/hooks/use-toast";
@@ -91,8 +93,6 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
   const [autoSlug, setAutoSlug] = useState(!productIdProp);
   const [suggesting, setSuggesting] = useState(false);
   const [autoSku, setAutoSku] = useState(!productIdProp);
-  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSuggestedName = useRef("");
   const formRef = useRef(form);
 
   useEffect(() => {
@@ -123,6 +123,30 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     value: ProductFormData[K]
   ) => setForm((f) => ({ ...f, [key]: value }));
 
+  const handleVariantsChange = (
+    variants: ProductFormData["variants"]
+  ) => {
+    setForm((f) => ({
+      ...f,
+      variants,
+      pricing: syncFormPricingFromVariants(f.pricing, variants),
+    }));
+  };
+
+  const handleListingPriceChange = (price: string) => {
+    setForm((f) => {
+      if (!f.variants.length) {
+        return { ...f, pricing: { ...f.pricing, price } };
+      }
+      const variants = f.variants.map((v) => ({ ...v, price }));
+      return {
+        ...f,
+        variants,
+        pricing: syncFormPricingFromVariants(f.pricing, variants),
+      };
+    });
+  };
+
   const handleNameChange = (name: string) => {
     setForm((f) => ({
       ...f,
@@ -135,7 +159,6 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     async (name: string, opts?: { force?: boolean }) => {
       if (!accessToken || !name.trim()) return;
       const f = formRef.current;
-      if (lastSuggestedName.current === name.trim() && !opts?.force) return;
 
       setSuggesting(true);
       try {
@@ -164,7 +187,6 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
         }
 
         const s = data.data;
-        lastSuggestedName.current = name.trim();
         setForm((current) => ({
           ...current,
           name:
@@ -242,20 +264,6 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     [accessToken, categories, brands]
   );
 
-  useEffect(() => {
-    if (!form.name.trim() || form.name.trim().length < 4) return;
-    if (form.variantOptions.length > 0 && form.description.trim()) return;
-
-    if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    suggestTimer.current = setTimeout(() => {
-      fetchFullAiSuggestions(form.name);
-    }, 1800);
-
-    return () => {
-      if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    };
-  }, [form.name, form.variantOptions.length, form.description, fetchFullAiSuggestions]);
-
   const saveProduct = async (opts?: { draft?: boolean; navigate?: boolean }) => {
     if (!accessToken) return false;
 
@@ -322,6 +330,10 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
         if (meta?.skuAdjusted && meta.sku) {
           setAutoSku(false);
           setForm((f) => ({ ...f, sku: meta.sku! }));
+        }
+
+        if (data.data) {
+          setForm(productToFormData(data.data));
         }
 
         toastSaveSuccess({
@@ -707,7 +719,10 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
           optionGroups={form.variantOptions}
           variants={form.variants}
           onOptionGroupsChange={(groups) => update("variantOptions", groups)}
-          onVariantsChange={(variants) => update("variants", variants)}
+          onVariantsChange={handleVariantsChange}
+          onBasePriceChange={(price) =>
+            update("pricing", { ...form.pricing, price })
+          }
         />
       )}
 
@@ -719,23 +734,21 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
           <CardContent className="space-y-4">
             {hasVariants && (
               <p className="rounded-lg border border-border bg-secondary/50 px-4 py-3 text-small text-muted-foreground">
-                This product has {form.variants.length} variants. Base price is used when
-                generating variants; per-variant prices are set in the Options step.
+                This product has {form.variants.length} variant
+                {form.variants.length === 1 ? "" : "s"}. Change the price here to
+                update all variants, or set per-variant prices in the Options step.
                 Total stock is summed from all variants.
               </p>
             )}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Base price {!hasVariants && "*"}</Label>
+                <Label>{hasVariants ? "Price (all variants)" : "Base price *"}</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={form.pricing.price}
-                  onChange={(e) =>
-                    update("pricing", { ...form.pricing, price: e.target.value })
-                  }
-                  disabled={hasVariants}
+                  onChange={(e) => handleListingPriceChange(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">

@@ -2,6 +2,11 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { Brand } from "@/models/Brand";
 import { fuzzyMatchScore } from "@/lib/search/fuzzy";
+import {
+  getSearchQueriesForMatching,
+  resolveSearchEnhancement,
+  type AiSearchEnhancement,
+} from "@/lib/search/ai-query";
 
 export interface SearchFilters {
   category?: string;
@@ -29,6 +34,101 @@ export interface SearchSuggestionsResult {
   products: SearchSuggestion[];
   categories: SearchSuggestion[];
   brands: SearchSuggestion[];
+  source?: "ai" | "fallback";
+  enhancedQuery?: string;
+}
+
+async function collectProductSuggestions(
+  queries: string[],
+  productLimit: number
+): Promise<SearchSuggestion[]> {
+  const products: SearchSuggestion[] = [];
+  const seen = new Set<string>();
+
+  for (const searchQuery of queries) {
+    let batch = await regexSuggestProducts(searchQuery, productLimit);
+
+    if (batch.length < productLimit) {
+      try {
+        const atlas = await atlasSuggestProducts(
+          searchQuery,
+          productLimit - batch.length
+        );
+        const atlasSeen = new Set(batch.map((p) => p.id));
+        for (const item of atlas) {
+          if (!atlasSeen.has(item.id)) {
+            batch.push(item);
+            atlasSeen.add(item.id);
+          }
+        }
+      } catch {
+        /* atlas unavailable */
+      }
+    }
+
+    for (const item of batch) {
+      if (!seen.has(item.id)) {
+        products.push(item);
+        seen.add(item.id);
+      }
+    }
+
+    if (products.length >= productLimit) break;
+  }
+
+  return products.slice(0, productLimit);
+}
+
+async function collectCategorySuggestions(
+  enhancement: AiSearchEnhancement,
+  limit: number
+): Promise<SearchSuggestion[]> {
+  const queries = [
+    enhancement.primaryQuery,
+    ...enhancement.alternateQueries,
+    ...enhancement.categoryHints,
+  ];
+  const categories: SearchSuggestion[] = [];
+  const seen = new Set<string>();
+
+  for (const searchQuery of queries) {
+    const batch = await suggestCategories(searchQuery, limit);
+    for (const item of batch) {
+      if (!seen.has(item.id)) {
+        categories.push(item);
+        seen.add(item.id);
+      }
+    }
+    if (categories.length >= limit) break;
+  }
+
+  return categories.slice(0, limit);
+}
+
+async function collectBrandSuggestions(
+  enhancement: AiSearchEnhancement,
+  limit: number
+): Promise<SearchSuggestion[]> {
+  const queries = [
+    enhancement.primaryQuery,
+    ...enhancement.alternateQueries,
+    ...enhancement.brandHints,
+  ];
+  const brands: SearchSuggestion[] = [];
+  const seen = new Set<string>();
+
+  for (const searchQuery of queries) {
+    const batch = await suggestBrands(searchQuery, limit);
+    for (const item of batch) {
+      if (!seen.has(item.id)) {
+        brands.push(item);
+        seen.add(item.id);
+      }
+    }
+    if (brands.length >= limit) break;
+  }
+
+  return brands.slice(0, limit);
 }
 
 const PRODUCT_SEARCH_FIELDS = [
@@ -281,6 +381,29 @@ export interface DeepSearchResult {
   page: number;
   limit: number;
   pages: number;
+  source?: "ai" | "fallback";
+  enhancedQuery?: string;
+}
+
+function rankProductWithEnhancement(
+  product: Record<string, unknown>,
+  enhancement: AiSearchEnhancement,
+  originalQuery: string
+) {
+  const primaryTokens = tokenizeSearchQuery(enhancement.primaryQuery);
+  const originalTokens = tokenizeSearchQuery(originalQuery);
+
+  let score = rankProductMatch(product, enhancement.primaryQuery, primaryTokens);
+  score = Math.max(score, rankProductMatch(product, originalQuery, originalTokens));
+
+  for (const alt of enhancement.alternateQueries) {
+    score = Math.max(
+      score,
+      Math.floor(rankProductMatch(product, alt, tokenizeSearchQuery(alt)) * 0.9)
+    );
+  }
+
+  return score;
 }
 
 /** Deep relevance-ranked product search with typo tolerance. */
@@ -291,11 +414,31 @@ export async function deepSearchProducts(
   limit = 12
 ): Promise<DeepSearchResult> {
   const q = query.trim();
-  const tokens = tokenizeSearchQuery(q);
-  const candidates = await collectDeepSearchCandidates(q, baseFilter);
+  if (!q) {
+    return {
+      products: [],
+      total: 0,
+      page,
+      limit,
+      pages: 1,
+      source: "fallback",
+    };
+  }
+
+  const enhancement = resolveSearchEnhancement(q);
+  const searchQueries = getSearchQueriesForMatching(enhancement);
+
+  let candidates: Record<string, unknown>[] = [];
+  for (const searchQuery of searchQueries) {
+    const batch = await collectDeepSearchCandidates(searchQuery, baseFilter);
+    candidates = mergeProducts(candidates, batch);
+  }
 
   const ranked = candidates
-    .map((p) => ({ p, score: rankProductMatch(p, q, tokens) }))
+    .map((p) => ({
+      p,
+      score: rankProductWithEnhancement(p, enhancement, q),
+    }))
     .filter((x) => x.score >= 8)
     .sort((a, b) => b.score - a.score);
 
@@ -309,6 +452,9 @@ export async function deepSearchProducts(
     page,
     limit,
     pages: Math.max(1, Math.ceil(total / limit)),
+    source: enhancement.source,
+    enhancedQuery:
+      enhancement.source === "ai" ? enhancement.primaryQuery : undefined,
   };
 }
 
@@ -574,34 +720,31 @@ export async function searchSuggestions(
       products: [],
       categories: [],
       brands: [],
+      source: "fallback",
     };
   }
 
-  let products: SearchSuggestion[] = await regexSuggestProducts(q, productLimit);
+  const enhancement = resolveSearchEnhancement(q);
+  const searchQueries = getSearchQueriesForMatching(enhancement);
 
-  if (products.length < productLimit) {
-    try {
-      const atlas = await atlasSuggestProducts(q, productLimit - products.length);
-      const seen = new Set(products.map((p) => p.id));
-      for (const item of atlas) {
-        if (!seen.has(item.id)) {
-          products.push(item);
-          seen.add(item.id);
-        }
-      }
-    } catch {
-      /* atlas unavailable */
-    }
-  }
-
-  const [categories, brands] = await Promise.all([
-    suggestCategories(q, categoryLimit),
-    suggestBrands(q, brandLimit),
+  const [products, categories, brands] = await Promise.all([
+    collectProductSuggestions(searchQueries, productLimit),
+    collectCategorySuggestions(enhancement, categoryLimit),
+    collectBrandSuggestions(enhancement, brandLimit),
   ]);
 
   const suggestions = [...products, ...categories, ...brands];
 
-  return { query: q, suggestions, products, categories, brands };
+  return {
+    query: q,
+    suggestions,
+    products,
+    categories,
+    brands,
+    source: enhancement.source,
+    enhancedQuery:
+      enhancement.source === "ai" ? enhancement.primaryQuery : undefined,
+  };
 }
 
 export async function searchProducts(
@@ -610,6 +753,9 @@ export async function searchProducts(
   page = 1,
   limit = 20
 ) {
+  const enhancement = query.trim() ? resolveSearchEnhancement(query) : null;
+  const effectiveQuery = enhancement?.primaryQuery ?? query;
+
   const skip = (page - 1) * limit;
   const filter: Record<string, unknown> = { status: "published" };
 
@@ -629,21 +775,34 @@ export async function searchProducts(
     }
   }
 
-  const searchFilter = buildProductSearchFilter(query);
-  if (searchFilter) {
-    Object.assign(filter, searchFilter);
+  const searchQueries = enhancement
+    ? getSearchQueriesForMatching(enhancement)
+    : [effectiveQuery];
+
+  let products: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+
+  for (const searchQuery of searchQueries) {
+    const searchFilter = buildProductSearchFilter(searchQuery);
+    const queryFilter = searchFilter ? { ...filter, ...searchFilter } : filter;
+    const batch = await Product.find(queryFilter)
+      .sort({ featured: -1, createdAt: -1 })
+      .limit(limit * 2)
+      .lean();
+
+    for (const product of batch) {
+      const id = String(product._id);
+      if (!seen.has(id)) {
+        products.push(product as unknown as Record<string, unknown>);
+        seen.add(id);
+      }
+    }
   }
 
-  const [products, total] = await Promise.all([
-    Product.find(filter)
-      .sort({ featured: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Product.countDocuments(filter),
-  ]);
+  const total = products.length;
+  products = products.slice(skip, skip + limit);
 
-  return { products, total, page, limit, pages: Math.ceil(total / limit) };
+  return { products, total, page, limit, pages: Math.ceil(total / limit) || 1 };
 }
 
 export function buildAtlasSearchPipeline(
@@ -723,8 +882,11 @@ export async function atlasSearchProducts(
   page = 1,
   limit = 20
 ) {
+  const enhancement = query.trim() ? resolveSearchEnhancement(query) : null;
+  const effectiveQuery = enhancement?.primaryQuery ?? query;
+
   try {
-    const pipeline = buildAtlasSearchPipeline(query, filters, page, limit);
+    const pipeline = buildAtlasSearchPipeline(effectiveQuery, filters, page, limit);
     const products = await Product.aggregate(pipeline);
     return { products, total: products.length, page, limit, source: "atlas" as const };
   } catch {

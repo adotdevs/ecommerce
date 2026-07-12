@@ -25,6 +25,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import type { SearchSuggestion } from "@/lib/search/products";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { startNavigationProgress } from "@/lib/navigation/progress";
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return text;
@@ -97,9 +98,26 @@ export function SearchAutocomplete({
     (q: string) => {
       const trimmed = q.trim();
       if (!trimmed) return;
+
+      const nextRouteKey = `/products?q=${encodeURIComponent(trimmed)}`;
+      let isSameSearch = false;
+      if (typeof window !== "undefined") {
+        const onProducts = window.location.pathname.endsWith("/products");
+        const currentQ = new URLSearchParams(window.location.search).get("q");
+        isSameSearch = onProducts && currentQ === trimmed;
+      }
+
       setOpen(false);
+
+      if (isSameSearch) {
+        router.refresh();
+        onSubmit?.(trimmed);
+        return;
+      }
+
+      startNavigationProgress();
+      router.push(nextRouteKey);
       onSubmit?.(trimmed);
-      router.push(`/products?q=${encodeURIComponent(trimmed)}`);
     },
     [onSubmit, router]
   );
@@ -108,6 +126,7 @@ export function SearchAutocomplete({
     (item: SearchSuggestion) => {
       setOpen(false);
       onChange(item.name);
+      startNavigationProgress();
       router.push(item.href);
     },
     [onChange, router]
@@ -230,6 +249,11 @@ export function SearchAutocomplete({
     );
   };
 
+  const trimmedValue = value.trim();
+  const viewAllHref = trimmedValue
+    ? `/products?q=${encodeURIComponent(trimmedValue)}`
+    : "#";
+
   let sectionOffset = 0;
   const productOffset = sectionOffset;
   sectionOffset += data?.products.length ?? 0;
@@ -299,16 +323,23 @@ export function SearchAutocomplete({
           )}
 
           <div className="border-t border-border bg-muted/30 px-3 py-2">
-            <button
-              type="button"
-              onClick={() => goToSearch(value)}
+            <Link
+              href={viewAllHref}
+              onClick={(e) => {
+                if (!trimmedValue) {
+                  e.preventDefault();
+                  return;
+                }
+                setOpen(false);
+                onSubmit?.(trimmedValue);
+              }}
               className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-small font-medium text-primary transition hover:bg-secondary"
             >
               <span>
-                {t("viewAll")} “{value.trim()}”
+                {t("viewAll")} “{trimmedValue}”
               </span>
               <ArrowRight className="h-4 w-4 shrink-0" />
-            </button>
+            </Link>
           </div>
         </div>
       )}

@@ -31,6 +31,10 @@ export interface ISiteSettings extends Document {
     ogImage?: string;
   };
   navigation: { label: string; href: string; children?: { label: string; href: string }[] }[];
+  exchangeRatesCache?: {
+    rates?: Record<string, number>;
+    updatedAt?: Date;
+  };
 }
 
 const SiteSettingsSchema = new Schema<ISiteSettings>(
@@ -76,6 +80,10 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
         children: [{ label: String, href: String }],
       },
     ],
+    exchangeRatesCache: {
+      rates: Schema.Types.Mixed,
+      updatedAt: Date,
+    },
   },
   { timestamps: true }
 );

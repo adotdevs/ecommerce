@@ -40,6 +40,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   sku?: string;
+  maxQuantity?: number;
 }
 
 export type HomepageSectionType =

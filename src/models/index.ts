@@ -6,6 +6,7 @@ export { ContentTranslation } from "./ContentTranslation";
 export { Category } from "./Category";
 export { Brand } from "./Brand";
 export { Product } from "./Product";
+export { StockReservation } from "./StockReservation";
 export { Cart } from "./Cart";
 export { Order } from "./Order";
 export { CmsPage } from "./CmsPage";

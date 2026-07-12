@@ -5,8 +5,12 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
+import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCurrency, useCountry } from "@/stores/locale-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { toastError } from "@/hooks/use-toast";
+import { getCartItemKey } from "@/lib/cart/display";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
@@ -19,7 +23,10 @@ export default function CheckoutPage() {
   const ta = useTranslations("auth");
   const router = useRouter();
   const items = useCartStore((s) => s.items);
+  const sessionId = useCartStore((s) => s.sessionId);
   const clearCart = useCartStore((s) => s.clearCart);
+  const hydrated = useCartHydrated();
+  useCartStockLimits(hydrated);
   const { accessToken, user } = useAuthStore();
   const currency = useCurrency();
   const country = useCountry();
@@ -64,6 +71,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           email: form.email,
           currency,
+          sessionId,
           items: items.map((i) => ({
             productId: i.productId,
             variantId: i.variantId,
@@ -91,6 +99,8 @@ export default function CheckoutPage() {
       if (data.success) {
         clearCart();
         router.push(`/order-confirmation?order=${data.data.orderNumber}`);
+      } else {
+        toastError(t("orderFailed"), data.error ?? t("orderFailedDesc"));
       }
     } finally {
       setLoading(false);
@@ -155,7 +165,7 @@ export default function CheckoutPage() {
             <CardHeader><CardTitle>{t("orderSummary")}</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               {items.map((item) => (
-                <CheckoutLine key={item.productId} item={item} />
+                <CheckoutLine key={getCartItemKey(item)} item={item} />
               ))}
               <div className="border-t border-border pt-2 space-y-2">
                 <div className="flex justify-between"><span>{tCart("subtotal")}</span><span>{subtotalFmt}</span></div>
@@ -163,7 +173,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between"><span>{tCart("tax")}</span><span>{taxFmt}</span></div>
                 <div className="flex justify-between text-lg font-bold"><span>{tCart("total")}</span><span>{totalFmt}</span></div>
               </div>
-              <Button type="submit" className="mt-4 w-full rounded-full" size="lg" disabled={loading}>
+              <Button type="submit" className="mt-4 w-full rounded-full max-md:h-12 max-md:min-h-[48px]" size="lg" disabled={loading}>
                 {loading ? t("processing") : t("placeOrder")}
               </Button>
             </CardContent>

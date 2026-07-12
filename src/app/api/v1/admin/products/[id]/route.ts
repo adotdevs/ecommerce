@@ -14,6 +14,7 @@ import {
   duplicateProductFieldMessage,
   ProductFieldConflictError,
 } from "@/lib/admin/product-helpers";
+import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
 
 export const GET = withAuth(async (_request, { params }) => {
   await connectDB();
@@ -78,12 +79,20 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
       update.media = normalizeMedia(media);
     }
 
-    if (rest.pricing) {
-      update.pricing = {
-        price: rest.pricing.price ?? existing.pricing.price,
-        currency: rest.pricing.currency ?? existing.pricing.currency,
-        compareAtPrice: rest.pricing.compareAtPrice ?? undefined,
+    if (rest.pricing || rest.variants !== undefined) {
+      const variants =
+        rest.variants !== undefined ? rest.variants : existing.variants;
+      const basePricing = {
+        price: rest.pricing?.price ?? existing.pricing.price,
+        compareAtPrice:
+          rest.pricing?.compareAtPrice ?? existing.pricing.compareAtPrice,
+        currency: rest.pricing?.currency ?? existing.pricing.currency,
       };
+      update.pricing = resolveCatalogPricing(basePricing, variants);
+    }
+
+    if (rest.variants !== undefined) {
+      update.variants = rest.variants;
     }
 
     const product = await Product.findByIdAndUpdate(

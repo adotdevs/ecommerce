@@ -4,6 +4,7 @@ import {
   type VariantOptionGroup,
   sanitizeOptionGroups,
 } from "@/lib/catalog/variant-options";
+import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
 import type { AdminVariantRow } from "./ProductVariantBuilder";
 import type { ProductMediaItem } from "./ProductMediaGallery";
 
@@ -147,14 +148,26 @@ export function productToFormData(product: Record<string, any>): ProductFormData
         attributes: v.attributes ?? {},
       })
     ),
-    pricing: {
-      price: String(product.pricing?.price ?? ""),
-      compareAtPrice:
-        product.pricing?.compareAtPrice != null
-          ? String(product.pricing.compareAtPrice)
-          : "",
-      currency: product.pricing?.currency ?? "USD",
-    },
+    pricing: (() => {
+      const variants = (product.variants ?? []) as {
+        price: number;
+        compareAtPrice?: number;
+      }[];
+      const resolved = resolveCatalogPricing(
+        {
+          price: Number(product.pricing?.price ?? 0),
+          compareAtPrice: product.pricing?.compareAtPrice,
+          currency: product.pricing?.currency ?? "USD",
+        },
+        variants
+      );
+      return {
+        price: String(resolved.price),
+        compareAtPrice:
+          resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
+        currency: resolved.currency ?? "USD",
+      };
+    })(),
     inventory: {
       stock: String(product.inventory?.stock ?? 0),
       lowStockThreshold: String(product.inventory?.lowStockThreshold ?? 5),
@@ -192,11 +205,68 @@ export function productToFormData(product: Record<string, any>): ProductFormData
   };
 }
 
+export function syncFormPricingFromVariants(
+  pricing: ProductFormData["pricing"],
+  variants: AdminVariantRow[]
+): ProductFormData["pricing"] {
+  if (!variants.length) return pricing;
+
+  const resolved = resolveCatalogPricing(
+    {
+      price: parseFloat(pricing.price) || 0,
+      compareAtPrice: pricing.compareAtPrice.trim()
+        ? parseFloat(pricing.compareAtPrice)
+        : undefined,
+      currency: pricing.currency || "USD",
+    },
+    variants.map((v) => ({
+      price: v.price,
+      compareAtPrice: v.compareAtPrice,
+    }))
+  );
+
+  return {
+    price: String(resolved.price),
+    compareAtPrice:
+      resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
+    currency: resolved.currency ?? pricing.currency ?? "USD",
+  };
+}
+
 export function formToPayload(form: ProductFormData) {
   const compareAt = form.pricing.compareAtPrice.trim();
   const totalVariantStock = form.variants.reduce(
     (sum, v) => sum + (parseInt(v.stock) || 0),
     0
+  );
+
+  const variants = form.variants.map((v) => {
+    const suffix = Object.values(v.attributes).filter(Boolean).join("-");
+    const fallbackSku = suffix
+      ? `${form.sku.trim()}-${suffix}`.toUpperCase().slice(0, 48)
+      : form.sku.trim();
+    return {
+      id: v.id,
+      name: v.name,
+      sku: v.sku.trim() || fallbackSku,
+      price: parseFloat(v.price) || parseFloat(form.pricing.price) || 0,
+      compareAtPrice: v.compareAtPrice.trim()
+        ? parseFloat(v.compareAtPrice)
+        : compareAt
+          ? parseFloat(compareAt)
+          : undefined,
+      stock: parseInt(v.stock) || 0,
+      attributes: v.attributes,
+    };
+  });
+
+  const pricing = resolveCatalogPricing(
+    {
+      price: parseFloat(form.pricing.price) || 0,
+      compareAtPrice: compareAt ? parseFloat(compareAt) : undefined,
+      currency: form.pricing.currency || "USD",
+    },
+    variants
   );
 
   return {
@@ -215,29 +285,11 @@ export function formToPayload(form: ProductFormData) {
       .filter(Boolean),
     media: form.media.filter((m) => m.url?.trim()),
     variantOptions: sanitizeOptionGroups(form.variantOptions),
-    variants: form.variants.map((v) => {
-      const suffix = Object.values(v.attributes).filter(Boolean).join("-");
-      const fallbackSku = suffix
-        ? `${form.sku.trim()}-${suffix}`.toUpperCase().slice(0, 48)
-        : form.sku.trim();
-      return {
-      id: v.id,
-      name: v.name,
-      sku: v.sku.trim() || fallbackSku,
-      price: parseFloat(v.price) || parseFloat(form.pricing.price) || 0,
-      compareAtPrice: v.compareAtPrice.trim()
-        ? parseFloat(v.compareAtPrice)
-        : compareAt
-          ? parseFloat(compareAt)
-          : undefined,
-      stock: parseInt(v.stock) || 0,
-      attributes: v.attributes,
-    };
-    }),
+    variants,
     pricing: {
-      price: parseFloat(form.pricing.price) || 0,
-      compareAtPrice: compareAt ? parseFloat(compareAt) : null,
-      currency: form.pricing.currency || "USD",
+      price: pricing.price,
+      compareAtPrice: pricing.compareAtPrice ?? null,
+      currency: pricing.currency ?? "USD",
     },
     inventory: {
       stock: form.variants.length

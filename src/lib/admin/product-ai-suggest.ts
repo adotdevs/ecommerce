@@ -11,6 +11,7 @@ import { resolveColorHex } from "@/lib/catalog/color-hex";
 import {
   generateUniqueSku,
   formatProductTitle,
+  sanitizeAiDashes,
   type ProductCopyInput,
 } from "@/lib/admin/product-copy-suggest";
 
@@ -134,7 +135,7 @@ function templateFullSuggest(
 
   return {
     name,
-    shortDescription: `Premium ${name} — engineered for performance, backed by our store guarantee.`,
+    shortDescription: `Premium ${name}, engineered for performance, backed by our store guarantee.`,
     description: `Discover the ${name}.\n\nBuilt for everyday excellence with reliable performance and thoughtful design. Customers choose this product for its quality, value, and dependable support.\n\n• Premium build quality\n• Fast, free shipping on eligible orders\n• Easy returns within 30 days`,
     highlights: [
       "Premium build quality",
@@ -249,7 +250,7 @@ async function openAiFullSuggest(
   const parsed = await openAiChatJson<AiFullResponse>(
     `You are an expert e-commerce catalog manager (Amazon-style listings). Return complete product JSON:
 {
-  "name": string — full retail product title with brand, model, key specs (e.g. "Apple iPhone 12 Pro Max — 256GB, Deep Blue, Unlocked"). Proper Title Case. Be specific and detailed.
+  "name": string, full retail product title with brand, model, key specs (e.g. "Apple iPhone 12 Pro Max, 256GB, Deep Blue, Unlocked"). Proper Title Case. Be specific and detailed.
   "shortDescription": string (max 200 chars, compelling),
   "description": string (4-6 paragraphs + bullet highlights, rich and authentic),
   "highlights": string[] (5-8 key feature bullets),
@@ -258,13 +259,14 @@ async function openAiFullSuggest(
   "pricing": { "price": number (realistic USD), "compareAtPrice": number, "currency": "USD" },
   "variantOptions": [{ "type": "color"|"shoe_size"|"apparel_size"|"size"|"material"|"style"|"capacity"|"custom", "name": "Color" for colors, "values": [{ "value", "label", "hex": "#RRGGBB" unique per color }] }],
   "variantPrices": [{ "attributes": { optionKey: value }, "price", "compareAtPrice", "stock" }],
-  "specifications": [{ "section": string, "key": string, "value": string }] — MINIMUM 18 specs across sections like: ${SPEC_SECTIONS.join(", ")}. Use realistic technical values for this exact product.
-  "faqs": [{ "question", "answer" }] — 6-8 helpful customer FAQs,
+  "specifications": [{ "section": string, "key": string, "value": string }], MINIMUM 18 specs across sections like: ${SPEC_SECTIONS.join(", ")}. Use realistic technical values for this exact product.
+  "faqs": [{ "question", "answer" }], 6-8 helpful customer FAQs,
   "warranty": string,
   "weight": number (kg)
 }
 Rules:
-- name must be a complete, professional product title — not just the input keyword.
+- name must be a complete, professional product title, not just the input keyword.
+- Never use em dashes (—) or en dashes (–) anywhere. Use commas, periods, or hyphens (-) instead.
 - Each color MUST have a distinct accurate hex (never all white).
 - Phones/electronics: color + capacity with realistic specs (OS, RAM, camera MP, battery mAh, etc.).
 - Shoes: color + shoe_size. Clothing: color + apparel_size.
@@ -310,15 +312,17 @@ Rules:
     });
   }
 
-  const aiName = parsed.name?.trim()
-    ? formatProductTitle(parsed.name.trim())
-    : formatProductTitle(input.name.trim());
+  const aiName = sanitizeAiDashes(
+    parsed.name?.trim()
+      ? formatProductTitle(parsed.name.trim())
+      : formatProductTitle(input.name.trim())
+  );
 
   const highlights = Array.isArray(parsed.highlights)
-    ? parsed.highlights.map(String).filter(Boolean).slice(0, 10)
+    ? parsed.highlights.map((h) => sanitizeAiDashes(String(h))).filter(Boolean).slice(0, 10)
     : [];
 
-  let description = String(parsed.description);
+  let description = sanitizeAiDashes(String(parsed.description));
   if (highlights.length && !description.includes("•") && !description.includes("- ")) {
     description += `\n\nKey features:\n${highlights.map((h) => `• ${h}`).join("\n")}`;
   }
@@ -330,19 +334,21 @@ Rules:
       : [
           ...specs,
           { section: "Additional details", key: "Brand", value: input.brand ?? "Official" },
-          { section: "Additional details", key: "Model", value: aiName.split("—")[0]?.trim() ?? aiName },
+          { section: "Additional details", key: "Model", value: aiName.split(",")[0]?.trim() ?? aiName },
           { section: "Additional details", key: "Condition", value: "New" },
         ];
 
   return {
     name: aiName,
-    shortDescription: String(parsed.shortDescription).slice(0, 220),
+    shortDescription: sanitizeAiDashes(String(parsed.shortDescription)).slice(0, 220),
     description,
     highlights,
     tags: Array.isArray(parsed.tags) ? parsed.tags.map(String).slice(0, 10) : [],
     seo: {
-      title: String(parsed.seo?.title ?? `${aiName} | Buy Online`),
-      description: String(parsed.seo?.description ?? parsed.shortDescription).slice(0, 200),
+      title: sanitizeAiDashes(String(parsed.seo?.title ?? `${aiName} | Buy Online`)),
+      description: sanitizeAiDashes(
+        String(parsed.seo?.description ?? parsed.shortDescription)
+      ).slice(0, 200),
       keywords: Array.isArray(parsed.seo?.keywords)
         ? parsed.seo.keywords.map(String)
         : [],

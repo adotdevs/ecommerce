@@ -58,6 +58,7 @@ export function FlashSaleCard({
       image: image?.url,
       price: product.pricing.price,
       quantity: 1,
+      maxQuantity: product.inventory?.stock,
     });
   };
 

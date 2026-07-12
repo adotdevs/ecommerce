@@ -40,6 +40,7 @@ export function Header({ settings }: HeaderProps) {
   const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -116,12 +117,11 @@ export function Header({ settings }: HeaderProps) {
             <div className="flex h-14 items-center gap-3 md:h-16 md:gap-4">
               <Button
                 variant="ghost"
-                size="icon-sm"
-                className="lg:hidden"
+                className="h-9 w-9 lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Menu"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5" strokeWidth={2.25} />
               </Button>
 
               <Link href="/" className="flex shrink-0 items-center">
@@ -202,10 +202,13 @@ export function Header({ settings }: HeaderProps) {
               </div>
 
               <div className="ml-auto flex items-center gap-0.5">
-                <Button variant="ghost" size="icon-sm" className="md:hidden" asChild>
-                  <Link href="/products?q=" aria-label={t("common.search")}>
-                    <Search className="h-[18px] w-[18px]" />
-                  </Link>
+                <Button
+                  variant="ghost"
+                  className="h-9 w-9 md:hidden"
+                  onClick={() => setMobileSearchOpen(true)}
+                  aria-label={t("common.search")}
+                >
+                  <Search className="h-5 w-5" strokeWidth={2.25} />
                 </Button>
                 <NavIcon
                   href="/cart"
@@ -213,13 +216,15 @@ export function Header({ settings }: HeaderProps) {
                   count={displayItemCount}
                   pulse={cartPulse}
                 >
-                  <ShoppingCart className="h-[18px] w-[18px]" />
+                  <ShoppingCart className="h-5 w-5" strokeWidth={2.25} />
                 </NavIcon>
-                <Button variant="ghost" size="icon-sm" asChild>
-                  <Link href={user ? "/account" : "/login"} aria-label={t("header.account")}>
-                    <User className="h-[18px] w-[18px]" />
-                  </Link>
-                </Button>
+                <TopBarIcon
+                  href={user ? "/account" : "/login"}
+                  label={t("header.account")}
+                  count={0}
+                >
+                  <User className="h-5 w-5" strokeWidth={2.25} />
+                </TopBarIcon>
               </div>
             </div>
           </div>
@@ -232,6 +237,39 @@ export function Header({ settings }: HeaderProps) {
           </div>
         )}
       </header>
+
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-[70] md:hidden">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileSearchOpen(false)}
+          />
+          <div className="absolute inset-x-0 top-0 border-b border-border bg-background p-4 shadow-[var(--shadow-card)]">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchAutocomplete
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSubmit={() => setMobileSearchOpen(false)}
+                  placeholder={t("common.search")}
+                  size="lg"
+                  autoFocus
+                  inputClassName="h-12 text-body"
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 shrink-0"
+                onClick={() => setMobileSearchOpen(false)}
+                aria-label="Close search"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mobileOpen && (
         <div className="fixed inset-0 z-[60] lg:hidden">
@@ -356,25 +394,25 @@ function NavIcon({
   pulse?: boolean;
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className={cn("relative", pulse && "animate-[cart-pop_0.55s_ease]")}
-      asChild
+    <Link
+      href={href}
+      aria-label={label}
+      className={cn(
+        "relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+        pulse && "animate-[cart-pop_0.55s_ease]"
+      )}
     >
-      <Link href={href} aria-label={label}>
-        {children}
-        {count > 0 && (
-          <span
-            className={cn(
-              "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white transition-transform",
-              pulse && "scale-125"
-            )}
-          >
-            {count > 99 ? "99+" : count}
-          </span>
-        )}
-      </Link>
-    </Button>
+      {children}
+      {count > 0 && (
+        <span
+          className={cn(
+            "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[10px] font-bold text-white transition-transform",
+            pulse && "scale-125"
+          )}
+        >
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </Link>
   );
 }

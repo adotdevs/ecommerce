@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   const { seoTitle, seoDescription } = resolveBranding(settings);
   return {
-    title: seoTitle || undefined,
+    title: seoTitle ? { absolute: seoTitle } : undefined,
     description: seoDescription || undefined,
     keywords: settings?.seo?.keywords,
     openGraph: {

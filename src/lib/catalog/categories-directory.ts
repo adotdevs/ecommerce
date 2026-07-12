@@ -1,5 +1,9 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { Brand, Category, Product } from "@/models";
+import {
+  resolveSearchEnhancement,
+  getSearchTermsForFilter,
+} from "@/lib/search/ai-query";
 
 export interface CategoryDirectoryItem {
   _id: string;
@@ -63,13 +67,17 @@ export async function getCategoriesDirectory(opts?: {
     };
   });
 
-  const q = opts?.q?.trim().toLowerCase();
+  const q = opts?.q?.trim();
   if (q) {
-    items = items.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.description?.toLowerCase().includes(q) ||
-        c.brands.some((b) => b.name.toLowerCase().includes(q))
+    const enhancement = resolveSearchEnhancement(q);
+    const terms = getSearchTermsForFilter(enhancement);
+    items = items.filter((c) =>
+      terms.some(
+        (term) =>
+          c.name.toLowerCase().includes(term) ||
+          c.description?.toLowerCase().includes(term) ||
+          c.brands.some((b) => b.name.toLowerCase().includes(term))
+      )
     );
   }
 

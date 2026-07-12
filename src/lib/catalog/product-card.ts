@@ -1,5 +1,10 @@
 import type { Locale } from "@/config/locales";
 import { localizeProductDoc } from "@/lib/i18n/product";
+import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
+import type {
+  VariantOptionGroup,
+  ProductVariantInput,
+} from "@/lib/catalog/variant-options";
 
 /** Plain product shape safe to pass into Client Components (no ObjectIds). */
 export interface ProductCardData {
@@ -10,6 +15,9 @@ export interface ProductCardData {
   media?: { url: string; alt?: string }[];
   brandName?: string;
   featured?: boolean;
+  hasVariants?: boolean;
+  variantOptions?: VariantOptionGroup[];
+  variants?: ProductVariantInput[];
   inventory?: { stock: number };
   rating?: { average: number; count: number };
 }
@@ -21,6 +29,16 @@ export function toProductCardData(
 ): ProductCardData {
   const p = locale ? localizeProductDoc(product ?? {}, locale) : (product ?? {});
   const pricing = (p.pricing as Record<string, unknown> | undefined) ?? {};
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  const resolvedPricing = resolveCatalogPricing(
+    {
+      price: Number(pricing.price ?? 0),
+      compareAtPrice:
+        pricing.compareAtPrice != null ? Number(pricing.compareAtPrice) : undefined,
+      currency: pricing.currency != null ? String(pricing.currency) : undefined,
+    },
+    variants as { price?: number; compareAtPrice?: number }[]
+  );
   const inventory = (p.inventory as Record<string, unknown> | undefined) ?? {};
   const media = Array.isArray(p.media) ? p.media : [];
   const rating = p.rating as Record<string, unknown> | undefined;
@@ -30,10 +48,9 @@ export function toProductCardData(
     name: String(p.name ?? ""),
     slug: String(p.slug ?? ""),
     pricing: {
-      price: Number(pricing.price ?? 0),
-      compareAtPrice:
-        pricing.compareAtPrice != null ? Number(pricing.compareAtPrice) : undefined,
-      currency: pricing.currency != null ? String(pricing.currency) : undefined,
+      price: resolvedPricing.price,
+      compareAtPrice: resolvedPricing.compareAtPrice,
+      currency: resolvedPricing.currency,
     },
     media: media
       .map((m) => {
@@ -47,6 +64,48 @@ export function toProductCardData(
       .filter(Boolean) as { url: string; alt?: string }[],
     brandName: p.brandName != null ? String(p.brandName) : undefined,
     featured: Boolean(p.featured),
+    hasVariants: variants.length > 0,
+    variantOptions: variants.length
+      ? ((p.variantOptions as unknown[]) ?? []).map((g) => {
+          const group = g as Record<string, unknown>;
+          return {
+            id: String(group.id),
+            name: String(group.name),
+            type: group.type as VariantOptionGroup["type"],
+            attributeKey:
+              group.attributeKey != null ? String(group.attributeKey) : undefined,
+            values: ((group.values as unknown[]) ?? []).map((v) => {
+              const val = v as Record<string, unknown>;
+              return {
+                value: String(val.value),
+                label: String(val.label ?? val.value),
+                hex: val.hex != null ? String(val.hex) : undefined,
+              };
+            }),
+          };
+        })
+      : undefined,
+    variants: variants.length
+      ? variants.map((v) => {
+          const variant = v as Record<string, unknown>;
+          return {
+            id: String(variant.id),
+            name: String(variant.name),
+            sku: String(variant.sku),
+            price: Number(variant.price),
+            compareAtPrice:
+              variant.compareAtPrice != null
+                ? Number(variant.compareAtPrice)
+                : undefined,
+            stock: Number(variant.stock),
+            attributes: Object.fromEntries(
+              Object.entries(
+                (variant.attributes as Record<string, unknown>) ?? {}
+              ).map(([k, val]) => [k, String(val)])
+            ),
+          };
+        })
+      : undefined,
     inventory: {
       stock: Number(inventory.stock ?? 0),
     },

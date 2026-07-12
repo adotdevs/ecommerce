@@ -22,8 +22,8 @@ const buttonVariants = cva(
       },
       size: {
         sm: "h-8 px-3 rounded-[var(--radius-sm)] text-[13px]",
-        md: "h-10 px-4 rounded-[var(--radius-sm)]",
-        lg: "h-12 px-6 rounded-[var(--radius-md)] text-body",
+        md: "h-10 px-4 rounded-[var(--radius-sm)] max-md:min-h-[44px]",
+        lg: "h-12 px-6 rounded-[var(--radius-md)] text-body max-md:min-h-[48px]",
         icon: "h-10 w-10 rounded-[var(--radius-sm)]",
         "icon-sm": "h-8 w-8 rounded-[var(--radius-sm)]",
       },

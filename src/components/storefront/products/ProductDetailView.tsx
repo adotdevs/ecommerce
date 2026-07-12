@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { ProductGallery } from "@/components/storefront/products/ProductGallery";
@@ -11,9 +11,15 @@ import { ProductReviews } from "@/components/storefront/products/ProductReviews"
 import { ProductDetailSectionNav } from "@/components/storefront/products/ProductDetailSectionNav";
 import { StarRating } from "@/components/storefront/products/StarRating";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
+import { useCartStore } from "@/stores/cart-store";
+import { useWishlistStore } from "@/stores/wishlist-store";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/components/ds/utils";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Heart } from "lucide-react";
 import { ProductVariantSelector } from "@/components/storefront/products/ProductVariantSelector";
+import { QuantitySelector } from "@/components/storefront/cart/QuantitySelector";
+import { LowStockHint } from "@/components/storefront/products/LowStockHint";
+import { isLowStock } from "@/lib/inventory/stock";
 import type { VariantOptionGroup } from "@/lib/catalog/variant-options";
 
 interface ProductSpecification {
@@ -93,6 +99,11 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   const tp = useTranslations("products");
   const tr = useTranslations("reviews");
   const { addToCart, justAdded } = useAddToCart();
+  const addItem = useCartStore((s) => s.addItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const router = useRouter();
+  const toggleWishlist = useWishlistStore((s) => s.toggleItem);
+  const isWishlisted = useWishlistStore((s) => s.hasItem(product._id));
 
   const sortedMedia = useMemo(
     () => [...product.media].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
@@ -102,6 +113,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   const [selectedVariant, setSelectedVariant] = useState<
     ProductData["variants"][number] | null
   >(() => product.variants[0] ?? null);
+  const [quantity, setQuantity] = useState(1);
 
   const handleVariantChange = useCallback(
     (variant: (typeof product.variants)[0] | undefined) => {
@@ -112,23 +124,29 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   const price = selectedVariant?.price ?? product.pricing.price;
   const compareAt = selectedVariant?.compareAtPrice ?? product.pricing.compareAtPrice;
-  const totalStock = useMemo(() => {
+  const availableStock = useMemo(() => {
+    if (selectedVariant != null) {
+      return Math.max(0, Number(selectedVariant.stock) || 0);
+    }
     if (product.variants.length) {
       return product.variants.reduce(
-        (sum, v) => sum + (Number(v.stock) || 0),
+        (sum, v) => sum + Math.max(0, Number(v.stock) || 0),
         0
       );
     }
-    return Number(product.inventory.stock) || 0;
-  }, [product.variants, product.inventory.stock]);
+    return Math.max(0, Number(product.inventory.stock) || 0);
+  }, [selectedVariant, product.variants, product.inventory.stock]);
 
-  const stock =
-    selectedVariant != null
-      ? Number(selectedVariant.stock) || 0
-      : totalStock;
-  const inStock = totalStock > 0;
-  const canAddToCart =
-    inStock && (!selectedVariant || (Number(selectedVariant.stock) || 0) > 0);
+  useEffect(() => {
+    setQuantity((current) => {
+      if (availableStock <= 0) return 1;
+      return Math.min(Math.max(1, current), availableStock);
+    });
+  }, [availableStock, selectedVariant?.id]);
+
+  const inStock = availableStock > 0;
+  const canAddToCart = inStock && quantity > 0 && quantity <= availableStock;
+  const showLowStock = isLowStock(availableStock);
 
   const { average: ratingAvg, count: reviewCount } = product.rating;
   const hasDescription = Boolean(product.description || product.shortDescription);
@@ -173,6 +191,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   const handleAddToCart = () => {
     if (!canAddToCart || justAdded) return;
+    if (product.variants.length > 0 && !selectedVariant) return;
     addToCart({
       productId: product._id,
       variantId: selectedVariant?.id ?? undefined,
@@ -180,8 +199,61 @@ export function ProductDetailView({ product }: { product: ProductData }) {
       slug: product.slug,
       image: sortedMedia[0]?.url,
       price,
-      quantity: 1,
+      quantity,
+      maxQuantity: availableStock,
     });
+  };
+
+  const handleBuyNow = () => {
+    if (!canAddToCart) return;
+    if (product.variants.length > 0 && !selectedVariant) return;
+
+    const cartItem = {
+      productId: product._id,
+      variantId: selectedVariant?.id ?? undefined,
+      name: selectedVariant
+        ? `${product.name} — ${selectedVariant.name}`
+        : product.name,
+      slug: product.slug,
+      image: sortedMedia[0]?.url,
+      price,
+      quantity,
+      maxQuantity: availableStock,
+    };
+
+    const existing = useCartStore
+      .getState()
+      .items.find(
+        (i) =>
+          i.productId === cartItem.productId &&
+          i.variantId === cartItem.variantId
+      );
+
+    if (existing) {
+      updateQuantity(cartItem.productId, quantity, cartItem.variantId);
+    } else {
+      addItem(cartItem);
+    }
+
+    router.push("/checkout");
+  };
+
+  const handleWishlist = () => {
+    const added = !isWishlisted;
+    toggleWishlist({
+      productId: product._id,
+      name: product.name,
+      slug: product.slug,
+      image: sortedMedia[0]?.url,
+      price,
+    });
+    if (added) {
+      toast({
+        variant: "success",
+        title: t("addedToWishlist"),
+        description: product.name,
+      });
+    }
   };
 
   return (
@@ -238,9 +310,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
           <div className="mt-4">
             {inStock ? (
-              <Badge variant="success">
-                {t("inStock")} ({stock})
-              </Badge>
+              <Badge variant="success">{t("inStock")}</Badge>
             ) : (
               <Badge variant="destructive">{t("outOfStock")}</Badge>
             )}
@@ -256,12 +326,29 @@ export function ProductDetailView({ product }: { product: ProductData }) {
             </div>
           )}
 
+          {inStock && (
+            <div className="mt-6">
+              <p className="mb-2 text-small font-medium text-foreground">
+                {tp("quantity")}
+              </p>
+              <QuantitySelector
+                quantity={quantity}
+                max={availableStock}
+                onDecrease={() => setQuantity((q) => Math.max(1, q - 1))}
+                onIncrease={() =>
+                  setQuantity((q) => Math.min(availableStock, q + 1))
+                }
+              />
+            </div>
+          )}
+
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
               size="lg"
               className={cn(
                 "flex-1",
-                justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
+                justAdded && "bg-brand-accent text-white hover:bg-brand-accent",
+                showLowStock && !justAdded && "h-auto min-h-12 py-2.5"
               )}
               variant={justAdded ? "accent" : "primary"}
               onClick={handleAddToCart}
@@ -273,12 +360,40 @@ export function ProductDetailView({ product }: { product: ProductData }) {
                   {t("addedToCart")}
                 </>
               ) : (
-                t("addToCart")
+                <span className="flex flex-col items-center gap-0.5">
+                  <span>{t("addToCart")}</span>
+                  {showLowStock && (
+                    <LowStockHint count={availableStock} compact className="text-white/90" />
+                  )}
+                </span>
               )}
             </Button>
-            <Button size="lg" variant="outline" className="flex-1" asChild disabled={!inStock}>
-              <Link href="/checkout">{t("buyNow")}</Link>
-            </Button>
+            {inStock ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+                onClick={handleBuyNow}
+                disabled={!canAddToCart}
+              >
+                {t("buyNow")}
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+                onClick={handleWishlist}
+              >
+                <Heart
+                  className={cn(
+                    "h-4 w-4",
+                    isWishlisted && "fill-red-500 text-red-500"
+                  )}
+                />
+                {t("addToWishlist")}
+              </Button>
+            )}
           </div>
 
           {product.warranty && (

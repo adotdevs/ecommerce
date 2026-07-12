@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import { ProductDetailView } from "@/components/storefront/products/ProductDetailView";
 import { toProductCardData } from "@/lib/catalog/product-card";
+import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
 import { PRODUCT_GRID_CLASS } from "@/lib/catalog/product-grid";
 import { computeReviewSummary, syncProductRating } from "@/lib/reviews/sync-rating";
 import { localizeProductDoc } from "@/lib/i18n/product";
@@ -71,6 +72,40 @@ export default async function ProductDetailPage({ params }: PageProps) {
     .limit(4)
     .lean();
 
+  const p = product as Record<string, unknown>;
+  const pricing = p.pricing as Record<string, unknown>;
+  const inventory = p.inventory as Record<string, unknown>;
+  const variants = ((p.variants as unknown[]) ?? []).map((v) => {
+    const variant = v as Record<string, unknown>;
+    return {
+      id: String(variant.id),
+      name: String(variant.name),
+      sku: String(variant.sku),
+      price: Number(variant.price),
+      compareAtPrice:
+        variant.compareAtPrice != null
+          ? Number(variant.compareAtPrice)
+          : undefined,
+      stock: Number(variant.stock),
+      attributes: Object.fromEntries(
+        Object.entries(
+          (variant.attributes as Record<string, unknown>) ?? {}
+        ).map(([k, val]) => [k, String(val)])
+      ),
+    };
+  });
+  const resolvedPricing = resolveCatalogPricing(
+    {
+      price: Number(pricing.price ?? 0),
+      compareAtPrice:
+        pricing.compareAtPrice != null
+          ? Number(pricing.compareAtPrice)
+          : undefined,
+      currency: pricing.currency != null ? String(pricing.currency) : undefined,
+    },
+    variants
+  );
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -81,19 +116,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
     image: (product.media as { url: string }[])?.map((m) => m.url),
     offers: {
       "@type": "Offer",
-      price: (product.pricing as { price: number }).price,
-      priceCurrency:
-        (product.pricing as { currency?: string }).currency ?? "USD",
+      price: resolvedPricing.price,
+      priceCurrency: resolvedPricing.currency ?? "USD",
       availability:
         (product.inventory as { stock: number }).stock > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
     },
   };
-
-  const p = product as Record<string, unknown>;
-  const pricing = p.pricing as Record<string, unknown>;
-  const inventory = p.inventory as Record<string, unknown>;
 
   const productData = {
     _id: String(p._id),
@@ -136,32 +166,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
         }),
       };
     }),
-    variants: ((p.variants as unknown[]) ?? []).map((v) => {
-      const variant = v as Record<string, unknown>;
-      return {
-        id: String(variant.id),
-        name: String(variant.name),
-        sku: String(variant.sku),
-        price: Number(variant.price),
-        compareAtPrice:
-          variant.compareAtPrice != null
-            ? Number(variant.compareAtPrice)
-            : undefined,
-        stock: Number(variant.stock),
-        attributes: Object.fromEntries(
-          Object.entries(
-            (variant.attributes as Record<string, unknown>) ?? {}
-          ).map(([k, val]) => [k, String(val)])
-        ),
-      };
-    }),
+    variants,
     pricing: {
-      price: Number(pricing.price),
-      compareAtPrice:
-        pricing.compareAtPrice != null
-          ? Number(pricing.compareAtPrice)
-          : undefined,
-      currency: pricing.currency != null ? String(pricing.currency) : undefined,
+      price: resolvedPricing.price,
+      compareAtPrice: resolvedPricing.compareAtPrice,
+      currency: resolvedPricing.currency,
     },
     inventory: {
       stock: Number(inventory.stock),

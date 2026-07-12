@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/api/authMiddleware";
 import { PERMISSIONS } from "@/config/permissions";
 import { productSchema } from "@/lib/validators";
 import { apiSuccess, apiError } from "@/lib/api/response";
+import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
 import {
   normalizeMedia,
   resolveBrandFields,
@@ -77,6 +78,15 @@ export const POST = withAuth(async (request: NextRequest) => {
       resolveBrandFields(brandId ?? undefined),
     ]);
 
+    const pricing = resolveCatalogPricing(
+      {
+        price: rest.pricing.price,
+        compareAtPrice: rest.pricing.compareAtPrice ?? undefined,
+        currency: rest.pricing.currency,
+      },
+      rest.variants
+    );
+
     const product = await Product.create({
       ...rest,
       slug,
@@ -87,8 +97,8 @@ export const POST = withAuth(async (request: NextRequest) => {
       ...categoryFields,
       ...brandFields,
       pricing: {
-        ...rest.pricing,
-        compareAtPrice: rest.pricing.compareAtPrice ?? undefined,
+        ...pricing,
+        compareAtPrice: pricing.compareAtPrice ?? undefined,
       },
     });
     return apiSuccess(

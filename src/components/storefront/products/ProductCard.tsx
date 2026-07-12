@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { RemoteImage } from "@/components/storefront/RemoteImage";
@@ -14,6 +15,9 @@ import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { cn } from "@/components/ds/utils";
+import { LowStockHint } from "@/components/storefront/products/LowStockHint";
+import { VariantQuickAddModal } from "@/components/storefront/products/VariantQuickAddModal";
+import { isLowStock } from "@/lib/inventory/stock";
 import type { ProductCardData } from "@/lib/catalog/product-card";
 
 interface ProductCardProps {
@@ -34,8 +38,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
     product.pricing.compareAtPrice != null &&
     product.pricing.compareAtPrice > product.pricing.price;
   const outOfStock = product.inventory?.stock === 0;
+  const stock = product.inventory?.stock ?? 0;
+  const showLowStock = isLowStock(stock);
   const rating = product.rating?.average ?? 0;
   const reviewCount = product.rating?.count ?? 0;
+  const [variantModalOpen, setVariantModalOpen] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -48,7 +55,30 @@ export function ProductCard({ product, className }: ProductCardProps) {
       image: image?.url,
       price: product.pricing.price,
       quantity: 1,
+      maxQuantity: product.inventory?.stock,
     });
+  };
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist({
+      productId: product._id,
+      name: product.name,
+      slug: product.slug,
+      image: image?.url,
+      price: product.pricing.price,
+    });
+  };
+
+  const handleVariantAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (outOfStock) {
+      handleWishlist(e);
+      return;
+    }
+    setVariantModalOpen(true);
   };
 
   return (
@@ -90,6 +120,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               className="bg-card/90 backdrop-blur-sm"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 toggleWishlist({
                   productId: product._id,
                   name: product.name,
@@ -110,6 +141,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               className="bg-card/90 backdrop-blur-sm"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 toggleCompare(product._id);
               }}
             >
@@ -143,28 +175,81 @@ export function ProductCard({ product, className }: ProductCardProps) {
       </Link>
 
       <div className="px-4 pb-4">
+        {showLowStock && !product.hasVariants && (
+          <div className="mb-2 flex justify-center">
+            <LowStockHint count={stock} className="text-xs" />
+          </div>
+        )}
+        {product.hasVariants ? (
+          <>
+            <Button
+              size="md"
+              variant={justAdded ? "accent" : "primary"}
+              className={cn(
+                "w-full transition-all",
+                justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
+              )}
+              onClick={handleVariantAdd}
+              disabled={!outOfStock && justAdded}
+            >
+              {justAdded ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  {t("addedToCart")}
+                </>
+              ) : outOfStock ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Heart className="h-4 w-4" />
+                  {t("addToWishlist")}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <ShoppingBag className="h-4 w-4" />
+                  {t("addToCart")}
+                </span>
+              )}
+            </Button>
+            <VariantQuickAddModal
+              product={product}
+              open={variantModalOpen}
+              onOpenChange={setVariantModalOpen}
+            />
+          </>
+        ) : (
         <Button
           size="md"
           variant={justAdded ? "accent" : "primary"}
           className={cn(
             "w-full transition-all",
-            justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
+            justAdded && "bg-brand-accent text-white hover:bg-brand-accent",
+            showLowStock && !justAdded && "h-auto min-h-10 py-2"
           )}
-          onClick={handleAddToCart}
-          disabled={outOfStock}
+          onClick={outOfStock ? handleWishlist : handleAddToCart}
+          disabled={!outOfStock && justAdded}
         >
           {justAdded ? (
             <>
               <Check className="h-4 w-4" />
               {t("addedToCart")}
             </>
+          ) : outOfStock ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Heart className="h-4 w-4" />
+              {t("addToWishlist")}
+            </span>
           ) : (
-            <>
-              <ShoppingBag className="h-4 w-4" />
-              {outOfStock ? t("outOfStock") : t("addToCart")}
-            </>
+            <span className="flex flex-col items-center gap-0.5">
+              <span className="inline-flex items-center gap-1.5">
+                <ShoppingBag className="h-4 w-4" />
+                {t("addToCart")}
+              </span>
+              {showLowStock && (
+                <LowStockHint count={stock} compact className="text-white/90" />
+              )}
+            </span>
           )}
         </Button>
+        )}
       </div>
     </motion.article>
   );

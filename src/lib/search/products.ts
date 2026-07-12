@@ -40,10 +40,13 @@ export interface SearchSuggestionsResult {
 
 async function collectProductSuggestions(
   queries: string[],
-  productLimit: number
+  productLimit: number,
+  originalQuery?: string
 ): Promise<SearchSuggestion[]> {
   const products: SearchSuggestion[] = [];
   const seen = new Set<string>();
+  const relevanceQuery = originalQuery ?? queries[0] ?? "";
+  const tokens = tokenizeSearchQuery(relevanceQuery);
 
   for (const searchQuery of queries) {
     let batch = await regexSuggestProducts(searchQuery, productLimit);
@@ -56,7 +59,14 @@ async function collectProductSuggestions(
         );
         const atlasSeen = new Set(batch.map((p) => p.id));
         for (const item of atlas) {
-          if (!atlasSeen.has(item.id)) {
+          if (
+            !atlasSeen.has(item.id) &&
+            isProductSearchRelevant(
+              { name: item.name, slug: item.slug },
+              relevanceQuery,
+              tokens
+            )
+          ) {
             batch.push(item);
             atlasSeen.add(item.id);
           }
@@ -76,25 +86,32 @@ async function collectProductSuggestions(
     if (products.length >= productLimit) break;
   }
 
-  return products.slice(0, productLimit);
+  return products
+    .filter((item) =>
+      isProductSearchRelevant(
+        { name: item.name, slug: item.slug },
+        relevanceQuery,
+        tokens
+      )
+    )
+    .slice(0, productLimit);
 }
 
 async function collectCategorySuggestions(
-  enhancement: AiSearchEnhancement,
-  limit: number
+  queries: string[],
+  limit: number,
+  originalQuery: string
 ): Promise<SearchSuggestion[]> {
-  const queries = [
-    enhancement.primaryQuery,
-    ...enhancement.alternateQueries,
-    ...enhancement.categoryHints,
-  ];
   const categories: SearchSuggestion[] = [];
   const seen = new Set<string>();
 
   for (const searchQuery of queries) {
     const batch = await suggestCategories(searchQuery, limit);
     for (const item of batch) {
-      if (!seen.has(item.id)) {
+      if (
+        !seen.has(item.id) &&
+        isDirectorySuggestionRelevant(item.name, item.slug, originalQuery)
+      ) {
         categories.push(item);
         seen.add(item.id);
       }
@@ -106,21 +123,20 @@ async function collectCategorySuggestions(
 }
 
 async function collectBrandSuggestions(
-  enhancement: AiSearchEnhancement,
-  limit: number
+  queries: string[],
+  limit: number,
+  originalQuery: string
 ): Promise<SearchSuggestion[]> {
-  const queries = [
-    enhancement.primaryQuery,
-    ...enhancement.alternateQueries,
-    ...enhancement.brandHints,
-  ];
   const brands: SearchSuggestion[] = [];
   const seen = new Set<string>();
 
   for (const searchQuery of queries) {
     const batch = await suggestBrands(searchQuery, limit);
     for (const item of batch) {
-      if (!seen.has(item.id)) {
+      if (
+        !seen.has(item.id) &&
+        isDirectorySuggestionRelevant(item.name, item.slug, originalQuery)
+      ) {
         brands.push(item);
         seen.add(item.id);
       }
@@ -131,13 +147,17 @@ async function collectBrandSuggestions(
   return brands.slice(0, limit);
 }
 
-const PRODUCT_SEARCH_FIELDS = [
+const PRIMARY_SEARCH_FIELDS = [
   "name",
   "slug",
   "sku",
   "brandName",
   "categoryNames",
   "tags",
+] as const;
+
+const PRODUCT_SEARCH_FIELDS = [
+  ...PRIMARY_SEARCH_FIELDS,
   "shortDescription",
   "description",
   "seo.title",
@@ -158,6 +178,16 @@ export function tokenizeSearchQuery(query: string): string[] {
 function fieldMatchOr(fields: readonly string[], regex: RegExp) {
   return { $or: fields.map((field) => ({ [field]: regex })) };
 }
+
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  computer: ["laptop", "macbook", "notebook", "pc", "desktop"],
+  laptop: ["macbook", "notebook", "computer"],
+  phone: ["iphone", "smartphone", "mobile", "cellphone"],
+  mobile: ["phone", "smartphone", "iphone"],
+  charger: ["charging", "power", "adapter"],
+  headphone: ["headphones", "earbuds", "earphone", "headset"],
+  headphones: ["headphone", "earbuds", "earphone", "headset"],
+};
 
 /** Flexible match: every token anywhere, compact gaps, or flexible spacing. */
 function buildFlexibleTextFilter(
@@ -208,7 +238,118 @@ function buildFlexibleTextFilter(
 
 /** Broad product text match for catalog listing queries. */
 export function buildProductSearchFilter(query: string): Record<string, unknown> | null {
-  return buildFlexibleTextFilter(PRODUCT_SEARCH_FIELDS, query);
+  const tokens = tokenizeSearchQuery(query);
+  if (tokens.length === 0) return null;
+
+  const usePrimaryOnly = tokens.length === 1 && tokens[0].length <= 5;
+  const fields = usePrimaryOnly ? PRIMARY_SEARCH_FIELDS : PRODUCT_SEARCH_FIELDS;
+  const clauses: Record<string, unknown>[] = [];
+
+  const main = buildFlexibleTextFilter(fields, query);
+  if (main) clauses.push(main);
+
+  // Synonyms only match title-level fields so descriptions cannot broaden results.
+  if (tokens.length === 1) {
+    for (const synonym of SEARCH_SYNONYMS[tokens[0]] ?? []) {
+      const synFilter = buildFlexibleTextFilter(PRIMARY_SEARCH_FIELDS, synonym);
+      if (synFilter) clauses.push(synFilter);
+    }
+  }
+
+  if (!clauses.length) return null;
+  return clauses.length === 1 ? clauses[0] : { $or: clauses };
+}
+
+function productPrimaryText(p: Record<string, unknown>) {
+  return [
+    String(p.name ?? ""),
+    String(p.slug ?? "").replace(/-/g, " "),
+    String(p.sku ?? ""),
+    String(p.brandName ?? ""),
+    ...(Array.isArray(p.categoryNames) ? p.categoryNames.map(String) : []),
+    ...(Array.isArray(p.tags) ? p.tags.map(String) : []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function tokenMatchesPrimaryField(token: string, primary: string) {
+  if (!token || !primary) return false;
+  if (primary.includes(token)) {
+    const re = new RegExp(`(?:^|[\\s\\-_/])${escapeRegex(token)}`, "i");
+    if (re.test(primary)) return true;
+    // Allow substring in product name tokens (e.g. phone in headphones is NOT ok)
+    const words = primary.split(/[\s\-_/]+/);
+    return words.some(
+      (word) =>
+        word === token ||
+        word.startsWith(token) ||
+        (token.length >= 4 && word.includes(token))
+    );
+  }
+  return fuzzyMatchScore(token, [primary]) >= 0.82;
+}
+
+/** Gate weak matches (e.g. hair → MacBook Air, computer → power bank). */
+function isProductSearchRelevant(
+  p: Record<string, unknown>,
+  query: string,
+  tokens: string[]
+) {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+
+  const name = String(p.name ?? "").toLowerCase();
+  const primary = productPrimaryText(p);
+
+  if (name.includes(q) || primary.includes(q)) return true;
+
+  if (!tokens.length) return false;
+
+  if (primaryFieldMatchesTokens(primary, tokens)) return true;
+
+  return fuzzyMatchScore(q, [name]) >= 0.8;
+}
+
+function minSearchScore(query: string) {
+  const tokens = tokenizeSearchQuery(query);
+  if (tokens.length === 1 && tokens[0].length <= 4) return 42;
+  if (tokens.length === 1) return 34;
+  return 28;
+}
+
+function expandedSearchTokens(tokens: string[]) {
+  const expanded = new Set(tokens);
+  for (const token of tokens) {
+    for (const synonym of SEARCH_SYNONYMS[token] ?? []) {
+      expanded.add(synonym);
+    }
+  }
+  return [...expanded];
+}
+
+function primaryFieldMatchesTokens(primary: string, tokens: string[]) {
+  const expanded = expandedSearchTokens(tokens);
+  return expanded.some((token) => tokenMatchesPrimaryField(token, primary));
+}
+
+/** Gate category/brand autocomplete noise (description-only matches). */
+function isDirectorySuggestionRelevant(
+  name: string,
+  slug: string,
+  query: string
+) {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+
+  const primary = `${name} ${slug}`.toLowerCase();
+  const tokens = tokenizeSearchQuery(query);
+
+  if (primary.includes(q)) return true;
+  if (!tokens.length) return false;
+
+  return primaryFieldMatchesTokens(primary, tokens);
 }
 
 /** Prefix / partial token match for typo tolerance (headphons → headphones). */
@@ -246,9 +387,11 @@ function productSearchTexts(p: Record<string, unknown>): string[] {
 
 function rankProductMatch(p: Record<string, unknown>, query: string, tokens: string[]) {
   const name = String(p.name ?? "").toLowerCase();
+  const primary = productPrimaryText(p);
   const blob = productSearchBlob(p);
   const q = query.trim().toLowerCase();
   const compactQ = q.replace(/\s+/g, "");
+  const expanded = expandedSearchTokens(tokens);
 
   let score = 0;
   if (name === q) score += 200;
@@ -257,13 +400,17 @@ function rankProductMatch(p: Record<string, unknown>, query: string, tokens: str
   if (compactQ.length >= 2 && name.replace(/\s+/g, "").includes(compactQ)) score += 50;
   if (tokens.every((t) => blob.includes(t))) score += 40;
   if (blob.includes(q)) score += 30;
+  if (expanded.some((t) => t !== q && primary.includes(t))) score += 75;
+  if (primaryFieldMatchesTokens(primary, tokens)) score += 65;
   if (p.featured) score += 5;
 
-  const fuzzy = fuzzyMatchScore(q, productSearchTexts(p));
+  const fuzzy = fuzzyMatchScore(q, [name]);
+  const blobFuzzy = fuzzyMatchScore(q, productSearchTexts(p));
+
   if (fuzzy >= 0.92) score += 120;
-  else if (fuzzy >= 0.8) score += 90;
-  else if (fuzzy >= 0.65) score += 55;
-  else if (fuzzy >= 0.5) score += 25;
+  else if (fuzzy >= 0.82) score += 90;
+  else if (fuzzy >= 0.72) score += 45;
+  else if (blobFuzzy >= 0.82) score += 20;
 
   return score;
 }
@@ -285,7 +432,7 @@ function mergeProducts(
 }
 
 const DEEP_SELECT =
-  "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured inventory pricing createdAt";
+  "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured inventory pricing createdAt variants variantOptions";
 
 async function collectDeepSearchCandidates(
   query: string,
@@ -306,6 +453,7 @@ async function collectDeepSearchCandidates(
   }
 
   try {
+    const isShortQuery = q.length <= 5;
     const atlasPipeline = [
       {
         $search: {
@@ -315,23 +463,31 @@ async function collectDeepSearchCandidates(
               {
                 text: {
                   query: q,
-                  path: [
-                    "name",
-                    "description",
-                    "shortDescription",
-                    "tags",
-                    "brandName",
-                    "categoryNames",
-                    "sku",
-                  ],
-                  fuzzy: { maxEdits: 2, prefixLength: 1 },
+                  path: isShortQuery
+                    ? ["name", "tags", "brandName", "categoryNames", "sku"]
+                    : [
+                        "name",
+                        "description",
+                        "shortDescription",
+                        "tags",
+                        "brandName",
+                        "categoryNames",
+                        "sku",
+                      ],
+                  fuzzy: {
+                    maxEdits: isShortQuery ? 1 : 2,
+                    prefixLength: isShortQuery ? 2 : 1,
+                  },
                 },
               },
               {
                 autocomplete: {
                   query: q,
                   path: "name",
-                  fuzzy: { maxEdits: 2, prefixLength: 1 },
+                  fuzzy: {
+                    maxEdits: isShortQuery ? 1 : 2,
+                    prefixLength: isShortQuery ? 2 : 1,
+                  },
                 },
               },
             ],
@@ -349,7 +505,7 @@ async function collectDeepSearchCandidates(
   }
 
   const prefixFilter = buildPrefixTokenFilter(q);
-  if (prefixFilter) {
+  if (prefixFilter && q.length >= 5) {
     const prefix = await Product.find({ ...baseFilter, ...prefixFilter })
       .select(DEEP_SELECT)
       .limit(100)
@@ -357,22 +513,26 @@ async function collectDeepSearchCandidates(
     candidates = mergeProducts(candidates, prefix as unknown as Record<string, unknown>[]);
   }
 
-  if (candidates.length < 30) {
-    const broad = await Product.find(baseFilter).select(DEEP_SELECT).limit(350).lean();
+  if (candidates.length === 0) {
+    const broad = await Product.find(baseFilter).select(DEEP_SELECT).limit(200).lean();
     const tokens = tokenizeSearchQuery(q);
     const fuzzyHits = (broad as unknown as Record<string, unknown>[])
       .map((p) => ({
         p,
         score: rankProductMatch(p, q, tokens),
-        fuzzy: fuzzyMatchScore(q, productSearchTexts(p)),
       }))
-      .filter((x) => x.score >= 12 || x.fuzzy >= 0.5)
-      .sort((a, b) => b.score + b.fuzzy * 100 - (a.score + a.fuzzy * 100))
+      .filter(
+        (x) =>
+          isProductSearchRelevant(x.p, q, tokens) &&
+          x.score >= minSearchScore(q)
+      )
+      .sort((a, b) => b.score - a.score)
       .map((x) => x.p);
     candidates = mergeProducts(candidates, fuzzyHits);
   }
 
-  return candidates;
+  const tokens = tokenizeSearchQuery(q);
+  return candidates.filter((p) => isProductSearchRelevant(p, q, tokens));
 }
 
 export interface DeepSearchResult {
@@ -426,21 +586,48 @@ export async function deepSearchProducts(
   }
 
   const enhancement = resolveSearchEnhancement(q);
-  const searchQueries = getSearchQueriesForMatching(enhancement);
+  const tokens = tokenizeSearchQuery(q);
+
+  // Search original + primary first; alternates only if results are thin.
+  const primaryQueries = [
+    ...new Set([q, enhancement.primaryQuery].map((s) => s.trim()).filter(Boolean)),
+  ];
 
   let candidates: Record<string, unknown>[] = [];
-  for (const searchQuery of searchQueries) {
+  for (const searchQuery of primaryQueries) {
     const batch = await collectDeepSearchCandidates(searchQuery, baseFilter);
     candidates = mergeProducts(candidates, batch);
   }
 
-  const ranked = candidates
+  let ranked = candidates
     .map((p) => ({
       p,
       score: rankProductWithEnhancement(p, enhancement, q),
     }))
-    .filter((x) => x.score >= 8)
+    .filter(
+      (x) =>
+        isProductSearchRelevant(x.p, q, tokens) &&
+        x.score >= minSearchScore(q)
+    )
     .sort((a, b) => b.score - a.score);
+
+  if (ranked.length < 3 && enhancement.alternateQueries.length) {
+    for (const alt of enhancement.alternateQueries) {
+      const batch = await collectDeepSearchCandidates(alt, baseFilter);
+      candidates = mergeProducts(candidates, batch);
+    }
+    ranked = candidates
+      .map((p) => ({
+        p,
+        score: rankProductWithEnhancement(p, enhancement, q),
+      }))
+      .filter(
+        (x) =>
+          isProductSearchRelevant(x.p, q, tokens) &&
+          x.score >= minSearchScore(q)
+      )
+      .sort((a, b) => b.score - a.score);
+  }
 
   const total = ranked.length;
   const skip = (page - 1) * limit;
@@ -529,6 +716,7 @@ function mapProductSuggestion(p: Record<string, unknown>): SearchSuggestion {
 }
 
 async function atlasSuggestProducts(query: string, limit: number) {
+  const isShortQuery = query.length <= 5;
   const pipeline = [
     {
       $search: {
@@ -539,22 +727,30 @@ async function atlasSuggestProducts(query: string, limit: number) {
               autocomplete: {
                 query,
                 path: "name",
-                fuzzy: { maxEdits: 1, prefixLength: 1 },
+                fuzzy: {
+                  maxEdits: isShortQuery ? 1 : 1,
+                  prefixLength: isShortQuery ? 2 : 1,
+                },
               },
             },
             {
               text: {
                 query,
-                path: [
-                  "name",
-                  "description",
-                  "shortDescription",
-                  "tags",
-                  "brandName",
-                  "categoryNames",
-                  "sku",
-                ],
-                fuzzy: { maxEdits: 1 },
+                path: isShortQuery
+                  ? ["name", "tags", "brandName", "categoryNames", "sku"]
+                  : [
+                      "name",
+                      "description",
+                      "shortDescription",
+                      "tags",
+                      "brandName",
+                      "categoryNames",
+                      "sku",
+                    ],
+                fuzzy: {
+                  maxEdits: isShortQuery ? 1 : 1,
+                  prefixLength: isShortQuery ? 2 : 1,
+                },
               },
             },
           ],
@@ -563,7 +759,7 @@ async function atlasSuggestProducts(query: string, limit: number) {
         },
       },
     },
-    { $limit: limit },
+    { $limit: limit * 3 },
     {
       $project: {
         name: 1,
@@ -579,7 +775,17 @@ async function atlasSuggestProducts(query: string, limit: number) {
   ];
 
   const rows = await Product.aggregate(pipeline);
-  return rows.map((p) => mapProductSuggestion(p as Record<string, unknown>));
+  const tokens = tokenizeSearchQuery(query);
+  return rows
+    .map((p) => mapProductSuggestion(p as Record<string, unknown>))
+    .filter((item) =>
+      isProductSearchRelevant(
+        { name: item.name, slug: item.slug },
+        query,
+        tokens
+      )
+    )
+    .slice(0, limit);
 }
 
 async function regexSuggestProducts(query: string, limit: number) {
@@ -604,13 +810,21 @@ async function regexSuggestProducts(query: string, limit: number) {
       p,
       score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
     }))
+    .filter(
+      (x) =>
+        isProductSearchRelevant(
+          x.p as unknown as Record<string, unknown>,
+          query,
+          tokens
+        ) && x.score >= minSearchScore(query)
+    )
     .sort((a, b) => b.score - a.score)
     .map(({ p }) => p)
     .slice(0, limit);
 
   if (products.length === 0) {
     const prefixFilter = buildPrefixTokenFilter(query);
-    if (prefixFilter) {
+    if (prefixFilter && query.length >= 5) {
       const prefixHits = await Product.find({
         status: "published",
         ...prefixFilter,
@@ -625,6 +839,14 @@ async function regexSuggestProducts(query: string, limit: number) {
           p,
           score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
         }))
+        .filter(
+          (x) =>
+            isProductSearchRelevant(
+              x.p as unknown as Record<string, unknown>,
+              query,
+              tokens
+            ) && x.score >= minSearchScore(query)
+        )
         .sort((a, b) => b.score - a.score)
         .map(({ p }) => p)
         .slice(0, limit);
@@ -640,11 +862,28 @@ async function regexSuggestProducts(query: string, limit: number) {
           { score: { $meta: "textScore" } }
         )
           .select(
-            "name slug pricing media brandName categoryNames shortDescription description featured"
+            "name slug pricing media brandName categoryNames tags shortDescription description featured"
           )
           .sort({ score: { $meta: "textScore" } })
-          .limit(limit)
+          .limit(fetchLimit)
           .lean();
+
+        products = products
+          .map((p) => ({
+            p,
+            score: rankProductMatch(p as unknown as Record<string, unknown>, query, tokens),
+          }))
+          .filter(
+            (x) =>
+              isProductSearchRelevant(
+                x.p as unknown as Record<string, unknown>,
+                query,
+                tokens
+              ) && x.score >= minSearchScore(query)
+          )
+          .sort((a, b) => b.score - a.score)
+          .map(({ p }) => p)
+          .slice(0, limit);
       } catch {
         /* text index may be missing on fresh DB */
       }
@@ -657,10 +896,12 @@ async function regexSuggestProducts(query: string, limit: number) {
 }
 
 async function suggestCategories(query: string, limit: number) {
-  const searchFilter = buildFlexibleTextFilter(
-    ["name", "slug", "description"],
-    query
-  );
+  const tokens = tokenizeSearchQuery(query);
+  const fields =
+    tokens.length === 1 && tokens[0].length <= 5
+      ? (["name", "slug"] as const)
+      : (["name", "slug", "description"] as const);
+  const searchFilter = buildFlexibleTextFilter(fields, query);
   if (!searchFilter) return [];
 
   const categories = await Category.find(searchFilter)
@@ -681,10 +922,12 @@ async function suggestCategories(query: string, limit: number) {
 }
 
 async function suggestBrands(query: string, limit: number) {
-  const searchFilter = buildFlexibleTextFilter(
-    ["name", "slug", "description"],
-    query
-  );
+  const tokens = tokenizeSearchQuery(query);
+  const fields =
+    tokens.length === 1 && tokens[0].length <= 5
+      ? (["name", "slug"] as const)
+      : (["name", "slug", "description"] as const);
+  const searchFilter = buildFlexibleTextFilter(fields, query);
   if (!searchFilter) return [];
 
   const brands = await Brand.find(searchFilter)
@@ -725,13 +968,22 @@ export async function searchSuggestions(
   }
 
   const enhancement = resolveSearchEnhancement(q);
-  const searchQueries = getSearchQueriesForMatching(enhancement);
+  const primaryQueries = [
+    ...new Set([q, enhancement.primaryQuery].map((s) => s.trim()).filter(Boolean)),
+  ];
 
-  const [products, categories, brands] = await Promise.all([
-    collectProductSuggestions(searchQueries, productLimit),
-    collectCategorySuggestions(enhancement, categoryLimit),
-    collectBrandSuggestions(enhancement, brandLimit),
-  ]);
+  let products = await collectProductSuggestions(primaryQueries, productLimit, q);
+
+  if (products.length < 3 && enhancement.alternateQueries.length) {
+    products = await collectProductSuggestions(
+      enhancement.alternateQueries,
+      productLimit,
+      q
+    );
+  }
+
+  const categories = await collectCategorySuggestions(primaryQueries, categoryLimit, q);
+  const brands = await collectBrandSuggestions(primaryQueries, brandLimit, q);
 
   const suggestions = [...products, ...categories, ...brands];
 

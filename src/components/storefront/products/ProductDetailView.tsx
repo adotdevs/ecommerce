@@ -145,7 +145,10 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   }, [availableStock, selectedVariant?.id]);
 
   const inStock = availableStock > 0;
-  const canAddToCart = inStock && quantity > 0 && quantity <= availableStock;
+  const variantReady =
+    product.variants.length === 0 || selectedVariant != null;
+  const canAddToCart =
+    inStock && quantity > 0 && quantity <= availableStock && variantReady;
   const showLowStock = isLowStock(availableStock);
 
   const { average: ratingAvg, count: reviewCount } = product.rating;
@@ -191,7 +194,13 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   const handleAddToCart = () => {
     if (!canAddToCart || justAdded) return;
-    if (product.variants.length > 0 && !selectedVariant) return;
+    if (product.variants.length > 0 && !selectedVariant) {
+      toast({
+        variant: "warning",
+        title: t("chooseOptions"),
+      });
+      return;
+    }
     addToCart({
       productId: product._id,
       variantId: selectedVariant?.id ?? undefined,

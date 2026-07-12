@@ -115,3 +115,11 @@ export function toProductCardData(
     },
   };
 }
+
+/** In-stock for cards: sum variant stock when options exist, else parent inventory. */
+export function isProductCardInStock(product: ProductCardData): boolean {
+  if (product.hasVariants && product.variants?.length) {
+    return product.variants.some((v) => (Number(v.stock) || 0) > 0);
+  }
+  return (product.inventory?.stock ?? 0) > 0;
+}

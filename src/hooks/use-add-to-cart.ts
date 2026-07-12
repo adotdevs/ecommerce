@@ -53,7 +53,7 @@ export function useAddToCart() {
         if (!line?.valid) {
           toast({
             variant: "warning",
-            title: t("outOfStock"),
+            title: item.variantId ? t("outOfStock") : t("chooseOptions"),
           });
           return false;
         }

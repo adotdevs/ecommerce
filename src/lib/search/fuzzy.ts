@@ -56,14 +56,38 @@ export function fuzzyMatchScore(query: string, candidates: string[]): number {
       if (word.length < 2) continue;
       const maxLen = Math.max(compactQ.length, word.length);
       if (maxLen > 0) {
-        best = Math.max(best, 1 - levenshtein(compactQ, word) / maxLen);
+        const td = levenshtein(compactQ, word);
+        const sim = 1 - td / maxLen;
+        // Avoid loose matches like "hair" → "air" or "pair"
+        if (compactQ.length <= 4) {
+          if (
+            Math.abs(word.length - compactQ.length) <= 1 &&
+            td <= 1 &&
+            sim >= 0.82
+          ) {
+            best = Math.max(best, sim);
+          }
+        } else if (sim >= 0.72) {
+          best = Math.max(best, sim);
+        }
       }
       for (const token of q.split(/\s+/)) {
         if (token.length < 2) continue;
         const td = levenshtein(token, word);
         const tl = Math.max(token.length, word.length);
-        if (tl > 0 && td <= 2) {
-          best = Math.max(best, 1 - td / tl);
+        if (tl > 0) {
+          const sim = 1 - td / tl;
+          if (token.length <= 4) {
+            if (
+              Math.abs(word.length - token.length) <= 1 &&
+              td <= 1 &&
+              sim >= 0.82
+            ) {
+              best = Math.max(best, sim);
+            }
+          } else if (td <= 2 && sim >= 0.72) {
+            best = Math.max(best, sim);
+          }
         }
       }
     }

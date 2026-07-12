@@ -95,19 +95,16 @@ export function CatalogListing({
 
   return (
     <div className="pb-16 md:pb-20">
-      <section
-        className={cn(
-          "relative overflow-hidden border-b border-border bg-gradient-to-br",
-          theme.hero
-        )}
-      >
-        <div
-          className={cn(
-            "pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl",
-            theme.glow
-          )}
-        />
-        <div className="container-store relative py-10 md:py-14">
+      <section className={cn("relative border-b border-border bg-gradient-to-br", theme.hero)}>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className={cn(
+              "absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl",
+              theme.glow
+            )}
+          />
+        </div>
+        <div className="container-store relative z-10 overflow-visible py-10 md:py-14">
           <div className="max-w-2xl">
             {(content.eyebrow || content.badge) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -139,7 +136,7 @@ export function CatalogListing({
             )}
             <CatalogSearchBar
               initialQuery={searchQuery ?? ""}
-              className="mt-6 max-w-xl"
+              className="relative z-20 mt-6 max-w-xl"
             />
             {content.ctaLabel && content.ctaHref && (
               <Button asChild className="mt-6" variant="outline">

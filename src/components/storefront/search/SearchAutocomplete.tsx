@@ -301,7 +301,7 @@ export function SearchAutocomplete({
 
       {showPanel && (
         <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-[80] overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-card)]"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-[200] overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-card)]"
           id={listboxId}
           role="listbox"
         >

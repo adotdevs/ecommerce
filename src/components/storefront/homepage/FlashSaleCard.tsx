@@ -7,19 +7,16 @@ import { motion } from "framer-motion";
 import { Flame, ShoppingBag, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
+import { VariantQuickAddModal } from "@/components/storefront/products/VariantQuickAddModal";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { cn } from "@/components/ds/utils";
 import { useTranslations } from "next-intl";
+import {
+  isProductCardInStock,
+  type ProductCardData,
+} from "@/lib/catalog/product-card";
 
-export interface FlashSaleProduct {
-  _id: string;
-  name: string;
-  slug: string;
-  pricing: { price: number; compareAtPrice?: number; currency?: string };
-  media?: { url: string; alt?: string }[];
-  brandName?: string;
-  inventory?: { stock: number };
-}
+export type FlashSaleProduct = ProductCardData;
 
 function discountPercent(price: number, compareAt?: number) {
   if (!compareAt || compareAt <= price) return null;
@@ -45,12 +42,17 @@ export function FlashSaleCard({
   const image = product.media?.[0];
   const off = discountPercent(product.pricing.price, product.pricing.compareAtPrice);
   const claimed = claimedPercent(product._id);
-  const outOfStock = product.inventory?.stock === 0;
+  const outOfStock = !isProductCardInStock(product);
+  const [variantModalOpen, setVariantModalOpen] = useState(false);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (outOfStock || justAdded) return;
+    if (product.hasVariants) {
+      setVariantModalOpen(true);
+      return;
+    }
     addToCart({
       productId: product._id,
       name: product.name,
@@ -154,7 +156,7 @@ export function FlashSaleCard({
               : "bg-amber-500 text-black hover:bg-amber-400"
           )}
           onClick={handleAdd}
-          disabled={outOfStock}
+          disabled={outOfStock || justAdded}
         >
           {justAdded ? (
             <>
@@ -168,6 +170,13 @@ export function FlashSaleCard({
             </>
           )}
         </Button>
+        {product.hasVariants && (
+          <VariantQuickAddModal
+            product={product}
+            open={variantModalOpen}
+            onOpenChange={setVariantModalOpen}
+          />
+        )}
       </div>
     </motion.article>
   );

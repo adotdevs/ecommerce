@@ -19,6 +19,7 @@ import { LowStockHint } from "@/components/storefront/products/LowStockHint";
 import { VariantQuickAddModal } from "@/components/storefront/products/VariantQuickAddModal";
 import { isLowStock } from "@/lib/inventory/stock";
 import type { ProductCardData } from "@/lib/catalog/product-card";
+import { isProductCardInStock } from "@/lib/catalog/product-card";
 
 interface ProductCardProps {
   product: ProductCardData;
@@ -37,7 +38,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const onSale =
     product.pricing.compareAtPrice != null &&
     product.pricing.compareAtPrice > product.pricing.price;
-  const outOfStock = product.inventory?.stock === 0;
+  const outOfStock = !isProductCardInStock(product);
   const stock = product.inventory?.stock ?? 0;
   const showLowStock = isLowStock(stock);
   const rating = product.rating?.average ?? 0;

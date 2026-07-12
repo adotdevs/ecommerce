@@ -6,6 +6,7 @@ const PAYMENT_LOGOS = [
   { id: "mastercard", label: "Mastercard", src: "/payments/mastercard.svg" },
   { id: "amex", label: "American Express", src: "/payments/amex.svg" },
   { id: "paypal", label: "PayPal", src: "/payments/paypal.svg" },
+  { id: "apple-pay", label: "Apple Pay", src: "/payments/apple-pay.svg" },
 ] as const;
 
 export function PaymentMethodBadges({ className }: { className?: string }) {

@@ -215,5 +215,9 @@ export const checkoutSchema = z.object({
     phone: z.string().optional(),
   }),
   paymentMethod: z.enum(["stripe", "paypal", "bank_transfer"]).default("bank_transfer"),
+  shippingMethod: z
+    .enum(["standard", "express", "overnight"])
+    .optional()
+    .default("standard"),
   notes: z.string().optional(),
 });

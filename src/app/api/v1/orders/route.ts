@@ -14,6 +14,7 @@ import {
   restoreProductStockAtomic,
 } from "@/lib/inventory/stock.server";
 import { releaseSessionReservations } from "@/lib/inventory/reservations";
+import { calculateShippingUsd } from "@/lib/checkout/shipping";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     const parsed = checkoutSchema.safeParse(body);
     if (!parsed.success) return apiError(parsed.error.issues[0].message);
 
-    const { items, email, shippingAddress, paymentMethod, notes, sessionId } =
+    const { items, email, shippingAddress, paymentMethod, notes, sessionId, shippingMethod } =
       body;
     if (!items?.length) return apiError("Cart is empty");
 
@@ -66,7 +67,11 @@ export async function POST(request: NextRequest) {
         sum + i.price * i.quantity,
       0
     );
-    const shipping = subtotal >= 100 ? 0 : 9.99;
+    const method =
+      parsed.data.shippingMethod ??
+      shippingMethod ??
+      "standard";
+    const shipping = calculateShippingUsd(subtotal, method);
     const tax = subtotal * 0.08;
     const total = subtotal + shipping + tax;
 

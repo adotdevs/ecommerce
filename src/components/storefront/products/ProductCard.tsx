@@ -36,6 +36,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const toggleCompare = useCompareStore((s) => s.toggleProduct);
   const image = product.media?.[0];
   const onSale =
+    Boolean(product.onSale) &&
     product.pricing.compareAtPrice != null &&
     product.pricing.compareAtPrice > product.pricing.price;
   const outOfStock = !isProductCardInStock(product);

@@ -45,6 +45,8 @@ export interface ProductFormData {
   status: "draft" | "published" | "archived";
   featured: boolean;
   isNewArrival: boolean;
+  onSale: boolean;
+  flashSale: boolean;
   seo: {
     title: string;
     description: string;
@@ -90,6 +92,8 @@ export const emptyProductForm = (): ProductFormData => ({
   status: "draft",
   featured: false,
   isNewArrival: false,
+  onSale: false,
+  flashSale: false,
   seo: {
     title: "",
     description: "",
@@ -195,6 +199,8 @@ export function productToFormData(product: Record<string, any>): ProductFormData
     status: product.status ?? "draft",
     featured: product.featured ?? false,
     isNewArrival: product.isNewArrival ?? false,
+    onSale: product.onSale ?? false,
+    flashSale: product.flashSale ?? false,
     seo: {
       title: product.seo?.title ?? "",
       description: product.seo?.description ?? "",
@@ -314,6 +320,8 @@ export function formToPayload(form: ProductFormData) {
     status: form.status,
     featured: form.featured,
     isNewArrival: form.isNewArrival,
+    onSale: form.onSale,
+    flashSale: form.flashSale,
     seo: {
       title: form.seo.title.trim() || undefined,
       description: form.seo.description.trim() || undefined,

@@ -15,6 +15,8 @@ export interface ProductCardData {
   media?: { url: string; alt?: string }[];
   brandName?: string;
   featured?: boolean;
+  onSale?: boolean;
+  flashSale?: boolean;
   hasVariants?: boolean;
   variantOptions?: VariantOptionGroup[];
   variants?: ProductVariantInput[];
@@ -64,6 +66,8 @@ export function toProductCardData(
       .filter(Boolean) as { url: string; alt?: string }[],
     brandName: p.brandName != null ? String(p.brandName) : undefined,
     featured: Boolean(p.featured),
+    onSale: Boolean(p.onSale),
+    flashSale: Boolean(p.flashSale),
     hasVariants: variants.length > 0,
     variantOptions: variants.length
       ? ((p.variantOptions as unknown[]) ?? []).map((g) => {

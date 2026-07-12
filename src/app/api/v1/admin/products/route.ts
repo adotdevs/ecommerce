@@ -27,16 +27,15 @@ export const GET = withAuth(async (request: NextRequest) => {
   const featured = searchParams.get("featured");
   const isNewArrival = searchParams.get("isNewArrival");
   const onSale = searchParams.get("onSale");
+  const flashSale = searchParams.get("flashSale");
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
   if (featured === "1") filter.featured = true;
   if (isNewArrival === "1") filter.isNewArrival = true;
+  if (flashSale === "1") filter.flashSale = true;
   if (onSale === "1") {
-    filter.$and = [
-      { "pricing.compareAtPrice": { $exists: true, $gt: 0 } },
-      { $expr: { $gt: ["$pricing.compareAtPrice", "$pricing.price"] } },
-    ];
+    filter.onSale = true;
   }
   if (q) {
     filter.$or = [

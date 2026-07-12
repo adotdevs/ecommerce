@@ -229,7 +229,7 @@ export function FeaturedProductsEditor({ config, onChange, accessToken }: Editor
             variant={mode === "auto" ? "primary" : "outline"}
             onClick={() => onChange({ ...config, selectionMode: "auto" })}
           >
-            Auto (featured in catalog)
+            Auto (featured products)
           </Button>
           <Button
             type="button"
@@ -442,7 +442,7 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
         multiline
       />
       <div className="space-y-1.5">
-        <Label>Sale ends at</Label>
+        <Label>Countdown anchor (optional)</Label>
         <Input
           type="datetime-local"
           value={endsAtLocal}
@@ -455,7 +455,8 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
           }}
         />
         <p className="text-[12px] text-muted-foreground">
-          Powers the live countdown on the storefront.
+          Countdown runs in 7-day cycles and auto-resets when it hits zero. Leave
+          empty for the default cycle, or set a custom start/end anchor.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -480,7 +481,7 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
             variant={mode === "auto" ? "primary" : "outline"}
             onClick={() => onChange({ ...config, selectionMode: "auto" })}
           >
-            Auto (featured in catalog)
+            Auto (flash sale products)
           </Button>
           <Button
             type="button"

@@ -768,7 +768,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                 />
                 {isOnSale && (
                   <p className="text-[12px] text-green-600">
-                    This product will appear in Deals
+                    Discount pricing active
                   </p>
                 )}
               </div>
@@ -781,6 +781,18 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                   }
                 />
               </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div>
+                <p className="font-medium">Include in Deals / Sale</p>
+                <p className="text-[12px] text-muted-foreground">
+                  List this product on the Deals page.
+                </p>
+              </div>
+              <Switch
+                checked={form.onSale}
+                onCheckedChange={(v) => update("onSale", v)}
+              />
             </div>
             {!hasVariants && (
               <div className="grid gap-4 md:grid-cols-3">
@@ -1050,14 +1062,26 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
                 <div>
-                  <p className="font-medium">Best Seller</p>
+                  <p className="font-medium">Featured on homepage</p>
                   <p className="text-[12px] text-muted-foreground">
-                    Featured on Best Sellers page and homepage.
+                    Shows in the Featured Products section on the homepage.
                   </p>
                 </div>
                 <Switch
                   checked={form.featured}
                   onCheckedChange={(v) => update("featured", v)}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div>
+                  <p className="font-medium">Flash sale on homepage</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    Shows in the Flash Sale section on the homepage.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.flashSale}
+                  onCheckedChange={(v) => update("flashSale", v)}
                 />
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -1072,18 +1096,27 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                   onCheckedChange={(v) => update("isNewArrival", v)}
                 />
               </div>
-              <div className="rounded-lg border border-border p-4">
-                <p className="font-medium">Deals / On Sale</p>
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  Set compare-at price higher than sale price.
-                  {isOnSale ? (
-                    <span className="ml-1 font-medium text-green-600">
-                      Active — will show on Deals page.
-                    </span>
-                  ) : (
-                    <span className="ml-1">Not active.</span>
-                  )}
-                </p>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div>
+                  <p className="font-medium">Deals / Sale</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    Include on the Deals page. Compare-at price only controls the
+                    discount display — it does not add the product to Deals automatically.
+                    {isOnSale ? (
+                      <span className="ml-1 font-medium text-green-600">
+                        Discount pricing is set.
+                      </span>
+                    ) : form.onSale ? (
+                      <span className="ml-1 text-amber-600">
+                        Set compare-at price above sale price to show a discount.
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+                <Switch
+                  checked={form.onSale}
+                  onCheckedChange={(v) => update("onSale", v)}
+                />
               </div>
             </CardContent>
           </Card>

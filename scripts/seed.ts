@@ -361,7 +361,9 @@ async function seed() {
         subtitle: "Handpicked favorites from our collection",
         viewAllLabel: "View All",
         layout: "grid",
+        selectionMode: "auto",
         limit: 4,
+        productLinks: [],
       },
     },
     {

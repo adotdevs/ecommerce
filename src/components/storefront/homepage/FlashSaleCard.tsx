@@ -15,6 +15,7 @@ import {
   isProductCardInStock,
   type ProductCardData,
 } from "@/lib/catalog/product-card";
+import { resolveFlashSaleEndsAt } from "@/lib/cms/flash-sale-countdown";
 
 export type FlashSaleProduct = ProductCardData;
 
@@ -78,16 +79,21 @@ export function FlashSaleCard({
       <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-500/20 blur-2xl transition-opacity group-hover:opacity-100" />
 
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[5/4] overflow-hidden bg-[#16120c]">
+        <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
           {image ? (
-            <RemoteImage
-              src={image.url}
-              alt={image.alt ?? product.name}
-              fill
-              className="object-contain p-3 transition-transform duration-500 group-hover:scale-[1.06]"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              loading="lazy"
-            />
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="relative h-full w-full origin-center scale-[1.28] transition-transform duration-500 group-hover:scale-[1.34]">
+                <RemoteImage
+                  src={image.url}
+                  alt={image.alt ?? product.name}
+                  fill
+                  className="object-cover object-center"
+                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  loading="lazy"
+                />
+              </div>
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-amber-200/40">—</div>
           )}
@@ -186,16 +192,12 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!endsAt) return;
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [endsAt]);
+  }, []);
 
-  if (!endsAt) return null;
-
-  const end = new Date(endsAt).getTime();
-  if (Number.isNaN(end)) return null;
+  const effectiveEnd = resolveFlashSaleEndsAt(endsAt, now ?? Date.now());
 
   // Avoid SSR/client time mismatch — show placeholders until mounted
   if (now == null) {
@@ -218,8 +220,7 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
     );
   }
 
-  const diff = Math.max(0, end - now);
-  const expired = diff === 0;
+  const diff = Math.max(0, effectiveEnd.getTime() - now);
   const totalSeconds = Math.floor(diff / 1000);
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
@@ -235,12 +236,7 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {expired ? (
-        <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-amber-400">
-          Sale ended
-        </span>
-      ) : (
-        cells.map((cell) => (
+      {cells.map((cell) => (
           <div
             key={cell.label}
             className="min-w-[3.25rem] rounded-lg border border-amber-500/25 bg-black/40 px-2.5 py-1.5 text-center backdrop-blur-sm"
@@ -252,8 +248,7 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
               {cell.label}
             </p>
           </div>
-        ))
-      )}
+      ))}
     </div>
   );
 }

@@ -72,6 +72,8 @@ export interface IProduct extends Document {
   status: "draft" | "published" | "archived";
   featured: boolean;
   isNewArrival: boolean;
+  onSale: boolean;
+  flashSale: boolean;
   rating: {
     average: number;
     count: number;
@@ -166,6 +168,8 @@ const ProductSchema = new Schema<IProduct>(
     },
     featured: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },
+    onSale: { type: Boolean, default: false },
+    flashSale: { type: Boolean, default: false },
     rating: {
       average: { type: Number, default: 0 },
       count: { type: Number, default: 0 },
@@ -177,6 +181,8 @@ const ProductSchema = new Schema<IProduct>(
 ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ sku: 1 }, { unique: true });
 ProductSchema.index({ status: 1, featured: 1 });
+ProductSchema.index({ status: 1, flashSale: 1 });
+ProductSchema.index({ status: 1, onSale: 1 });
 ProductSchema.index({ name: "text", description: "text", shortDescription: "text", brandName: "text", categoryNames: "text", tags: "text", sku: "text", "seo.title": "text" });
 
 if (mongoose.models.Product) {

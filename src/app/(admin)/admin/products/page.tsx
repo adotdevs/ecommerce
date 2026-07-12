@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
-import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2 } from "lucide-react";
+import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2, Zap } from "lucide-react";
 import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
 
 interface Product {
@@ -25,6 +25,8 @@ interface Product {
   inventory: { stock: number };
   featured?: boolean;
   isNewArrival?: boolean;
+  onSale?: boolean;
+  flashSale?: boolean;
   categoryNames?: string[];
   media?: { url: string }[];
 }
@@ -51,6 +53,7 @@ export default function AdminProductsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkMerchandising, setBulkMerchandising] = useState(false);
 
   const load = () => {
     if (!accessToken) return;
@@ -167,7 +170,42 @@ export default function AdminProductsPage() {
     void deleteProducts([...selectedIds], "");
   };
 
-  const isOnSale = (p: Product) =>
+  const applyBulkMerchandising = async (updates: {
+    featured?: boolean;
+    flashSale?: boolean;
+    onSale?: boolean;
+    isNewArrival?: boolean;
+  }) => {
+    if (!accessToken || selectedIds.size === 0) return;
+    setBulkMerchandising(true);
+    try {
+      const res = await fetch("/api/v1/admin/products/bulk-merchandising", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ ids: [...selectedIds], ...updates }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          variant: "success",
+          title: "Products updated",
+          description: `${data.data?.modified ?? selectedIds.size} product(s) updated`,
+        });
+        load();
+      } else {
+        toastError("Update failed", data.error ?? "Could not update products.");
+      }
+    } catch {
+      toastError("Update failed", "Network error.");
+    } finally {
+      setBulkMerchandising(false);
+    }
+  };
+
+  const hasDiscount = (p: Product) =>
     p.pricing.compareAtPrice != null &&
     p.pricing.compareAtPrice > p.pricing.price;
 
@@ -229,6 +267,100 @@ export default function AdminProductsPage() {
           </Button>
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center gap-2 py-4">
+            <p className="mr-2 text-sm font-medium text-foreground">
+              {selectedIds.size} selected
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ featured: true })}
+            >
+              <Star className="mr-1.5 h-3.5 w-3.5" />
+              Feature homepage
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ featured: false })}
+            >
+              Unfeature
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ flashSale: true })}
+            >
+              <Zap className="mr-1.5 h-3.5 w-3.5" />
+              Flash sale
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ flashSale: false })}
+            >
+              Remove flash sale
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ onSale: true })}
+            >
+              <Tag className="mr-1.5 h-3.5 w-3.5" />
+              Add to deals
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ onSale: false })}
+            >
+              Remove from deals
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ isNewArrival: true })}
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              New arrival
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ isNewArrival: false })}
+            >
+              Remove new
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={handleBulkDelete}
+            >
+              {bulkDeleting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Delete
+            </Button>
+            {bulkMerchandising && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {bulkOpen && (
         <Card className="border-primary/20">
@@ -330,20 +462,6 @@ export default function AdminProductsPage() {
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
         </select>
-        {selectedIds.size > 0 && (
-          <Button
-            variant="destructive"
-            onClick={handleBulkDelete}
-            disabled={bulkDeleting}
-          >
-            {bulkDeleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Delete selected ({selectedIds.size})
-          </Button>
-        )}
       </div>
 
       {loading ? (
@@ -422,9 +540,19 @@ export default function AdminProductsPage() {
                                 <Sparkles className="h-2.5 w-2.5" /> New
                               </span>
                             )}
-                            {isOnSale(p) && (
+                            {p.flashSale && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-orange-600">
+                                <Zap className="h-2.5 w-2.5" /> Flash
+                              </span>
+                            )}
+                            {p.onSale && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] text-green-600">
                                 <Tag className="h-2.5 w-2.5" /> Deal
+                              </span>
+                            )}
+                            {hasDiscount(p) && !p.onSale && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                <Tag className="h-2.5 w-2.5" /> Priced
                               </span>
                             )}
                           </div>
@@ -436,7 +564,7 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span>{formatPrice(p.pricing.price)}</span>
-                      {isOnSale(p) && p.pricing.compareAtPrice && (
+                      {hasDiscount(p) && p.pricing.compareAtPrice && (
                         <span className="ml-1 text-[11px] text-muted-foreground line-through">
                           {formatPrice(p.pricing.compareAtPrice)}
                         </span>

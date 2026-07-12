@@ -16,6 +16,7 @@ export function RemoteImage({
   sizes,
   loading,
   priority,
+  style,
   ...rest
 }: RemoteImageProps) {
   const srcString = typeof src === "string" ? src : "";
@@ -27,8 +28,9 @@ export function RemoteImage({
           height: "100%",
           width: "100%",
           inset: 0,
+          ...style,
         } as const)
-      : undefined;
+      : style;
 
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -55,6 +57,7 @@ export function RemoteImage({
       sizes={sizes}
       loading={loading}
       priority={priority}
+      style={style}
       {...rest}
     />
   );

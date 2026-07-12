@@ -10,6 +10,8 @@ const merchandisingUpdateSchema = z.object({
   productId: z.string().min(1),
   featured: z.boolean().optional(),
   isNewArrival: z.boolean().optional(),
+  onSale: z.boolean().optional(),
+  flashSale: z.boolean().optional(),
   compareAtPrice: z.number().optional().nullable(),
 });
 
@@ -18,15 +20,10 @@ export const GET = withAuth(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const section = searchParams.get("section");
 
-  const onSaleFilter = {
-    $and: [
-      { "pricing.compareAtPrice": { $exists: true, $gt: 0 } },
-      { $expr: { $gt: ["$pricing.compareAtPrice", "$pricing.price"] } },
-    ],
-  };
+  const onSaleFilter = { onSale: true };
 
   const baseSelect =
-    "name slug sku pricing status inventory featured isNewArrival media categoryNames";
+    "name slug sku pricing status inventory featured isNewArrival onSale flashSale media categoryNames";
 
   if (section === "bestsellers") {
     const products = await Product.find({ featured: true })
@@ -73,11 +70,13 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     const parsed = merchandisingUpdateSchema.safeParse(body);
     if (!parsed.success) return apiError(parsed.error.issues[0].message);
 
-    const { productId, featured, isNewArrival, compareAtPrice } = parsed.data;
+    const { productId, featured, isNewArrival, onSale, flashSale, compareAtPrice } = parsed.data;
     const update: Record<string, unknown> = {};
 
     if (featured !== undefined) update.featured = featured;
     if (isNewArrival !== undefined) update.isNewArrival = isNewArrival;
+    if (onSale !== undefined) update.onSale = onSale;
+    if (flashSale !== undefined) update.flashSale = flashSale;
     if (compareAtPrice !== undefined) {
       update["pricing.compareAtPrice"] = compareAtPrice ?? undefined;
     }

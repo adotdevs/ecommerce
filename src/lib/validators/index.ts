@@ -134,6 +134,8 @@ const productFieldsSchema = z.object({
   status: z.enum(["draft", "published", "archived"]).default("draft"),
   featured: z.boolean().default(false),
   isNewArrival: z.boolean().default(false),
+  onSale: z.boolean().default(false),
+  flashSale: z.boolean().default(false),
   seo: z
     .object({
       title: z.string().optional(),

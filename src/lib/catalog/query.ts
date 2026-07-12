@@ -86,10 +86,7 @@ function buildCatalogFilter(
     input.preset === "deals" ||
     input.sort === "deals";
   if (onSale) {
-    filter.$and = [
-      { "pricing.compareAtPrice": { $exists: true, $gt: 0 } },
-      { $expr: { $gt: ["$pricing.compareAtPrice", "$pricing.price"] } },
-    ];
+    filter.onSale = true;
   }
 
   return filter;

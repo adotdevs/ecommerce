@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { HomepageSection } from "@/models";
-import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
+import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, resolveFlashSaleProducts, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
+import { resolveFlashSaleEndsAtIso } from "@/lib/cms/flash-sale-countdown";
 import { localizeHomepageSection } from "@/lib/cms/localize-homepage";
 import { HomepageRenderer } from "@/components/storefront/homepage/HomepageRenderer";
 import { getSiteSettings } from "@/lib/data/site-settings";
@@ -53,8 +54,14 @@ async function getHomepageSections(locale: Locale) {
       if (section.type === "promo_banner") {
         localizedConfig = await enrichConfigFromProductLink(localizedConfig);
       }
-      if (section.type === "featured_products" || section.type === "flash_sale") {
+      if (section.type === "featured_products") {
         localizedConfig.products = await resolveHomepageProducts(localizedConfig, locale);
+      }
+      if (section.type === "flash_sale") {
+        localizedConfig.products = await resolveFlashSaleProducts(localizedConfig, locale);
+        localizedConfig.endsAt = resolveFlashSaleEndsAtIso(
+          localizedConfig.endsAt as string | undefined
+        );
       }
       if (section.type === "category_showcase") {
         localizedConfig.categories = await resolveHomepageCategories(localizedConfig);

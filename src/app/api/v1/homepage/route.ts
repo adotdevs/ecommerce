@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { HomepageSection, Product, Category } from "@/models";
-import { isSectionVisible, resolveFeaturedProducts } from "@/lib/cms/homepage";
+import { isSectionVisible, resolveFeaturedProducts, resolveFlashSaleProducts } from "@/lib/cms/homepage";
+import { resolveFlashSaleEndsAtIso } from "@/lib/cms/flash-sale-countdown";
 import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
 import { apiSuccess } from "@/lib/api/response";
 
@@ -13,9 +14,15 @@ export async function GET() {
     visible.map(async (section) => {
       const config = { ...section.config } as Record<string, unknown>;
 
-      if (section.type === "featured_products" || section.type === "flash_sale") {
+      if (section.type === "featured_products") {
         const limit = (config.limit as number) ?? 8;
         config.products = await resolveFeaturedProducts(limit);
+      }
+
+      if (section.type === "flash_sale") {
+        const limit = (config.limit as number) ?? 4;
+        config.products = await resolveFlashSaleProducts({ ...config, limit });
+        config.endsAt = resolveFlashSaleEndsAtIso(config.endsAt as string | undefined);
       }
 
       if (section.type === "category_showcase") {

@@ -46,23 +46,72 @@ export async function resolveFeaturedProducts(limit = 8, locale?: Locale) {
   );
 }
 
+async function resolveManualProductCards(
+  links: string[],
+  limit: number,
+  locale?: Locale
+) {
+  if (!links.length) return [];
+  const products = await resolveProductsByLinks(links);
+  return products
+    .slice(0, limit)
+    .map((p) =>
+      toProductCardData(p as unknown as Record<string, unknown>, locale)
+    );
+}
+
+export async function resolveFlashSaleProducts(
+  config: Record<string, unknown>,
+  locale?: Locale
+) {
+  const limit = (config.limit as number) ?? 4;
+
+  // Admin "Flash sale on homepage" flag is the primary source
+  const flagged = await Product.find({ status: "published", flashSale: true })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  if (flagged.length > 0) {
+    return flagged.map((p) =>
+      toProductCardData(p as unknown as Record<string, unknown>, locale)
+    );
+  }
+
+  const mode = (config.selectionMode as string) ?? "auto";
+  const links = (config.productLinks as string[]) ?? [];
+  if (mode === "manual" && links.length > 0) {
+    return resolveManualProductCards(links, limit, locale);
+  }
+
+  return [];
+}
+
 export async function resolveHomepageProducts(
   config: Record<string, unknown>,
   locale?: Locale
 ) {
-  const mode = (config.selectionMode as string) ?? "auto";
-  const links = (config.productLinks as string[]) ?? [];
+  const limit = (config.limit as number) ?? 8;
 
-  if (mode === "manual" && links.length > 0) {
-    const products = await resolveProductsByLinks(links);
-    if (products.length > 0) {
-      return products.map((p) =>
-        toProductCardData(p as unknown as Record<string, unknown>, locale)
-      );
-    }
+  // Admin "Featured on homepage" flag is the primary source
+  const flagged = await Product.find({ status: "published", featured: true })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  if (flagged.length > 0) {
+    return flagged.map((p) =>
+      toProductCardData(p as unknown as Record<string, unknown>, locale)
+    );
   }
 
-  return resolveFeaturedProducts((config.limit as number) ?? 8, locale);
+  const mode = (config.selectionMode as string) ?? "auto";
+  const links = (config.productLinks as string[]) ?? [];
+  if (mode === "manual" && links.length > 0) {
+    return resolveManualProductCards(links, limit, locale);
+  }
+
+  return resolveFeaturedProducts(limit, locale);
 }
 
 export async function resolveHomepageCategories(config: Record<string, unknown>) {

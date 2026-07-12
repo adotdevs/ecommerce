@@ -932,20 +932,15 @@ async function regexSuggestProducts(query: string, limit: number) {
   const select =
     "name slug sku pricing media brandName categoryNames tags shortDescription description seo featured";
 
-  let products = await Product.find({
+  let products: Record<string, unknown>[] = (await Product.find({
     status: "published",
     ...searchFilter,
   })
     .select(select)
     .limit(fetchLimit)
-    .lean();
+    .lean()) as unknown as Record<string, unknown>[];
 
-  products = scoreSuggestionProducts(
-    products as unknown as Record<string, unknown>[],
-    query,
-    tokens,
-    limit
-  );
+  products = scoreSuggestionProducts(products, query, tokens, limit);
 
   if (products.length === 0) {
     const prefixFilter = buildPrefixTokenFilter(query);

@@ -71,43 +71,39 @@ export function FlashSaleCard({
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl",
-        "border border-amber-500/25 bg-gradient-to-b from-[#1a1208] to-[#0c0a08]",
+        "border border-amber-500/25 bg-[#0c0a08]",
         "shadow-[0_0_0_1px_rgba(245,158,11,0.08),0_20px_40px_-20px_rgba(0,0,0,0.6)]",
         className
       )}
     >
-      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-500/20 blur-2xl transition-opacity group-hover:opacity-100" />
+      <div className="pointer-events-none absolute -right-8 top-[38%] h-28 w-28 rounded-full bg-amber-500/20 blur-2xl transition-opacity group-hover:opacity-100" />
 
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
+        <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-white">
           {image ? (
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="relative h-full w-full origin-center scale-[1.28] transition-transform duration-500 group-hover:scale-[1.34]">
-                <RemoteImage
-                  src={image.url}
-                  alt={image.alt ?? product.name}
-                  fill
-                  className="object-cover object-center"
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  loading="lazy"
-                />
-              </div>
-            </div>
+            <RemoteImage
+              src={image.url}
+              alt={image.alt ?? product.name}
+              fill
+              className="object-contain p-3 transition-transform duration-500 group-hover:scale-[1.03]"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              loading="lazy"
+            />
           ) : (
-            <div className="flex h-full items-center justify-center text-amber-200/40">—</div>
+            <div className="flex h-full items-center justify-center bg-white text-amber-200/40">
+              —
+            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0c0a08] via-transparent to-transparent" />
 
           {off != null && (
-            <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-black shadow-lg">
+            <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-black shadow-lg">
               <Zap className="h-3 w-3 fill-current" />
               −{off}%
             </div>
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2.5 p-4 pt-3">
+        <div className="flex flex-1 flex-col gap-2.5 bg-gradient-to-b from-[#1a1208] to-[#0c0a08] p-4 pt-3">
           {product.brandName && (
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500/70">
               {product.brandName}
@@ -152,7 +148,7 @@ export function FlashSaleCard({
         </div>
       </Link>
 
-      <div className="px-4 pb-4">
+      <div className="bg-[#0c0a08] px-4 pb-4">
         <Button
           size="md"
           className={cn(

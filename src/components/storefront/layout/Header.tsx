@@ -92,14 +92,14 @@ export function Header({ settings }: HeaderProps) {
     <>
       <header id="site-header" className="sticky top-0 z-50 bg-background/95 backdrop-blur-md">
         {/* Top bar — locale, theme, secondary actions */}
-        <div className="hidden border-b border-border sm:block">
-          <div className="container-store flex h-11 items-center justify-between gap-4">
-            <p className="truncate text-[12px] text-muted-foreground">
+        <div className="hidden border-b border-border bg-foreground sm:block">
+          <div className="container-store flex h-10 items-center justify-between gap-4">
+            <p className="truncate text-[12px] text-background/90">
               {settings?.announcement ?? settings?.deliveryInfo}
             </p>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5 text-background/85 [&_button]:text-background/85 [&_button:hover]:bg-background/10 [&_a]:text-background/85 [&_a:hover]:bg-background/10">
               <RegionSelector compact />
-              <div className="mx-0.5 h-5 w-px bg-border" />
+              <div className="mx-0.5 h-5 w-px bg-background/20" />
               <ThemeToggle />
               <TopBarIcon href="/wishlist" label={t("header.wishlist")} count={displayWishlistCount}>
                 <Heart className="h-5 w-5" strokeWidth={2.25} />
@@ -191,13 +191,14 @@ export function Header({ settings }: HeaderProps) {
                 ))}
               </nav>
 
-              <div className="mx-auto hidden max-w-md flex-1 md:flex lg:max-w-lg">
+              <div className="mx-auto hidden max-w-md flex-1 md:flex lg:max-w-xl">
                 <SearchAutocomplete
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onSubmit={() => setMobileOpen(false)}
                   placeholder={t("common.search")}
                   size="md"
+                  inputClassName="rounded-full border-transparent bg-secondary/80 shadow-inner"
                 />
               </div>
 

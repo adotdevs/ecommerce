@@ -63,8 +63,9 @@
   },
   "home": {
     "heroBadge": "New Collection 2026",
-    "exploreNew": "Explore New",
+    "exploreNew": "Explore Collections",
     "viewAll": "View All",
+    "viewAllCategories": "View all categories",
     "featuredSubtitle": "Handpicked favorites from our curated collection",
     "statCustomers": "Happy Customers",
     "statProducts": "Premium Products",
@@ -73,13 +74,79 @@
     "newsletterPrivacy": "No spam. Unsubscribe anytime.",
     "featuredProducts": "Featured Products",
     "shopByCategory": "Shop by Category",
+    "shopByCategorySubtitle": "Browse curated collections tailored to how you shop.",
     "newsletterTitle": "Stay in the Loop",
-    "newsletterSubtitle": "Get exclusive offers and new arrivals delivered to your inbox.",
+    "newsletterSubtitle": "Get exclusive deals, new arrivals, and curated updates delivered to your inbox.",
     "subscribe": "Subscribe",
     "flashSale": "Flash Sale",
     "flashSaleSubtitle": "Lightning deals — grab them before the clock hits zero.",
     "flashSaleCta": "Shop all deals",
-    "endsIn": "Ends in"
+    "endsIn": "Ends in",
+    "heroTrustShipping": "Free Shipping",
+    "heroTrustPayment": "Secure Payment",
+    "heroTrustReturns": "Easy Returns",
+    "heroTrustSupport": "24/7 Support",
+    "heroOfferBadge": "Up to 40% off",
+    "heroOfferLabel": "Seasonal savings",
+    "collectionTabsNew": "New Arrivals",
+    "collectionTabsBest": "Best Sellers",
+    "collectionTabsDeals": "On Sale",
+    "promoEyebrow": "Seasonal picks",
+    "promoGridTitle": "Offers worth exploring",
+    "promoGridSubtitle": "Curated promotions across our most-loved categories.",
+    "promoTile": {
+      "summer": {
+        "eyebrow": "Limited time",
+        "title": "Summer Sale",
+        "subtitle": "Save up to 40% on selected essentials.",
+        "cta": "Shop deals"
+      },
+      "fresh": {
+        "eyebrow": "Just dropped",
+        "title": "Fresh Styles",
+        "subtitle": "Discover the latest arrivals, curated weekly.",
+        "cta": "Explore new"
+      },
+      "deals": {
+        "eyebrow": "Customer favourites",
+        "title": "Best Sellers",
+        "subtitle": "Top-rated products trusted by thousands.",
+        "cta": "Shop bestsellers"
+      }
+    },
+    "trustedBrands": "Trusted by leading brands",
+    "trustedBrandsSubtitle": "Shop authentic products from names you know and trust.",
+    "whyShopEyebrow": "The YourStore difference",
+    "whyShopTitle": "Why shop with us",
+    "whyShopSubtitle": "Premium quality, secure checkout, and support you can count on.",
+    "whyShop": {
+      "items": {
+        "0": {
+          "title": "Curated quality",
+          "description": "Every product is selected for reliability, value, and everyday usefulness."
+        },
+        "1": {
+          "title": "Secure payments",
+          "description": "Checkout with confidence using encrypted, industry-standard payment protection."
+        },
+        "2": {
+          "title": "Easy returns",
+          "description": "Simple return process if something isn't quite right — no hassle."
+        },
+        "3": {
+          "title": "Fast support",
+          "description": "Friendly customer care ready to help before, during, and after your order."
+        },
+        "4": {
+          "title": "Authentic products",
+          "description": "Genuine items sourced from trusted suppliers and verified brands."
+        },
+        "5": {
+          "title": "Competitive prices",
+          "description": "Fair pricing with regular offers so you get more for your money."
+        }
+      }
+    }
   },
   "products": {
     "title": "All Products",
@@ -318,11 +385,14 @@
   "footer": {
     "shop": "Shop",
     "company": "Company",
-    "support": "Support",
+    "support": "Customer Service",
     "about": "About Us",
     "contact": "Contact",
     "privacy": "Privacy Policy",
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "trustNote": "Secure checkout · Easy returns · Fast delivery",
+    "payments": "We accept",
+    "followUs": "Follow us"
   },
   "account": {
     "title": "My Account",

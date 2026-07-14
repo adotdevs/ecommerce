@@ -1,6 +1,6 @@
 import { connectDB } from "@/lib/db/mongoose";
-import { HomepageSection } from "@/models";
-import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, resolveFlashSaleProducts, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
+import { HomepageSection, Brand } from "@/models";
+import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, resolveFlashSaleProducts, resolveProductSliderProducts, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
 import { resolveFlashSaleEndsAtIso } from "@/lib/cms/flash-sale-countdown";
 import { localizeHomepageSection } from "@/lib/cms/localize-homepage";
 import { HomepageRenderer } from "@/components/storefront/homepage/HomepageRenderer";
@@ -57,6 +57,9 @@ async function getHomepageSections(locale: Locale) {
       if (section.type === "featured_products") {
         localizedConfig.products = await resolveHomepageProducts(localizedConfig, locale);
       }
+      if (section.type === "product_slider") {
+        localizedConfig.products = await resolveProductSliderProducts(localizedConfig, locale);
+      }
       if (section.type === "flash_sale") {
         localizedConfig.products = await resolveFlashSaleProducts(localizedConfig, locale);
         localizedConfig.endsAt = resolveFlashSaleEndsAtIso(
@@ -65,6 +68,15 @@ async function getHomepageSections(locale: Locale) {
       }
       if (section.type === "category_showcase") {
         localizedConfig.categories = await resolveHomepageCategories(localizedConfig);
+      }
+      if (section.type === "brand_strip") {
+        const brands = await Brand.find().sort({ name: 1 }).limit(12).lean();
+        localizedConfig.brands = brands.map((b) => ({
+          _id: b._id.toString(),
+          name: b.name,
+          slug: b.slug,
+          logo: b.logo,
+        }));
       }
 
       return {

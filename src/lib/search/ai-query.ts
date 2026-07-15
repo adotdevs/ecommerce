@@ -10,7 +10,9 @@ export interface AiSearchEnhancement {
 }
 
 const queryCache = new Map<string, { at: number; data: AiSearchEnhancement }>();
-const CACHE_TTL_MS = 60_000;
+/** Long TTL so repeated typos / related searches reuse one rewrite. */
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const inflight = new Map<string, Promise<AiSearchEnhancement>>();
 
 function fallbackEnhancement(query: string): AiSearchEnhancement {
   const raw = query.trim();
@@ -24,7 +26,7 @@ function fallbackEnhancement(query: string): AiSearchEnhancement {
   };
 }
 
-/** Read a recently cached AI enhancement without waiting on OpenAI. */
+/** Read a recently cached AI enhancement without calling OpenAI. */
 export function getCachedEnhancement(query: string): AiSearchEnhancement | null {
   const raw = query.trim();
   if (raw.length < 2) return null;
@@ -34,9 +36,35 @@ export function getCachedEnhancement(query: string): AiSearchEnhancement | null 
   return cached.data;
 }
 
-const inflight = new Map<string, Promise<AiSearchEnhancement>>();
+/**
+ * Non-blocking: returns cache or literal query.
+ * Does NOT call OpenAI (saves tokens on autocomplete keystrokes).
+ */
+export function resolveSearchEnhancement(query: string): AiSearchEnhancement {
+  const raw = query.trim();
+  return getCachedEnhancement(raw) ?? fallbackEnhancement(raw);
+}
 
-/** Warm the AI enhancement cache without blocking the current request. */
+/**
+ * Await AI rewrite once when local matchers need help (typos / related intent).
+ * Dedupes concurrent calls for the same query.
+ */
+export async function resolveSearchEnhancementAsync(
+  query: string,
+  opts?: { force?: boolean }
+): Promise<AiSearchEnhancement> {
+  const raw = query.trim();
+  if (raw.length < 2) return fallbackEnhancement(raw);
+
+  const cached = getCachedEnhancement(raw);
+  if (cached && (!opts?.force || cached.source === "ai")) return cached;
+
+  if (!isOpenAiConfigured()) return fallbackEnhancement(raw);
+
+  return enhanceSearchQuery(raw);
+}
+
+/** @deprecated Prefer resolveSearchEnhancement (no prefetch) to avoid token waste. */
 export function prefetchEnhancement(query: string): void {
   const raw = query.trim();
   if (raw.length < 2 || !isOpenAiConfigured()) return;
@@ -52,14 +80,7 @@ export function prefetchEnhancement(query: string): void {
   void promise;
 }
 
-/** Fast enhancement for live search: cached AI if ready, otherwise literal query. */
-export function resolveSearchEnhancement(query: string): AiSearchEnhancement {
-  const raw = query.trim();
-  prefetchEnhancement(raw);
-  return getCachedEnhancement(raw) ?? fallbackEnhancement(raw);
-}
-
-/** Use OpenAI to rewrite shopper queries into better product search terms. */
+/** Use OpenAI to fix typos and expand related product terms — minimal tokens. */
 export async function enhanceSearchQuery(
   query: string
 ): Promise<AiSearchEnhancement> {
@@ -73,55 +94,65 @@ export async function enhanceSearchQuery(
     return cached.data;
   }
 
+  const existing = inflight.get(cacheKey);
+  if (existing) return existing;
+
+  const promise = (async (): Promise<AiSearchEnhancement> => {
+    try {
+      const parsed = await openAiChatJson<{
+        primaryQuery?: string;
+        alternateQueries?: string[];
+        categoryHints?: string[];
+        brandHints?: string[];
+      }>(
+        // Keep system prompt short to save tokens.
+        `Fix e-commerce search typos and return JSON:
+{"primaryQuery":"corrected product phrase","alternateQueries":["related term"],"categoryHints":[],"brandHints":[]}
+Rules: fix spelling, expand abbreviations, keep shopping intent. Max 3 alternates. No dashes.`,
+        raw,
+        { temperature: 0, maxTokens: 120 }
+      );
+
+      const primary = parsed?.primaryQuery?.trim();
+      if (!parsed || !primary) return fallbackEnhancement(raw);
+
+      const alternateQueries = [
+        ...new Set(
+          (parsed.alternateQueries ?? [])
+            .map((term) => String(term).trim())
+            .filter((term) => term.length >= 2)
+        ),
+      ]
+        .filter((term) => term.toLowerCase() !== primary.toLowerCase())
+        .slice(0, 3);
+
+      const result: AiSearchEnhancement = {
+        originalQuery: raw,
+        primaryQuery: primary,
+        alternateQueries,
+        categoryHints: (parsed.categoryHints ?? [])
+          .map((hint) => String(hint).trim())
+          .filter(Boolean)
+          .slice(0, 2),
+        brandHints: (parsed.brandHints ?? [])
+          .map((hint) => String(hint).trim())
+          .filter(Boolean)
+          .slice(0, 2),
+        source: "ai",
+      };
+
+      queryCache.set(cacheKey, { at: Date.now(), data: result });
+      return result;
+    } catch {
+      return fallbackEnhancement(raw);
+    }
+  })();
+
+  inflight.set(cacheKey, promise);
   try {
-    const parsed = await openAiChatJson<{
-      primaryQuery?: string;
-      alternateQueries?: string[];
-      categoryHints?: string[];
-      brandHints?: string[];
-    }>(
-      `You improve e-commerce product search queries. Return JSON only:
-{
-  "primaryQuery": "best rewritten search phrase for matching products",
-  "alternateQueries": ["synonym or related product term"] (2-5 concrete terms),
-  "categoryHints": ["category if obvious"],
-  "brandHints": ["brand if mentioned or strongly implied"]
-}
-Rules: fix typos, expand abbreviations, keep shopping intent. Never use em dashes or en dashes. If the query is already clear, keep primaryQuery close to the input. alternateQueries must help find relevant products.`,
-      `Shopper search: ${raw}`,
-      { temperature: 0.2 }
-    );
-
-    const primary = parsed?.primaryQuery?.trim();
-    if (!parsed || !primary) return fallbackEnhancement(raw);
-
-    const alternateQueries = [...new Set(
-      (parsed.alternateQueries ?? [])
-        .map((term) => String(term).trim())
-        .filter((term) => term.length >= 2)
-    )]
-      .filter((term) => term.toLowerCase() !== primary.toLowerCase())
-      .slice(0, 5);
-
-    const result: AiSearchEnhancement = {
-      originalQuery: raw,
-      primaryQuery: primary,
-      alternateQueries,
-      categoryHints: (parsed.categoryHints ?? [])
-        .map((hint) => String(hint).trim())
-        .filter(Boolean)
-        .slice(0, 3),
-      brandHints: (parsed.brandHints ?? [])
-        .map((hint) => String(hint).trim())
-        .filter(Boolean)
-        .slice(0, 3),
-      source: "ai",
-    };
-
-    queryCache.set(cacheKey, { at: Date.now(), data: result });
-    return result;
-  } catch {
-    return fallbackEnhancement(raw);
+    return await promise;
+  } finally {
+    inflight.delete(cacheKey);
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
@@ -12,8 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
-import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2, Zap } from "lucide-react";
+import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2, Zap, Palette } from "lucide-react";
 import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
+
+const PAGE_SIZE = 100;
 
 interface Product {
   _id: string;
@@ -42,6 +44,7 @@ export default function AdminProductsPage() {
   const { accessToken } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -54,29 +57,105 @@ export default function AdminProductsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkMerchandising, setBulkMerchandising] = useState(false);
+  const [bulkClearingOptions, setBulkClearingOptions] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const pageRef = useRef(1);
+  const loadingRef = useRef(false);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef(search);
+  const statusRef = useRef(statusFilter);
+  searchRef.current = search;
+  statusRef.current = statusFilter;
 
-  const load = () => {
-    if (!accessToken) return;
-    setLoading(true);
-    const params = new URLSearchParams({ limit: "50" });
-    if (search.trim()) params.set("q", search.trim());
-    if (statusFilter) params.set("status", statusFilter);
+  const load = useCallback(
+    async (reset = true) => {
+      if (!accessToken || loadingRef.current) return;
+      loadingRef.current = true;
 
-    fetch(`/api/v1/admin/products?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        setProducts(d.data?.products ?? []);
+      if (reset) {
+        setLoading(true);
+        pageRef.current = 1;
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const pageNum = reset ? 1 : pageRef.current + 1;
+        const params = new URLSearchParams({
+          limit: String(PAGE_SIZE),
+          page: String(pageNum),
+        });
+        const q = searchRef.current.trim();
+        const status = statusRef.current;
+        if (q) params.set("q", q);
+        if (status) params.set("status", status);
+
+        const res = await fetch(`/api/v1/admin/products?${params}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const d = await res.json();
+        const batch = (d.data?.products ?? []) as Product[];
+        const reportedTotal = Number(d.data?.pagination?.total);
+        const total = Number.isFinite(reportedTotal)
+          ? reportedTotal
+          : batch.length;
+
+        setTotalCount(total);
+        setProducts((prev) => {
+          if (reset) return batch;
+          const seen = new Set(prev.map((p) => p._id));
+          return [...prev, ...batch.filter((p) => !seen.has(p._id))];
+        });
+        pageRef.current = pageNum;
+        setHasMore(pageNum * PAGE_SIZE < total && batch.length > 0);
+        if (reset && tableScrollRef.current) {
+          tableScrollRef.current.scrollTop = 0;
+        }
+      } catch {
+        if (reset) {
+          setProducts([]);
+          setTotalCount(0);
+          setHasMore(false);
+        }
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
+        setLoadingMore(false);
+        loadingRef.current = false;
+      }
+    },
+    [accessToken]
+  );
+
+  const reload = useCallback(() => {
+    void load(true);
+  }, [load]);
 
   useEffect(() => {
-    const timer = setTimeout(load, search ? 300 : 0);
+    if (!accessToken) return;
+    const timer = setTimeout(() => {
+      void load(true);
+    }, search ? 300 : 0);
     return () => clearTimeout(timer);
-  }, [accessToken, search, statusFilter]);
+  }, [accessToken, search, statusFilter, load]);
+
+  useEffect(() => {
+    const root = tableScrollRef.current;
+    const node = sentinelRef.current;
+    if (!root || !node || !hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingRef.current) {
+          void load(false);
+        }
+      },
+      { root, rootMargin: "160px 0px", threshold: 0 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, load, products.length]);
 
   useEffect(() => {
     setSelectedIds((prev) => {
@@ -148,7 +227,7 @@ export default function AdminProductsPage() {
         if (reviewsProduct && ids.includes(reviewsProduct._id)) {
           setReviewsProduct(null);
         }
-        load();
+        reload();
         return true;
       }
       toastError("Delete failed", data.error ?? "Could not delete products.");
@@ -194,7 +273,7 @@ export default function AdminProductsPage() {
           title: "Products updated",
           description: `${data.data?.modified ?? selectedIds.size} product(s) updated`,
         });
-        load();
+        reload();
       } else {
         toastError("Update failed", data.error ?? "Could not update products.");
       }
@@ -202,6 +281,53 @@ export default function AdminProductsPage() {
       toastError("Update failed", "Network error.");
     } finally {
       setBulkMerchandising(false);
+    }
+  };
+
+  const clearSelectedOptions = async (mode: "color" | "all") => {
+    if (!accessToken || selectedIds.size === 0) return;
+    const label =
+      mode === "color"
+        ? "Remove Color options from selected products? Remaining options are kept and variants are rebuilt."
+        : "Remove ALL option types and variants from selected products?";
+    if (!window.confirm(label)) return;
+
+    setBulkClearingOptions(true);
+    try {
+      const res = await fetch("/api/v1/admin/products/bulk-clear-options", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ ids: [...selectedIds], mode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const modified = Number(data.data?.modified ?? 0);
+        const skipped = Number(data.data?.skipped ?? 0);
+        if (modified === 0) {
+          toastError(
+            "No changes",
+            skipped > 0
+              ? "Selected products had no color options or color variants to remove."
+              : "No products were updated. Try again or check your selection."
+          );
+        } else {
+          toast({
+            variant: "success",
+            title: mode === "color" ? "Color options removed" : "Options cleared",
+            description: `${modified} product(s) updated`,
+          });
+          reload();
+        }
+      } else {
+        toastError("Update failed", data.error ?? "Could not clear options.");
+      }
+    } catch {
+      toastError("Update failed", "Network error.");
+    } finally {
+      setBulkClearingOptions(false);
     }
   };
 
@@ -233,7 +359,7 @@ export default function AdminProductsPage() {
           title: "Bulk import complete",
           description: `${data.data?.created ?? 0} created, ${data.data?.failed ?? 0} failed`,
         });
-        load();
+        reload();
       } else {
         toastError("Import failed", data.error ?? "Could not import products.");
       }
@@ -250,7 +376,14 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="text-display-h2 text-foreground">Products</h1>
           <p className="mt-1 text-body text-muted-foreground">
-            Manage your catalog. Use{" "}
+            <span className="font-semibold text-foreground">
+              {totalCount.toLocaleString()}
+            </span>{" "}
+            total product{totalCount === 1 ? "" : "s"}
+            {products.length > 0 && products.length < totalCount
+              ? ` · ${products.length.toLocaleString()} loaded`
+              : null}
+            . Use{" "}
             <Link href="/admin/merchandising" className="underline-offset-2 hover:underline">
               Merchandising
             </Link>{" "}
@@ -344,8 +477,29 @@ export default function AdminProductsPage() {
             </Button>
             <Button
               size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting || bulkClearingOptions}
+              onClick={() => void clearSelectedOptions("color")}
+            >
+              {bulkClearingOptions ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Palette className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Remove Color options
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting || bulkClearingOptions}
+              onClick={() => void clearSelectedOptions("all")}
+            >
+              Clear all options
+            </Button>
+            <Button
+              size="sm"
               variant="destructive"
-              disabled={bulkMerchandising || bulkDeleting}
+              disabled={bulkMerchandising || bulkDeleting || bulkClearingOptions}
               onClick={handleBulkDelete}
             >
               {bulkDeleting ? (
@@ -355,7 +509,7 @@ export default function AdminProductsPage() {
               )}
               Delete
             </Button>
-            {bulkMerchandising && (
+            {(bulkMerchandising || bulkClearingOptions) && (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </CardContent>
@@ -462,6 +616,13 @@ export default function AdminProductsPage() {
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
         </select>
+        {!loading && (
+          <p className="flex items-center text-sm text-muted-foreground">
+            {totalCount === 0
+              ? "No products"
+              : `Loaded ${products.length.toLocaleString()} of ${totalCount.toLocaleString()}`}
+          </p>
+        )}
       </div>
 
       {loading ? (
@@ -469,32 +630,47 @@ export default function AdminProductsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/50">
-              <tr>
-                <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all products"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected && !allSelected;
-                    }}
-                    onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                </th>
-                <th className="px-4 py-3 text-left font-medium">Product</th>
-                <th className="hidden px-4 py-3 text-left font-medium md:table-cell">SKU</th>
-                <th className="px-4 py-3 text-left font-medium">Price</th>
-                <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Stock</th>
-                <th className="hidden px-4 py-3 text-left font-medium lg:table-cell">Categories</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="admin-products-table">
+          <div ref={tableScrollRef} className="admin-products-table__scroll">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all products"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected && !allSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Product
+                  </th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">
+                    SKU
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Price
+                  </th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">
+                    Stock
+                  </th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:table-cell">
+                    Categories
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
               {products.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
@@ -628,8 +804,34 @@ export default function AdminProductsPage() {
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+
+            {products.length > 0 && (
+              <div
+                ref={sentinelRef}
+                className="flex flex-col items-center justify-center gap-2 border-t border-border bg-card py-5"
+                aria-live="polite"
+              >
+                {loadingMore && (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Loading more products…
+                    </p>
+                  </>
+                )}
+                {!loadingMore && hasMore && (
+                  <p className="text-sm text-muted-foreground">Scroll for more</p>
+                )}
+                {!loadingMore && !hasMore && (
+                  <p className="text-sm text-muted-foreground">
+                    All {totalCount.toLocaleString()} products loaded
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

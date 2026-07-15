@@ -171,21 +171,39 @@ function cartesian<T>(arrays: T[][]): T[][] {
 }
 
 export function sanitizeOptionGroups(groups: VariantOptionGroup[]): VariantOptionGroup[] {
+  if (!Array.isArray(groups)) return [];
+
   return groups
-    .map((g) => ({
-      ...g,
-      name: g.type === "color" ? "Color" : g.name.trim(),
-      attributeKey: defaultAttributeKey(g),
-      values: g.values
-        .filter((v) => v.value.trim() && v.label.trim())
-        .map((v) => ({
-          ...v,
-          hex:
-            g.type === "color"
-              ? resolveColorHex(v.label.trim(), v.hex)
-              : v.hex,
-        })),
-    }))
+    .filter(Boolean)
+    .map((g) => {
+      const type = g.type;
+      const rawName = String(g.name ?? "").trim();
+      const values = Array.isArray(g.values) ? g.values : [];
+
+      return {
+        ...g,
+        name: type === "color" ? "Color" : rawName,
+        attributeKey: defaultAttributeKey({
+          ...g,
+          name: type === "color" ? "Color" : rawName || "option",
+        }),
+        values: values
+          .filter((v) => v != null)
+          .map((v) => ({
+            value: String(v.value ?? "").trim(),
+            label: String(v.label ?? "").trim(),
+            hex: v.hex,
+          }))
+          .filter((v) => v.value && v.label)
+          .map((v) => ({
+            ...v,
+            hex:
+              type === "color"
+                ? resolveColorHex(v.label, v.hex)
+                : v.hex,
+          })),
+      };
+    })
     .filter((g) => g.name && g.values.length > 0);
 }
 

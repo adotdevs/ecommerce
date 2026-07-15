@@ -5,6 +5,7 @@ import { fuzzyMatchScore } from "@/lib/search/fuzzy";
 import {
   getSearchQueriesForMatching,
   resolveSearchEnhancement,
+  resolveSearchEnhancementAsync,
   type AiSearchEnhancement,
 } from "@/lib/search/ai-query";
 
@@ -662,6 +663,34 @@ export interface DeepSearchResult {
   enhancedQuery?: string;
 }
 
+function isRelevantWithEnhancement(
+  product: Record<string, unknown>,
+  enhancement: AiSearchEnhancement,
+  originalQuery: string
+) {
+  const queries = getSearchQueriesForMatching(enhancement);
+  for (const term of queries) {
+    if (isProductSearchRelevant(product, term, tokenizeSearchQuery(term))) {
+      return true;
+    }
+  }
+
+  const blob = productPrimaryText(product);
+  for (const hint of [
+    ...enhancement.categoryHints,
+    ...enhancement.brandHints,
+  ]) {
+    const h = hint.trim().toLowerCase();
+    if (h.length >= 2 && blob.includes(h)) return true;
+  }
+
+  return isProductSearchRelevant(
+    product,
+    originalQuery,
+    tokenizeSearchQuery(originalQuery)
+  );
+}
+
 function rankProductWithEnhancement(
   product: Record<string, unknown>,
   enhancement: AiSearchEnhancement,
@@ -680,10 +709,18 @@ function rankProductWithEnhancement(
     );
   }
 
+  const blob = productPrimaryText(product);
+  for (const hint of enhancement.brandHints) {
+    if (blob.includes(hint.toLowerCase())) score += 8;
+  }
+  for (const hint of enhancement.categoryHints) {
+    if (blob.includes(hint.toLowerCase())) score += 5;
+  }
+
   return score;
 }
 
-/** Deep relevance-ranked product search with typo tolerance. */
+/** Deep relevance-ranked product search with typo / intent AI assist. */
 export async function deepSearchProducts(
   query: string,
   baseFilter: Record<string, unknown>,
@@ -702,48 +739,63 @@ export async function deepSearchProducts(
     };
   }
 
-  const enhancement = resolveSearchEnhancement(q);
-  const tokens = tokenizeSearchQuery(q);
+  // 1) Fast local pass (fuzzy / Atlas / regex) — no OpenAI tokens.
+  let enhancement = resolveSearchEnhancement(q);
+  let candidates = await collectDeepSearchCandidates(q, baseFilter);
 
-  // Search original + primary first; alternates only if results are thin.
-  const primaryQueries = [
-    ...new Set([q, enhancement.primaryQuery].map((s) => s.trim()).filter(Boolean)),
-  ];
-
-  let candidates: Record<string, unknown>[] = [];
-  for (const searchQuery of primaryQueries) {
-    const batch = await collectDeepSearchCandidates(searchQuery, baseFilter);
-    candidates = mergeProducts(candidates, batch);
+  if (
+    enhancement.source === "ai" &&
+    enhancement.primaryQuery.toLowerCase() !== q.toLowerCase()
+  ) {
+    candidates = mergeProducts(
+      candidates,
+      await collectDeepSearchCandidates(enhancement.primaryQuery, baseFilter)
+    );
   }
 
-  let ranked = candidates
-    .map((p) => ({
-      p,
-      score: rankProductWithEnhancement(p, enhancement, q),
-    }))
-    .filter(
-      (x) =>
-        isProductSearchRelevant(x.p, q, tokens) &&
-        x.score >= minSearchScore(q)
-    )
-    .sort((a, b) => b.score - a.score);
-
-  if (ranked.length < 3 && enhancement.alternateQueries.length) {
-    for (const alt of enhancement.alternateQueries) {
-      const batch = await collectDeepSearchCandidates(alt, baseFilter);
-      candidates = mergeProducts(candidates, batch);
-    }
-    ranked = candidates
+  const rank = (enh: AiSearchEnhancement) =>
+    candidates
       .map((p) => ({
         p,
-        score: rankProductWithEnhancement(p, enhancement, q),
+        score: rankProductWithEnhancement(p, enh, q),
       }))
       .filter(
         (x) =>
-          isProductSearchRelevant(x.p, q, tokens) &&
-          x.score >= minSearchScore(q)
+          isRelevantWithEnhancement(x.p, enh, q) &&
+          x.score >= Math.min(minSearchScore(q), minSearchScore(enh.primaryQuery))
       )
       .sort((a, b) => b.score - a.score);
+
+  let ranked = rank(enhancement);
+
+  // 2) Only call OpenAI when local results are thin (typos / related intent).
+  //    Cached rewrites are free — no extra tokens.
+  if (ranked.length < 3) {
+    enhancement = await resolveSearchEnhancementAsync(q);
+    if (enhancement.source === "ai") {
+      const aiQueries = getSearchQueriesForMatching(enhancement).filter(
+        (term) => term.toLowerCase() !== q.toLowerCase()
+      );
+      for (const searchQuery of aiQueries) {
+        candidates = mergeProducts(
+          candidates,
+          await collectDeepSearchCandidates(searchQuery, baseFilter)
+        );
+      }
+      ranked = rank(enhancement);
+    }
+  } else if (
+    enhancement.alternateQueries.length &&
+    ranked.length < 6 &&
+    enhancement.source === "ai"
+  ) {
+    for (const alt of enhancement.alternateQueries) {
+      candidates = mergeProducts(
+        candidates,
+        await collectDeepSearchCandidates(alt, baseFilter)
+      );
+    }
+    ranked = rank(enhancement);
   }
 
   const total = ranked.length;
@@ -758,7 +810,10 @@ export async function deepSearchProducts(
     pages: Math.max(1, Math.ceil(total / limit)),
     source: enhancement.source,
     enhancedQuery:
-      enhancement.source === "ai" ? enhancement.primaryQuery : undefined,
+      enhancement.source === "ai" &&
+      enhancement.primaryQuery.toLowerCase() !== q.toLowerCase()
+        ? enhancement.primaryQuery
+        : undefined,
   };
 }
 
@@ -1070,9 +1125,14 @@ export async function searchSuggestions(
 
   let products = await collectProductSuggestions(primaryQueries, productLimit);
 
+  // Autocomplete stays local/cached only — no OpenAI wait (saves tokens).
+  // If a prior full-search already cached a rewrite, use its alternates.
   if (products.length < 3 && enhancement.alternateQueries.length) {
     products = await collectProductSuggestions(
-      enhancement.alternateQueries,
+      [
+        ...primaryQueries,
+        ...enhancement.alternateQueries,
+      ],
       productLimit
     );
   }

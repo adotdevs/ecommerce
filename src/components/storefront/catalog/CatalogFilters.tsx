@@ -2,18 +2,22 @@
 
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { useTranslations } from "next-intl";
 import {
   SlidersHorizontal,
   X,
   ChevronDown,
-  ArrowUpDown,
-  Tag,
-  Sparkles,
+  Check,
 } from "lucide-react";
-import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
-import { Label } from "@/components/ds/label";
 import { cn } from "@/components/ds/utils";
 
 export interface CatalogFacetOption {
@@ -27,14 +31,25 @@ export interface CatalogFacets {
   priceRange: { min: number; max: number };
 }
 
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "bestsellers", label: "Best sellers" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "deals", label: "Biggest discounts" },
-  { value: "featured", label: "Featured" },
+const SORT_VALUES = [
+  "newest",
+  "bestsellers",
+  "price-asc",
+  "price-desc",
+  "deals",
+  "featured",
 ] as const;
+
+type SortValue = (typeof SORT_VALUES)[number];
+
+type OpenMenu =
+  | "category"
+  | "price"
+  | "brand"
+  | "rating"
+  | "availability"
+  | "sort"
+  | null;
 
 interface CatalogFiltersProps {
   facets: CatalogFacets;
@@ -48,15 +63,17 @@ interface CatalogFiltersProps {
 export function CatalogFilters({
   facets,
   total,
-  accent = "indigo",
   children,
   hideCategoryFilter = false,
 }: CatalogFiltersProps) {
+  const t = useTranslations("catalog");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   const current = useMemo(
     () => ({
@@ -66,14 +83,56 @@ export function CatalogFilters({
       maxPrice: searchParams.get("maxPrice") ?? "",
       onSale: searchParams.get("onSale") === "1",
       featured: searchParams.get("featured") === "1",
-      sort: searchParams.get("sort") ?? "newest",
+      sort: (searchParams.get("sort") as SortValue) || "newest",
       q: searchParams.get("q") ?? "",
+      minRating: searchParams.get("minRating") ?? "",
+      availability: searchParams.get("availability") ?? "",
     }),
     [searchParams]
   );
 
   const [minPrice, setMinPrice] = useState(current.minPrice);
   const [maxPrice, setMaxPrice] = useState(current.maxPrice);
+
+  useEffect(() => {
+    const header = document.getElementById("site-header");
+    const sync = () => {
+      const h = header?.offsetHeight ?? 72;
+      document.documentElement.style.setProperty("--site-header-height", `${h}px`);
+    };
+    sync();
+    const ro = header ? new ResizeObserver(sync) : null;
+    if (header && ro) ro.observe(header);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMinPrice(current.minPrice);
+    setMaxPrice(current.maxPrice);
+  }, [current.minPrice, current.maxPrice]);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!barRef.current?.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [drawerOpen]);
 
   const updateParams = useCallback(
     (patch: Record<string, string | null>) => {
@@ -87,6 +146,7 @@ export function CatalogFilters({
         const qs = next.toString();
         router.push(qs ? `${pathname}?${qs}` : pathname);
       });
+      setOpenMenu(null);
     },
     [pathname, router, searchParams]
   );
@@ -100,6 +160,8 @@ export function CatalogFilters({
     });
     setMinPrice("");
     setMaxPrice("");
+    setDrawerOpen(false);
+    setOpenMenu(null);
   };
 
   const activeCount = [
@@ -109,76 +171,316 @@ export function CatalogFilters({
     current.maxPrice,
     current.onSale,
     current.featured,
+    current.minRating,
+    current.availability,
   ].filter(Boolean).length;
 
-  const accentRing = {
-    indigo: "focus-visible:ring-indigo-500",
-    emerald: "focus-visible:ring-emerald-500",
-    amber: "focus-visible:ring-amber-500",
-    rose: "focus-visible:ring-rose-500",
-    sky: "focus-visible:ring-sky-500",
-  }[accent];
+  const sortLabel = (value: string) => {
+    switch (value) {
+      case "bestsellers":
+        return t("sortBestsellers");
+      case "price-asc":
+        return t("sortPriceAsc");
+      case "price-desc":
+        return t("sortPriceDesc");
+      case "deals":
+        return t("sortDeals");
+      case "featured":
+        return t("sortFeatured");
+      default:
+        return t("sortNewest");
+    }
+  };
 
-  const accentChip = {
-    indigo: "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
-    emerald: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    amber: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    rose: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300",
-    sky: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  }[accent];
+  const applyPrice = () => {
+    updateParams({
+      minPrice: minPrice || null,
+      maxPrice: maxPrice || null,
+    });
+  };
+
+  const toggleMenu = (menu: OpenMenu) => {
+    setOpenMenu((prev) => (prev === menu ? null : menu));
+  };
 
   return (
-    <div className={cn("space-y-4", pending && "opacity-80")}>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-small text-muted-foreground">
-          <span className="font-semibold text-foreground">{total}</span> products
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setOpen((v) => !v)}
+    <div className={cn(pending && "catalog-filter-bar--pending")}>
+      <div
+        ref={barRef}
+        className="catalog-filter-bar"
+        role="toolbar"
+        aria-label={t("filters")}
+      >
+        <button
+          type="button"
+          className={cn(
+            "catalog-filter-pill catalog-filter-pill--all catalog-filter-mobile-only",
+            activeCount > 0 && "catalog-filter-pill--active"
+          )}
+          onClick={() => setDrawerOpen(true)}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {t("allFilters")}
+          {activeCount > 0 && (
+            <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-bold text-primary">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={cn(
+            "catalog-filter-pill catalog-filter-pill--all catalog-filter-desktop-only",
+            activeCount > 0 && "catalog-filter-pill--active",
+            openMenu === null && drawerOpen && "catalog-filter-pill--active"
+          )}
+          onClick={() => setDrawerOpen(true)}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {t("allFilters")}
+          {activeCount > 0 && (
+            <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-bold text-primary">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {!hideCategoryFilter && (
+          <FilterDropdown
+            className="catalog-filter-desktop-only"
+            label={t("category")}
+            active={Boolean(current.category)}
+            open={openMenu === "category"}
+            onToggle={() => toggleMenu("category")}
           >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {activeCount > 0 && (
-              <span className={`ml-1 rounded-full px-1.5 text-[11px] ${accentChip}`}>
-                {activeCount}
-              </span>
-            )}
-          </Button>
-          <div className="relative">
-            <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <select
-              value={current.sort}
-              onChange={(e) => updateParams({ sort: e.target.value })}
+            <button
+              type="button"
               className={cn(
-                "h-9 appearance-none rounded-[var(--radius-sm)] border border-border bg-card pl-9 pr-8 text-small text-foreground",
-                accentRing
+                "catalog-filter-option",
+                !current.category && "catalog-filter-option--active"
               )}
+              onClick={() => updateParams({ category: null })}
             >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              {!current.category && <Check className="h-3.5 w-3.5" />}
+              {t("allCategories")}
+            </button>
+            {facets.categories.map((c) => (
+              <button
+                key={c.slug}
+                type="button"
+                className={cn(
+                  "catalog-filter-option",
+                  current.category === c.name && "catalog-filter-option--active"
+                )}
+                onClick={() =>
+                  updateParams({
+                    category: current.category === c.name ? null : c.name,
+                  })
+                }
+              >
+                {current.category === c.name && <Check className="h-3.5 w-3.5" />}
+                {c.name}
+              </button>
+            ))}
+          </FilterDropdown>
+        )}
+
+        <FilterDropdown
+          className="catalog-filter-desktop-only"
+          label={t("price")}
+          active={Boolean(current.minPrice || current.maxPrice)}
+          open={openMenu === "price"}
+          onToggle={() => toggleMenu("price")}
+        >
+          <div className="catalog-filter-menu--price space-y-3 p-1">
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder={`${t("minPrice")} ${facets.priceRange.min}`}
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="h-9"
+              />
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder={`${t("maxPrice")} ${facets.priceRange.max}`}
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <button
+              type="button"
+              className="catalog-product-card__cta h-9 text-sm"
+              onClick={applyPrice}
+            >
+              {t("applyPrice")}
+            </button>
           </div>
+        </FilterDropdown>
+
+        <FilterDropdown
+          className="catalog-filter-desktop-only"
+          label={t("brand")}
+          active={Boolean(current.brand)}
+          open={openMenu === "brand"}
+          onToggle={() => toggleMenu("brand")}
+        >
+          <button
+            type="button"
+            className={cn(
+              "catalog-filter-option",
+              !current.brand && "catalog-filter-option--active"
+            )}
+            onClick={() => updateParams({ brand: null })}
+          >
+            {!current.brand && <Check className="h-3.5 w-3.5" />}
+            {t("allBrands")}
+          </button>
+          {facets.brands.map((b) => (
+            <button
+              key={b.slug}
+              type="button"
+              className={cn(
+                "catalog-filter-option",
+                current.brand === b.name && "catalog-filter-option--active"
+              )}
+              onClick={() =>
+                updateParams({
+                  brand: current.brand === b.name ? null : b.name,
+                })
+              }
+            >
+              {current.brand === b.name && <Check className="h-3.5 w-3.5" />}
+              {b.name}
+            </button>
+          ))}
+        </FilterDropdown>
+
+        <FilterDropdown
+          className="catalog-filter-desktop-only"
+          label={t("rating")}
+          active={Boolean(current.minRating)}
+          open={openMenu === "rating"}
+          onToggle={() => toggleMenu("rating")}
+        >
+          <button
+            type="button"
+            className={cn(
+              "catalog-filter-option",
+              !current.minRating && "catalog-filter-option--active"
+            )}
+            onClick={() => updateParams({ minRating: null })}
+          >
+            {!current.minRating && <Check className="h-3.5 w-3.5" />}
+            {t("allRatings")}
+          </button>
+          {[4, 3, 2, 1].map((rating) => (
+            <button
+              key={rating}
+              type="button"
+              className={cn(
+                "catalog-filter-option",
+                current.minRating === String(rating) &&
+                  "catalog-filter-option--active"
+              )}
+              onClick={() =>
+                updateParams({
+                  minRating:
+                    current.minRating === String(rating) ? null : String(rating),
+                })
+              }
+            >
+              {current.minRating === String(rating) && (
+                <Check className="h-3.5 w-3.5" />
+              )}
+              {t("ratingAndUp", { rating })}
+            </button>
+          ))}
+        </FilterDropdown>
+
+        <FilterDropdown
+          className="catalog-filter-desktop-only"
+          label={t("availability")}
+          active={Boolean(current.availability)}
+          open={openMenu === "availability"}
+          onToggle={() => toggleMenu("availability")}
+        >
+          {(
+            [
+              ["", t("availabilityAll")],
+              ["in-stock", t("availabilityInStock")],
+              ["out-of-stock", t("availabilityOutOfStock")],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value || "all"}
+              type="button"
+              className={cn(
+                "catalog-filter-option",
+                current.availability === value && "catalog-filter-option--active"
+              )}
+              onClick={() => updateParams({ availability: value || null })}
+            >
+              {current.availability === value && <Check className="h-3.5 w-3.5" />}
+              {label}
+            </button>
+          ))}
+        </FilterDropdown>
+
+        <div className="catalog-filter-toggle catalog-filter-desktop-only">
+          <span>{t("onSale")}</span>
+          <button
+            type="button"
+            className="catalog-switch"
+            data-on={current.onSale ? "true" : "false"}
+            aria-pressed={current.onSale}
+            aria-label={t("onSale")}
+            onClick={() =>
+              updateParams({ onSale: current.onSale ? null : "1" })
+            }
+          >
+            <span className="catalog-switch__thumb" />
+          </button>
+        </div>
+
+        <div className="catalog-filter-sort">
+          <span className="catalog-filter-sort__label">{t("sortBy")}:</span>
+          <FilterDropdown
+            label={sortLabel(current.sort)}
+            active={false}
+            open={openMenu === "sort"}
+            onToggle={() => toggleMenu("sort")}
+            align="right"
+          >
+            {SORT_VALUES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={cn(
+                  "catalog-filter-option",
+                  current.sort === value && "catalog-filter-option--active"
+                )}
+                onClick={() => updateParams({ sort: value })}
+              >
+                {current.sort === value && <Check className="h-3.5 w-3.5" />}
+                {sortLabel(value)}
+              </button>
+            ))}
+          </FilterDropdown>
         </div>
       </div>
 
-      {/* Active chips */}
       {activeCount > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="catalog-filter-chips">
           {current.category && (
             <button
               type="button"
+              className="catalog-chip"
               onClick={() => updateParams({ category: null })}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${accentChip}`}
             >
               {current.category} <X className="h-3 w-3" />
             </button>
@@ -186,8 +488,8 @@ export function CatalogFilters({
           {current.brand && (
             <button
               type="button"
+              className="catalog-chip"
               onClick={() => updateParams({ brand: null })}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${accentChip}`}
             >
               {current.brand} <X className="h-3 w-3" />
             </button>
@@ -195,244 +497,369 @@ export function CatalogFilters({
           {(current.minPrice || current.maxPrice) && (
             <button
               type="button"
+              className="catalog-chip"
               onClick={() => {
                 setMinPrice("");
                 setMaxPrice("");
                 updateParams({ minPrice: null, maxPrice: null });
               }}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${accentChip}`}
             >
-              ${current.minPrice || facets.priceRange.min}–$
-              {current.maxPrice || facets.priceRange.max} <X className="h-3 w-3" />
+              {current.minPrice || facets.priceRange.min}–{current.maxPrice || facets.priceRange.max}{" "}
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          {current.minRating && (
+            <button
+              type="button"
+              className="catalog-chip"
+              onClick={() => updateParams({ minRating: null })}
+            >
+              {t("ratingAndUp", { rating: current.minRating })}{" "}
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          {current.availability && (
+            <button
+              type="button"
+              className="catalog-chip"
+              onClick={() => updateParams({ availability: null })}
+            >
+              {current.availability === "in-stock"
+                ? t("availabilityInStock")
+                : t("availabilityOutOfStock")}{" "}
+              <X className="h-3 w-3" />
             </button>
           )}
           {current.onSale && (
             <button
               type="button"
+              className="catalog-chip"
               onClick={() => updateParams({ onSale: null })}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${accentChip}`}
             >
-              On sale <X className="h-3 w-3" />
+              {t("onSale")} <X className="h-3 w-3" />
             </button>
           )}
           {current.featured && (
             <button
               type="button"
+              className="catalog-chip"
               onClick={() => updateParams({ featured: null })}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${accentChip}`}
             >
-              Featured <X className="h-3 w-3" />
+              {t("featured")} <X className="h-3 w-3" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-[12px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            Clear all
+          <button type="button" className="catalog-chip__clear" onClick={clearAll}>
+            {t("clearAll")}
           </button>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        {/* Sidebar filters */}
-        <aside
-          className={cn(
-            "space-y-5 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-subtle)]",
-            open ? "block" : "hidden lg:block"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-small font-semibold text-foreground">Filters</p>
-            {activeCount > 0 && (
-              <button
-                type="button"
-                onClick={clearAll}
-                className="text-[12px] text-muted-foreground hover:text-foreground"
-              >
-                Reset
-              </button>
-            )}
-          </div>
+      <div className="min-w-0" aria-busy={pending} data-total={total}>
+        {children}
+      </div>
 
-          <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Quick
-            </Label>
-            <div className="flex flex-wrap gap-2">
+      {drawerOpen && (
+        <>
+          <button
+            type="button"
+            className="catalog-drawer-backdrop"
+            aria-label={t("closeFilters")}
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div
+            className="catalog-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("filters")}
+          >
+            <div className="catalog-drawer__header">
+              <h2 className="catalog-drawer__title">{t("filters")}</h2>
               <button
                 type="button"
-                onClick={() =>
-                  updateParams({ onSale: current.onSale ? null : "1" })
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition",
-                  current.onSale
-                    ? accentChip
-                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                )}
+                className="catalog-filter-pill"
+                onClick={() => setDrawerOpen(false)}
+                aria-label={t("closeFilters")}
               >
-                <Tag className="h-3 w-3" /> On sale
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updateParams({ featured: current.featured ? null : "1" })
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition",
-                  current.featured
-                    ? accentChip
-                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                )}
-              >
-                <Sparkles className="h-3 w-3" /> Featured
+                <X className="h-4 w-4" />
               </button>
             </div>
-          </div>
+            <div className="catalog-drawer__body">
+              <MobileFilterSection title={t("onSale")}>
+                <div className="catalog-filter-toggle">
+                  <span>{t("onSale")}</span>
+                  <button
+                    type="button"
+                    className="catalog-switch"
+                    data-on={current.onSale ? "true" : "false"}
+                    aria-pressed={current.onSale}
+                    onClick={() =>
+                      updateParams({ onSale: current.onSale ? null : "1" })
+                    }
+                  >
+                    <span className="catalog-switch__thumb" />
+                  </button>
+                </div>
+              </MobileFilterSection>
 
-          <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Price
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                inputMode="decimal"
-                placeholder={`Min ${facets.priceRange.min}`}
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                onBlur={() => updateParams({ minPrice: minPrice || null })}
-                className="h-9"
-              />
-              <Input
-                type="number"
-                inputMode="decimal"
-                placeholder={`Max ${facets.priceRange.max}`}
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                onBlur={() => updateParams({ maxPrice: maxPrice || null })}
-                className="h-9"
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="w-full"
-              onClick={() =>
-                updateParams({
-                  minPrice: minPrice || null,
-                  maxPrice: maxPrice || null,
-                })
-              }
-            >
-              Apply price
-            </Button>
-          </div>
+              <MobileFilterSection title={t("price")}>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder={`${t("minPrice")} ${facets.priceRange.min}`}
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="h-10"
+                  />
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder={`${t("maxPrice")} ${facets.priceRange.max}`}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="mt-2 w-full rounded-lg border border-border bg-secondary py-2 text-sm font-medium"
+                  onClick={applyPrice}
+                >
+                  {t("applyPrice")}
+                </button>
+              </MobileFilterSection>
 
-          {!hideCategoryFilter && (
-            <div className="space-y-2">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Category
-              </Label>
-              <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
-                <FilterOption
-                  active={!current.category}
-                  label="All categories"
-                  onClick={() => updateParams({ category: null })}
-                  accent={accent}
-                />
-                {facets.categories.map((c) => (
-                  <FilterOption
-                    key={c.slug}
-                    active={current.category === c.name}
-                    label={c.name}
+              {!hideCategoryFilter && (
+                <MobileFilterSection title={t("category")}>
+                  <div className="max-h-40 space-y-1 overflow-y-auto">
+                    <button
+                      type="button"
+                      className={cn(
+                        "catalog-filter-option",
+                        !current.category && "catalog-filter-option--active"
+                      )}
+                      onClick={() => updateParams({ category: null })}
+                    >
+                      {t("allCategories")}
+                    </button>
+                    {facets.categories.map((c) => (
+                      <button
+                        key={c.slug}
+                        type="button"
+                        className={cn(
+                          "catalog-filter-option",
+                          current.category === c.name &&
+                            "catalog-filter-option--active"
+                        )}
+                        onClick={() =>
+                          updateParams({
+                            category:
+                              current.category === c.name ? null : c.name,
+                          })
+                        }
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </MobileFilterSection>
+              )}
+
+              <MobileFilterSection title={t("brand")}>
+                <div className="max-h-40 space-y-1 overflow-y-auto">
+                  <button
+                    type="button"
+                    className={cn(
+                      "catalog-filter-option",
+                      !current.brand && "catalog-filter-option--active"
+                    )}
+                    onClick={() => updateParams({ brand: null })}
+                  >
+                    {t("allBrands")}
+                  </button>
+                  {facets.brands.map((b) => (
+                    <button
+                      key={b.slug}
+                      type="button"
+                      className={cn(
+                        "catalog-filter-option",
+                        current.brand === b.name &&
+                          "catalog-filter-option--active"
+                      )}
+                      onClick={() =>
+                        updateParams({
+                          brand: current.brand === b.name ? null : b.name,
+                        })
+                      }
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              </MobileFilterSection>
+
+              <MobileFilterSection title={t("rating")}>
+                <button
+                  type="button"
+                  className={cn(
+                    "catalog-filter-option",
+                    !current.minRating && "catalog-filter-option--active"
+                  )}
+                  onClick={() => updateParams({ minRating: null })}
+                >
+                  {t("allRatings")}
+                </button>
+                {[4, 3, 2, 1].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    className={cn(
+                      "catalog-filter-option",
+                      current.minRating === String(rating) &&
+                        "catalog-filter-option--active"
+                    )}
                     onClick={() =>
                       updateParams({
-                        category: current.category === c.name ? null : c.name,
+                        minRating:
+                          current.minRating === String(rating)
+                            ? null
+                            : String(rating),
                       })
                     }
-                    accent={accent}
-                  />
+                  >
+                    {t("ratingAndUp", { rating })}
+                  </button>
                 ))}
-              </div>
-            </div>
-          )}
+              </MobileFilterSection>
 
-          <div className="space-y-2">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Brand
-            </Label>
-            <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
-              <FilterOption
-                active={!current.brand}
-                label="All brands"
-                onClick={() => updateParams({ brand: null })}
-                accent={accent}
-              />
-              {facets.brands.map((b) => (
-                <FilterOption
-                  key={b.slug}
-                  active={current.brand === b.name}
-                  label={b.name}
-                  onClick={() =>
-                    updateParams({
-                      brand: current.brand === b.name ? null : b.name,
-                    })
-                  }
-                  accent={accent}
-                />
-              ))}
+              <MobileFilterSection title={t("availability")}>
+                {(
+                  [
+                    ["", t("availabilityAll")],
+                    ["in-stock", t("availabilityInStock")],
+                    ["out-of-stock", t("availabilityOutOfStock")],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value || "all"}
+                    type="button"
+                    className={cn(
+                      "catalog-filter-option",
+                      current.availability === value &&
+                        "catalog-filter-option--active"
+                    )}
+                    onClick={() =>
+                      updateParams({ availability: value || null })
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </MobileFilterSection>
+
+              <MobileFilterSection title={t("featured")}>
+                <div className="catalog-filter-toggle">
+                  <span>{t("featured")}</span>
+                  <button
+                    type="button"
+                    className="catalog-switch"
+                    data-on={current.featured ? "true" : "false"}
+                    aria-pressed={current.featured}
+                    onClick={() =>
+                      updateParams({ featured: current.featured ? null : "1" })
+                    }
+                  >
+                    <span className="catalog-switch__thumb" />
+                  </button>
+                </div>
+              </MobileFilterSection>
+            </div>
+            <div className="catalog-drawer__footer">
+              <button
+                type="button"
+                className="catalog-drawer__clear"
+                onClick={clearAll}
+              >
+                {t("clearFilters")}
+              </button>
+              <button
+                type="button"
+                className="catalog-drawer__apply"
+                onClick={() => setDrawerOpen(false)}
+              >
+                {t("applyFilters")}
+              </button>
             </div>
           </div>
-        </aside>
-
-        <div className="min-w-0">{children}</div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
-function FilterOption({
-  active,
+function FilterDropdown({
   label,
-  onClick,
-  accent,
+  active,
+  open,
+  onToggle,
+  children,
+  className,
+  align = "left",
 }: {
-  active: boolean;
   label: string;
-  onClick: () => void;
-  accent: string;
+  active: boolean;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  className?: string;
+  align?: "left" | "right";
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-[13px] transition",
-        active
-          ? "bg-secondary font-medium text-foreground"
-          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-      )}
-    >
-      <span
+    <div className={cn("catalog-filter-dropdown", className)}>
+      <button
+        type="button"
         className={cn(
-          "mr-2 h-1.5 w-1.5 rounded-full",
-          active
-            ? accent === "emerald"
-              ? "bg-emerald-500"
-              : accent === "amber"
-                ? "bg-amber-500"
-                : accent === "rose"
-                  ? "bg-rose-500"
-                  : accent === "sky"
-                    ? "bg-sky-500"
-                    : "bg-indigo-500"
-            : "bg-border"
+          "catalog-filter-pill",
+          (active || open) && "catalog-filter-pill--active"
         )}
-      />
-      {label}
-    </button>
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        {label}
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      {open && (
+        <div
+          className={cn(
+            "catalog-filter-menu",
+            align === "right" && "left-auto right-0"
+          )}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileFilterSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 }

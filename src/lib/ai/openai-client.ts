@@ -5,7 +5,7 @@
 export async function openAiChatJson<T>(
   systemPrompt: string,
   userPrompt: string,
-  opts?: { model?: string; temperature?: number }
+  opts?: { model?: string; temperature?: number; maxTokens?: number }
 ): Promise<T | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -19,6 +19,7 @@ export async function openAiChatJson<T>(
     body: JSON.stringify({
       model: opts?.model ?? "gpt-4o-mini",
       temperature: opts?.temperature ?? 0.6,
+      ...(opts?.maxTokens != null ? { max_tokens: opts.maxTokens } : {}),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },

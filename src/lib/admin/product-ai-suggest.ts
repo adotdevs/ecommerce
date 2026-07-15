@@ -100,21 +100,120 @@ const SPEC_SECTIONS = [
   "Materials",
 ];
 
-function inferOptionsFromName(name: string): VariantOptionGroup[] {
-  const lower = name.toLowerCase();
-  if (/shoe|sneaker|boot|sandal|footwear|trainer/i.test(lower)) {
+/** Products that are almost never sold with color swatches. */
+const NO_COLOR_RE =
+  /vitamin|supplement|softgel|capsule|tablet|pill|gummy| probiot|omega[\s-]?3|collagen|protein\s*powder|whey|creatine|multivitamin|medicine|pharma|grocery|snack|food|beverage|drink|tea|coffee|oil\b|serum|lotion|cream\b|shampoo|conditioner|soap|detergent|cleaner|book|ebook|magazine|software|license|subscription|gift\s*card|ticket|service|consult/i;
+
+/** Products that commonly offer color / finish choices. */
+const COLOR_LIKELY_RE =
+  /shoe|sneaker|boot|sandal|footwear|trainer|shirt|dress|jacket|hoodie|pants|jeans|apparel|clothing|top|blouse|sweater|coat|sock|hat|cap|bag|wallet|belt|backpack|watch|phone|iphone|ipad|tablet|laptop|macbook|galaxy|pixel|case|cover|earbuds|headphone|speaker|furniture|sofa|chair|lamp|mug|bottle|tumbler|backpack/i;
+
+const FOOTWEAR_RE = /shoe|sneaker|boot|sandal|footwear|trainer/i;
+const APPAREL_RE =
+  /shirt|dress|jacket|hoodie|pants|jeans|apparel|clothing|top|blouse|sweater|coat|tee|t-shirt/i;
+const ELECTRONICS_CAPACITY_RE =
+  /phone|laptop|tablet|ssd|storage|usb|drive|iphone|ipad|macbook|galaxy|pixel|earbuds|headphone/i;
+const BAG_LEATHER_RE = /bag|wallet|belt|leather|backpack|purse/i;
+const FLAVOR_PACK_RE =
+  /vitamin|supplement|softgel|capsule|protein|whey|snack|tea|coffee|gummy/i;
+
+function productHaystack(name: string, categories?: string[]) {
+  return `${name} ${(categories ?? []).join(" ")}`.trim();
+}
+
+/**
+ * Infer option groups only when this product type typically has shopper choices.
+ * Default is NO options (single SKU) — never force Color onto unrelated products.
+ */
+export function inferOptionsFromName(
+  name: string,
+  categories?: string[]
+): VariantOptionGroup[] {
+  const haystack = productHaystack(name, categories);
+  if (!haystack.trim()) return [];
+
+  // Consumables / digital / services: usually pack size or flavor, not color.
+  if (NO_COLOR_RE.test(haystack)) {
+    if (FLAVOR_PACK_RE.test(haystack)) {
+      // Prefer a simple custom "Pack size" style option over fake colors.
+      return [
+        {
+          id: `opt-pack-${Date.now().toString(36)}`,
+          name: "Pack size",
+          type: "custom",
+          values: [
+            { value: "1-pack", label: "1 Pack" },
+            { value: "2-pack", label: "2 Pack" },
+            { value: "3-pack", label: "3 Pack" },
+          ],
+        },
+      ];
+    }
+    return [];
+  }
+
+  if (FOOTWEAR_RE.test(haystack)) {
     return [newOptionGroup("color"), newOptionGroup("shoe_size")];
   }
-  if (/shirt|dress|jacket|hoodie|pants|jeans|apparel|clothing|top|blouse/i.test(lower)) {
+  if (APPAREL_RE.test(haystack)) {
     return [newOptionGroup("color"), newOptionGroup("apparel_size")];
   }
-  if (/phone|laptop|tablet|ssd|storage|usb|drive|iphone|ipad|macbook|galaxy|pixel/i.test(lower)) {
+  if (ELECTRONICS_CAPACITY_RE.test(haystack)) {
     return [newOptionGroup("color"), newOptionGroup("capacity")];
   }
-  if (/bag|wallet|belt|leather/i.test(lower)) {
+  if (BAG_LEATHER_RE.test(haystack)) {
     return [newOptionGroup("color"), newOptionGroup("material")];
   }
-  return [newOptionGroup("color")];
+
+  // Only add standalone color when the product type clearly sells finishes.
+  if (COLOR_LIKELY_RE.test(haystack)) {
+    return [newOptionGroup("color")];
+  }
+
+  return [];
+}
+
+/** Drop options that do not make sense for this product (e.g. Color on vitamins). */
+export function filterRelevantOptionGroups(
+  groups: VariantOptionGroup[],
+  name: string,
+  categories?: string[]
+): VariantOptionGroup[] {
+  const haystack = productHaystack(name, categories);
+  if (!groups.length) return [];
+
+  return groups.filter((g) => {
+    const isColor =
+      g.type === "color" || /^(color|colour)$/i.test(g.name.trim());
+
+    if (isColor && NO_COLOR_RE.test(haystack)) return false;
+
+    if (
+      g.type === "shoe_size" &&
+      !FOOTWEAR_RE.test(haystack) &&
+      !/shoe|size/i.test(haystack)
+    ) {
+      return false;
+    }
+
+    if (
+      g.type === "apparel_size" &&
+      !APPAREL_RE.test(haystack) &&
+      !/cloth|apparel|shirt|dress|size/i.test(haystack)
+    ) {
+      return false;
+    }
+
+    if (
+      g.type === "capacity" &&
+      !ELECTRONICS_CAPACITY_RE.test(haystack) &&
+      !/gb|tb|storage|memory|capacity/i.test(haystack)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 function templateFullSuggest(
@@ -122,7 +221,7 @@ function templateFullSuggest(
   sku: string
 ): FullProductSuggestion {
   const name = formatProductTitle(input.name.trim());
-  const variantOptions = inferOptionsFromName(name);
+  const variantOptions = inferOptionsFromName(name, input.categories);
   const basePrice = 49.99;
   const compareAt = 69.99;
 
@@ -132,6 +231,18 @@ function templateFullSuggest(
     [],
     true
   );
+
+  const specs: ProductSpecification[] = [
+    { section: "Additional details", key: "Brand", value: input.brand ?? "Store brand" },
+    { section: "Additional details", key: "Condition", value: "New" },
+  ];
+  if (variantOptions.some((g) => g.type === "color")) {
+    specs.push({
+      section: "Additional details",
+      key: "Color",
+      value: "Multiple options",
+    });
+  }
 
   return {
     name,
@@ -155,11 +266,7 @@ function templateFullSuggest(
     pricing: { price: basePrice, compareAtPrice: compareAt, currency: "USD" },
     variantOptions,
     variants,
-    specifications: [
-      { section: "Additional details", key: "Brand", value: input.brand ?? "Store brand" },
-      { section: "Additional details", key: "Condition", value: "New" },
-      { section: "Additional details", key: "Color", value: "Multiple options" },
-    ],
+    specifications: specs,
     faqs: [
       {
         question: "What is included in the box?",
@@ -248,40 +355,51 @@ async function openAiFullSuggest(
     .join("\n");
 
   const parsed = await openAiChatJson<AiFullResponse>(
-    `You are an expert e-commerce catalog manager (Amazon-style listings). Return complete product JSON:
+    `You are an expert e-commerce catalog manager. Return complete product JSON:
 {
-  "name": string, full retail product title with brand, model, key specs (e.g. "Apple iPhone 12 Pro Max, 256GB, Deep Blue, Unlocked"). Proper Title Case. Be specific and detailed.
-  "shortDescription": string (max 200 chars, compelling),
-  "description": string (4-6 paragraphs + bullet highlights, rich and authentic),
-  "highlights": string[] (5-8 key feature bullets),
+  "name": string, full retail title with brand/model/key specs. Proper Title Case.
+  "shortDescription": string (max 200 chars),
+  "description": string (4-6 paragraphs + bullets),
+  "highlights": string[] (5-8),
   "tags": string[],
   "seo": { "title", "description", "keywords": string[] },
-  "pricing": { "price": number (realistic USD), "compareAtPrice": number, "currency": "USD" },
-  "variantOptions": [{ "type": "color"|"shoe_size"|"apparel_size"|"size"|"material"|"style"|"capacity"|"custom", "name": "Color" for colors, "values": [{ "value", "label", "hex": "#RRGGBB" unique per color }] }],
+  "pricing": { "price": number (USD), "compareAtPrice": number, "currency": "USD" },
+  "variantOptions": [] OR option groups shoppers actually choose for THIS product,
   "variantPrices": [{ "attributes": { optionKey: value }, "price", "compareAtPrice", "stock" }],
-  "specifications": [{ "section": string, "key": string, "value": string }], MINIMUM 18 specs across sections like: ${SPEC_SECTIONS.join(", ")}. Use realistic technical values for this exact product.
-  "faqs": [{ "question", "answer" }], 6-8 helpful customer FAQs,
+  "specifications": [{ "section", "key", "value" }], MINIMUM 12 category-appropriate specs (${SPEC_SECTIONS.join(", ")}),
+  "faqs": [{ "question", "answer" }], 6-8,
   "warranty": string,
   "weight": number (kg)
 }
-Rules:
-- name must be a complete, professional product title, not just the input keyword.
-- Never use em dashes (—) or en dashes (–) anywhere. Use commas, periods, or hyphens (-) instead.
-- Each color MUST have a distinct accurate hex (never all white).
-- Phones/electronics: color + capacity with realistic specs (OS, RAM, camera MP, battery mAh, etc.).
-- Shoes: color + shoe_size. Clothing: color + apparel_size.
-- variantPrices cover combinations; premium variants cost more.
-- specifications must be category-appropriate and detailed like Amazon product information.`,
-    `Product seed name: ${input.name}\n${context}\nBase SKU: ${sku}`,
-    { temperature: 0.65 }
+CRITICAL variantRules — think carefully before adding any option:
+- Ask: "Would a shopper pick this option for THIS exact product?" If unsure, use "variantOptions": [].
+- Empty variantOptions is correct for many products (single SKU): vitamins, supplements, softgels, food, groceries, books, software, services, one-size accessories.
+- NEVER invent Color / colour swatches for vitamins, supplements, medicine, food, drinks, or similar consumables.
+- Only add Color when the product is truly sold in different colors or finishes (apparel, shoes, phones, bags, cases, furniture).
+- Footwear: color + shoe_size. Apparel: color + apparel_size. Phones/storage devices: color + capacity when realistic.
+- Supplements/vitamins: if variants exist, prefer Pack size, Count, or Flavor — never fake color chips.
+- Each color (only when used) MUST have a distinct accurate hex.
+- Never use em dashes or en dashes. Use commas, periods, or hyphens.
+- variantPrices only when variantOptions is non-empty.`,
+    `Product seed name: ${input.name}\n${context}\nBase SKU: ${sku}\nDecide options only from what this product type truly needs.`,
+    { temperature: 0.4, maxTokens: 3500 }
   );
 
   if (!parsed?.shortDescription || !parsed.description) return null;
 
+  const mapped = mapAiOptions(parsed.variantOptions);
+  const inferred = inferOptionsFromName(
+    parsed.name?.trim() || input.name,
+    input.categories
+  );
+  // Prefer AI options when present; otherwise smart inference (often empty).
+  // Never force Color when neither AI nor inference wants it.
   const variantOptions = sanitizeOptionGroups(
-    mapAiOptions(parsed.variantOptions).length
-      ? mapAiOptions(parsed.variantOptions)
-      : inferOptionsFromName(input.name)
+    filterRelevantOptionGroups(
+      mapped.length ? mapped : inferred,
+      parsed.name?.trim() || input.name,
+      input.categories
+    )
   );
 
   const basePrice = Number(parsed.pricing?.price) || 49.99;
@@ -328,11 +446,18 @@ Rules:
   }
 
   const specs = mapSpecifications(parsed.specifications);
+  const hasColorOption = variantOptions.some(
+    (g) => g.type === "color" || /^(color|colour)$/i.test(g.name)
+  );
+  const cleanedSpecs = hasColorOption
+    ? specs
+    : specs.filter((s) => !/^(color|colour)$/i.test(s.key.trim()));
+
   const finalSpecs =
-    specs.length >= 8
-      ? specs
+    cleanedSpecs.length >= 8
+      ? cleanedSpecs
       : [
-          ...specs,
+          ...cleanedSpecs,
           { section: "Additional details", key: "Brand", value: input.brand ?? "Official" },
           { section: "Additional details", key: "Model", value: aiName.split(",")[0]?.trim() ?? aiName },
           { section: "Additional details", key: "Condition", value: "New" },

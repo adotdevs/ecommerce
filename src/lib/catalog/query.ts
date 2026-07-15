@@ -25,6 +25,10 @@ export interface CatalogQueryInput {
   maxPrice?: number;
   onSale?: boolean;
   featured?: boolean;
+  /** Minimum average rating (1–5) */
+  minRating?: number;
+  /** Stock filter */
+  availability?: "in-stock" | "out-of-stock" | "all";
   locale?: Locale;
   /** Preset from dedicated catalog routes */
   preset?: CatalogPageSlug;
@@ -87,6 +91,33 @@ function buildCatalogFilter(
     input.sort === "deals";
   if (onSale) {
     filter.onSale = true;
+  }
+
+  if (input.minRating != null && !Number.isNaN(input.minRating) && input.minRating > 0) {
+    filter["rating.average"] = { $gte: input.minRating };
+  }
+
+  if (input.availability === "in-stock") {
+    filter.$or = [
+      { "inventory.stock": { $gt: 0 } },
+      { "variants.stock": { $gt: 0 } },
+    ];
+  } else if (input.availability === "out-of-stock") {
+    filter.$and = [
+      {
+        $or: [
+          { "inventory.stock": { $lte: 0 } },
+          { inventory: { $exists: false } },
+        ],
+      },
+      {
+        $or: [
+          { variants: { $size: 0 } },
+          { variants: { $exists: false } },
+          { variants: { $not: { $elemMatch: { stock: { $gt: 0 } } } } },
+        ],
+      },
+    ];
   }
 
   return filter;

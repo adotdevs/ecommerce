@@ -14,6 +14,7 @@ export interface ProductCardData {
   pricing: { price: number; compareAtPrice?: number; currency?: string };
   media?: { url: string; alt?: string }[];
   brandName?: string;
+  categoryNames?: string[];
   featured?: boolean;
   onSale?: boolean;
   flashSale?: boolean;
@@ -66,6 +67,9 @@ export function toProductCardData(
       })
       .filter(Boolean) as { url: string; alt?: string }[],
     brandName: p.brandName != null ? String(p.brandName) : undefined,
+    categoryNames: Array.isArray(p.categoryNames)
+      ? (p.categoryNames as unknown[]).map((c) => String(c)).filter(Boolean)
+      : undefined,
     featured: Boolean(p.featured),
     onSale: Boolean(p.onSale),
     flashSale: Boolean(p.flashSale),

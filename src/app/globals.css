@@ -210,3 +210,36 @@ select:disabled {
     transform: scale(1);
   }
 }
+
+/* Admin products table — sticky header inside scroll panel */
+.admin-products-table {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.admin-products-table__scroll {
+  max-height: min(72vh, calc(100vh - 11.5rem));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-products-table__scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-products-table__scroll thead {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.admin-products-table__scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--muted);
+  box-shadow: 0 1px 0 var(--border);
+}

@@ -30,7 +30,11 @@ const SKIP_KEYS = new Set([
   "endsAt",
   "ctaHref",
   "exploreNewHref",
+  "viewAllHref",
   "heroImage",
+  "preset",
+  "variant",
+  "showNewBadge",
 ]);
 
 /** Collect dot-paths of all string leaves in an object (skips URLs and image paths) */

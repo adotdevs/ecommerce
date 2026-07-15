@@ -12,20 +12,20 @@ import {
   Shield,
   RefreshCw,
   Headphones,
-  Sparkles,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { cn } from "@/components/ds/utils";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import {
   FlashSaleCard,
   FlashCountdown,
   type FlashSaleProduct,
 } from "@/components/storefront/homepage/FlashSaleCard";
+import { ProductSliderCard } from "@/components/storefront/homepage/ProductSliderCard";
+import { ProductCarousel } from "@/components/storefront/homepage/ProductCarousel";
 import {
   fadeUp,
   staggerContainer,
@@ -48,18 +48,48 @@ const BADGE_ICONS: Record<string, LucideIcon> = {
   headphones: Headphones,
 };
 
-/* ─── Hero (retail promo banner — theme aware) ─── */
+function CmsSectionHeader({
+  title,
+  viewAllLabel,
+  viewAllHref,
+}: {
+  title: string;
+  viewAllLabel?: string;
+  viewAllHref?: string;
+}) {
+  return (
+    <div className="store-section-header">
+      <h2 className="store-section-title">{title}</h2>
+      {viewAllLabel && viewAllHref && (
+        <Link href={viewAllHref} className="store-section-header__link">
+          {viewAllLabel}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+type HeroSlide = {
+  title: string;
+  subtitle: string;
+  image: string;
+  eyebrow?: string;
+  floatCardTitle?: string;
+  floatCardSubtitle?: string;
+  cta?: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
+};
+
+/* ─── Hero ─── */
 export function HeroSliderSection({ config }: SectionProps) {
-  const t = useTranslations("home");
-  const heroBadge = (config.heroBadge as string) || t("heroBadge");
-  const exploreNewLabel = (config.exploreNewLabel as string) || t("exploreNew");
+  const heroBadge = (config.heroBadge as string) ?? "";
+  const exploreNewLabel = (config.exploreNewLabel as string) ?? "";
   const exploreNewHref = (config.exploreNewHref as string) || "/new-arrivals";
-  const slides = (config.slides as Array<{
-    title: string;
-    subtitle: string;
-    image: string;
-    cta?: { label: string; href: string };
-  }>) ?? [];
+  const floatCardTitle = (config.floatCardTitle as string) ?? "";
+  const floatCardSubtitle = (config.floatCardSubtitle as string) ?? "";
+  const trustPoints = (config.trustPoints as Array<{ icon?: string; label: string }>) ?? [];
+  const slides = (config.slides as HeroSlide[]) ?? [];
 
   const [active, setActive] = useState(0);
 
@@ -67,7 +97,7 @@ export function HeroSliderSection({ config }: SectionProps) {
     if (slides.length <= 1) return;
     const timer = setInterval(() => {
       setActive((i) => (i + 1) % slides.length);
-    }, 6500);
+    }, 7000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
@@ -76,38 +106,53 @@ export function HeroSliderSection({ config }: SectionProps) {
   const go = (dir: -1 | 1) =>
     setActive((i) => (i + dir + slides.length) % slides.length);
 
+  const eyebrow = slide.eyebrow || heroBadge;
+  const offerTitle = slide.floatCardTitle || floatCardTitle;
+  const offerSub = slide.floatCardSubtitle || floatCardSubtitle;
+  const secondaryLabel = slide.secondaryCta?.label || exploreNewLabel;
+  const secondaryHref = slide.secondaryCta?.href || exploreNewHref;
+
   return (
-    <section className="w-full border-b border-border bg-background">
-      {/* Retail promo strip — shorter than a landing hero */}
-      <div className="relative overflow-hidden bg-secondary">
-        <div className="container-store relative">
-          <div className="grid min-h-[340px] md:min-h-[400px] lg:min-h-[440px] lg:grid-cols-12">
-            {/* Copy panel — solid theme surface */}
-            <div className="relative z-10 flex flex-col justify-center py-10 md:py-12 lg:col-span-5 lg:py-14">
+    <section className="store-hero-banner w-full">
+      <div className="container-store py-5 md:py-7">
+        <div className="store-hero-banner__shell">
+          {slides.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous slide"
+                onClick={() => go(-1)}
+                className="store-hero-banner__nav store-hero-banner__nav--left"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next slide"
+                onClick={() => go(1)}
+                className="store-hero-banner__nav store-hero-banner__nav--right"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
+
+          <div className="store-hero-banner__frame">
+            <div className="store-hero-banner__content">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={active}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="max-w-md"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  {heroBadge && (
-                    <span className="mb-4 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-                      <Sparkles className="h-3 w-3" />
-                      {heroBadge}
-                    </span>
-                  )}
-                  <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-bold leading-[1.1] tracking-tight text-foreground">
-                    {slide.title}
-                  </h1>
+                  {eyebrow && <p className="store-hero-banner__eyebrow">{eyebrow}</p>}
+                  <h1 className="store-hero-banner__title">{slide.title}</h1>
                   {slide.subtitle && (
-                    <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground md:text-base">
-                      {slide.subtitle}
-                    </p>
+                    <p className="store-hero-banner__subtitle">{slide.subtitle}</p>
                   )}
-                  <div className="mt-7 flex flex-wrap gap-3">
+                  <div className="store-hero-banner__actions">
                     {slide.cta?.label && (
                       <Button size="lg" asChild>
                         <Link href={slide.cta.href || "/products"}>
@@ -116,84 +161,92 @@ export function HeroSliderSection({ config }: SectionProps) {
                         </Link>
                       </Button>
                     )}
-                    <Button size="lg" variant="outline" asChild>
-                      <Link href={exploreNewHref}>{exploreNewLabel}</Link>
-                    </Button>
+                    {secondaryLabel && (
+                      <Button size="lg" variant="outline" asChild>
+                        <Link href={secondaryHref}>{secondaryLabel}</Link>
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               </AnimatePresence>
 
-              {slides.length > 1 && (
-                <div className="mt-8 flex items-center gap-4">
-                  <div className="flex items-center gap-1.5">
-                    {slides.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        aria-label={`Slide ${i + 1}`}
-                        onClick={() => setActive(i)}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                          i === active
-                            ? "w-7 bg-primary"
-                            : "w-1.5 bg-border hover:bg-muted-foreground"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <div className="hidden items-center gap-1 sm:flex">
-                    <button
-                      type="button"
-                      aria-label="Previous slide"
-                      onClick={() => go(-1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-secondary"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Next slide"
-                      onClick={() => go(1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-secondary"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
+              {trustPoints.length > 0 && (
+                <div className="store-hero-banner__trust">
+                  {trustPoints.map((point) => {
+                    const Icon = BADGE_ICONS[point.icon ?? ""] ?? Shield;
+                    return (
+                      <div key={point.label} className="store-hero-banner__trust-item">
+                        <span className="store-hero-banner__trust-icon">
+                          <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+                        </span>
+                        <span>{point.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* Product visual — edge image, no dark wash */}
-            <div className="relative -mx-4 min-h-[240px] sm:-mx-6 md:mx-0 md:min-h-[320px] lg:col-span-7 lg:min-h-0">
+            <div className="store-hero-banner__media">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={slide.image || active}
+                  key={slide.image || String(active)}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="absolute inset-0 lg:left-6"
+                  transition={{ duration: 0.55 }}
+                  className="absolute inset-0"
                 >
                   {slide.image ? (
                     <Image
                       src={slide.image}
                       alt={slide.title}
                       fill
-                      priority
-                      className="object-cover object-center lg:rounded-l-[var(--radius-lg)]"
-                      sizes="(max-width:1024px) 100vw, 58vw"
+                      priority={active === 0}
+                      className="object-cover object-center"
+                      sizes="(max-width:1024px) 100vw, 55vw"
                     />
                   ) : (
-                    <div className="absolute inset-0 bg-muted lg:rounded-l-[var(--radius-lg)]" />
+                    <div className="absolute inset-0 bg-muted" />
                   )}
                 </motion.div>
               </AnimatePresence>
-              {/* Soft fade only on mobile where text stacks above image */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-secondary to-transparent lg:hidden" />
+              {(offerTitle || offerSub) && (
+                <div className="store-hero-banner__float">
+                  {offerTitle && (
+                    <p className="store-hero-banner__float-title">{offerTitle}</p>
+                  )}
+                  {offerSub && <p className="store-hero-banner__float-sub">{offerSub}</p>}
+                </div>
+              )}
             </div>
           </div>
+
+          {slides.length > 1 && (
+            <div className="store-hero-banner__footer">
+              <div className="store-hero-banner__dots">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`Slide ${i + 1}`}
+                    onClick={() => setActive(i)}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      i === active
+                        ? "w-8 bg-primary"
+                        : "w-1.5 bg-border hover:bg-muted-foreground"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="store-hero-banner__counter">
+                {active + 1} / {slides.length}
+              </span>
+            </div>
+          )}
         </div>
       </div>
-
     </section>
   );
 }
@@ -210,42 +263,30 @@ export function TrustBadgesSection({ config }: SectionProps) {
   if (badges.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden border-b border-border bg-background py-8 md:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(79,70,229,0.08),transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(79,70,229,0.14),transparent_55%)]" />
-
-      <div className="container-store relative">
+    <section className="store-trust-strip--end w-full">
+      <div className="container-store">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
-          className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
+          className="store-trust-strip"
         >
           {badges.map((badge) => {
             const Icon = BADGE_ICONS[badge.icon ?? ""] ?? Shield;
             const title = badge.title ?? badge.label ?? "";
             return (
-              <motion.div
-                key={title}
-                variants={staggerItem}
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="group relative overflow-hidden rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-subtle)] transition-shadow duration-300 hover:border-primary/30 hover:shadow-[var(--shadow-card)] md:p-5"
-              >
-                <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/15 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
-
-                <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-br from-primary/15 to-primary/5 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold tracking-tight text-foreground md:text-small">
-                      {title}
-                    </p>
-                    <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
-                      {badge.description}
-                    </p>
-                  </div>
+              <motion.div key={title} variants={staggerItem} className="store-trust-item">
+                <div className="store-trust-item__icon">
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold tracking-tight text-foreground md:text-small">
+                    {title}
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">
+                    {badge.description}
+                  </p>
                 </div>
               </motion.div>
             );
@@ -258,22 +299,21 @@ export function TrustBadgesSection({ config }: SectionProps) {
 
 /* ─── Flash sale ─── */
 export function FlashSaleSection({ config }: SectionProps) {
-  const t = useTranslations("home");
   const products = (config.products as FlashSaleProduct[]) ?? [];
-  const title = (config.title as string) || t("flashSale");
-  const subtitle = (config.subtitle as string) || t("flashSaleSubtitle");
-  const eyebrow = (config.eyebrow as string) || "Limited time";
+  const title = (config.title as string) ?? "";
+  const subtitle = (config.subtitle as string) ?? "";
+  const eyebrow = (config.eyebrow as string) ?? "";
   const endsAt = config.endsAt as string | undefined;
-  const ctaLabel = (config.ctaLabel as string) || t("flashSaleCta");
+  const ctaLabel = (config.ctaLabel as string) ?? "";
   const ctaHref = (config.ctaHref as string) || "/deals";
+  const endsInLabel = (config.endsInLabel as string) ?? "";
+  const emptyMessage = (config.emptyMessage as string) ?? "";
 
-  if (products.length === 0) return null;
+  if (!title && products.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.12),transparent_60%)]" />
-      <div className="pointer-events-none absolute -left-24 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[100px]" />
-      <div className="pointer-events-none absolute -right-16 bottom-0 h-48 w-48 rounded-full bg-orange-600/10 blur-[80px]" />
+    <section className="store-section relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.06),transparent_55%)]" />
 
       <div className="container-store relative">
         <motion.div
@@ -284,111 +324,96 @@ export function FlashSaleSection({ config }: SectionProps) {
           className="mb-10 flex flex-col gap-6 md:mb-12 md:flex-row md:items-end md:justify-between"
         >
           <div className="max-w-xl">
-            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-400">
-              <Zap className="h-3 w-3 fill-current" />
-              {eyebrow}
-            </p>
-            <h2 className="text-[clamp(1.85rem,3.5vw,2.5rem)] font-bold tracking-tight text-foreground">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-2 text-body text-muted-foreground">{subtitle}</p>
+            {eyebrow && (
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
+                {eyebrow}
+              </p>
             )}
+            <h2 className="store-section-title">{title}</h2>
+            {subtitle && <p className="store-section-subtitle">{subtitle}</p>}
           </div>
 
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div>
-              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                {t("endsIn")}
-              </p>
+              {endsInLabel && (
+                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                  {endsInLabel}
+                </p>
+              )}
               <FlashCountdown endsAt={endsAt} />
             </div>
-            <Button
-              variant="outline"
-              asChild
-              className="shrink-0 border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
-            >
-              <Link href={ctaHref}>
-                {ctaLabel} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </motion.div>
-
-        <div className={PRODUCT_GRID_CLASS}>
-          {products.map((product, i) => (
-            <motion.div
-              key={product._id}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={viewportOnce}
-              transition={{ duration: 0.45, delay: i * 0.07 }}
-              className="w-full"
-            >
-              <FlashSaleCard product={product} />
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Featured products ─── */
-export function FeaturedProductsSection({ config }: SectionProps) {
-  const t = useTranslations("home");
-  const products = (config.products as Parameters<typeof ProductCard>[0]["product"][]) ?? [];
-  const title = (config.title as string) ?? t("featuredProducts");
-  const subtitle = (config.subtitle as string) ?? t("featuredSubtitle");
-  const viewAllLabel = (config.viewAllLabel as string) || t("viewAll");
-
-  return (
-    <section className="py-16 md:py-24">
-      <div className="container-store">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewportOnce}
-          variants={fadeUp}
-          className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end md:mb-12"
-        >
-          <div>
-            <h2 className="text-[clamp(1.75rem,3vw,2.25rem)] font-bold tracking-tight text-foreground">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-2 max-w-lg text-body text-muted-foreground">{subtitle}</p>
+            {ctaLabel && (
+              <Button variant="outline" asChild className="shrink-0">
+                <Link href={ctaHref}>
+                  {ctaLabel} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             )}
           </div>
-          <Button variant="outline" asChild className="shrink-0">
-            <Link href="/products">
-              {viewAllLabel} <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
         </motion.div>
 
-        <div className={cn(PRODUCT_GRID_CLASS, "lg:gap-6")}>
-          {products.map((product, i) => (
-            <motion.div
-              key={product._id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={viewportOnce}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="w-full"
-            >
-              <ProductCard product={product} />
-            </motion.div>
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className={PRODUCT_GRID_CLASS}>
+            {products.map((product, i) => (
+              <motion.div
+                key={product._id}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={viewportOnce}
+                transition={{ duration: 0.45, delay: i * 0.07 }}
+                className="w-full"
+              >
+                <FlashSaleCard product={product} />
+              </motion.div>
+            ))}
+          </div>
+        ) : emptyMessage ? (
+          <p className="text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : null}
       </div>
     </section>
   );
 }
 
-/* ─── Categories bento grid ─── */
+/* ─── Featured products (legacy grid — optional section) ─── */
+export function FeaturedProductsSection({ config }: SectionProps) {
+  const products = (config.products as Parameters<typeof ProductCard>[0]["product"][]) ?? [];
+  const title = (config.title as string) ?? "";
+  const viewAllLabel = (config.viewAllLabel as string) ?? "";
+  const viewAllHref = (config.viewAllHref as string) || "/products";
+
+  if (!title && products.length === 0) return null;
+
+  return (
+    <section className="store-section">
+      <div className="container-store">
+        <motion.div initial="hidden" whileInView="visible" viewport={viewportOnce} variants={fadeUp}>
+          <CmsSectionHeader title={title} viewAllLabel={viewAllLabel} viewAllHref={viewAllHref} />
+        </motion.div>
+
+        {products.length > 0 ? (
+          <div className={cn(PRODUCT_GRID_CLASS, "lg:gap-6")}>
+            {products.map((product, i) => (
+              <motion.div
+                key={product._id}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={viewportOnce}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className="w-full"
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Shop by category ─── */
 export function CategoryShowcaseSection({ config }: SectionProps) {
-  const t = useTranslations("home");
   const categories = (config.categories as Array<{
     _id: string;
     name: string;
@@ -396,28 +421,17 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
     image?: string;
   }>) ?? [];
 
-  const title = (config.title as string) ?? t("shopByCategory");
-  const subtitle = config.subtitle as string | undefined;
+  const title = (config.title as string) ?? "";
+  const viewAllLabel = (config.viewAllLabel as string) ?? "";
+  const viewAllHref = (config.viewAllHref as string) || "/categories";
 
   if (categories.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-secondary/40 py-16 md:py-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(79,70,229,0.08),transparent_50%)]" />
-      <div className="container-store relative">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewportOnce}
-          variants={fadeUp}
-          className="mb-10 text-center md:mb-12"
-        >
-          <h2 className="text-[clamp(1.75rem,3vw,2.25rem)] font-bold tracking-tight text-foreground">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="mx-auto mt-2 max-w-lg text-body text-muted-foreground">{subtitle}</p>
-          )}
+    <section className="store-section">
+      <div className="container-store">
+        <motion.div initial="hidden" whileInView="visible" viewport={viewportOnce} variants={fadeUp}>
+          <CmsSectionHeader title={title} viewAllLabel={viewAllLabel} viewAllHref={viewAllHref} />
         </motion.div>
 
         <motion.div
@@ -425,50 +439,29 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
-          className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
+          className="store-category-row"
         >
-          {categories.slice(0, 4).map((cat, i) => (
-            <motion.div
-              key={cat._id}
-              variants={staggerItem}
-              className={i === 0 ? "col-span-2 row-span-2 md:col-span-2 md:row-span-2" : ""}
-            >
-              <Link
-                href={`/categories/${cat.slug}`}
-                className="group relative block h-full overflow-hidden rounded-[var(--radius-lg)] border border-border/70 bg-card shadow-[var(--shadow-subtle)] transition-shadow hover:shadow-[var(--shadow-card)]"
-              >
-                <div
-                  className={`relative bg-secondary ${
-                    i === 0 ? "aspect-[4/3] md:aspect-auto md:min-h-[340px]" : "aspect-square"
-                  }`}
-                >
+          {categories.slice(0, 11).map((cat) => (
+            <motion.div key={cat._id} variants={staggerItem} className="shrink-0 sm:shrink">
+              <Link href={`/categories/${cat.slug}`} className="store-category-orbit group">
+                <div className="store-category-orbit__ring">
                   {cat.image ? (
-                    <Image
+                    <RemoteImage
                       src={cat.image}
                       alt={cat.name}
                       fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                      sizes={i === 0 ? "50vw" : "25vw"}
+                      className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                      sizes="120px"
                     />
                   ) : (
-                    <div className="flex h-full min-h-[120px] items-center justify-center text-muted-foreground">
+                    <span className="text-2xl font-semibold text-muted-foreground">
                       {cat.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent opacity-90" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
-                    <p
-                      className={`font-semibold text-foreground ${
-                        i === 0 ? "text-lg md:text-2xl" : "text-small"
-                      }`}
-                    >
-                      {cat.name}
-                    </p>
-                    <span className="mt-1.5 inline-flex translate-y-1 items-center gap-1 text-[12px] text-primary opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
-                      Shop now <ArrowRight className="h-3 w-3" />
                     </span>
-                  </div>
+                  )}
                 </div>
+                <span className="store-category-orbit__label group-hover:text-primary">
+                  {cat.name}
+                </span>
               </Link>
             </motion.div>
           ))}
@@ -483,44 +476,40 @@ export function PromoBannerSection({ config }: SectionProps) {
   const title = config.title as string;
   const subtitle = config.subtitle as string;
   const cta = config.cta as { label: string; href: string } | undefined;
-  const eyebrow = (config.eyebrow as string) || "Limited offer";
-  const discountLabel = (config.discountLabel as string) || "40%";
+  const eyebrow = (config.eyebrow as string) ?? "";
+  const discountLabel = (config.discountLabel as string) ?? "";
   const image = config.image as string | undefined;
 
   if (!title) return null;
 
   return (
-    <section className="py-16 md:py-20">
+    <section className="store-section store-section--tight">
       <div className="container-store">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
           variants={staggerContainer}
-          className="relative overflow-hidden rounded-[var(--radius-lg)] border border-border/70 shadow-[var(--shadow-card)]"
+          className="store-card relative overflow-hidden"
         >
           {image ? (
             <div className="absolute inset-0">
               <Image src={image} alt={title} fill className="object-cover" sizes="100vw" />
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]" />
+              <div className="absolute inset-0 bg-background/82 backdrop-blur-[1px]" />
             </div>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-background to-brand-accent/15" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-background to-brand-accent/8" />
           )}
-          <div className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-          <div className="relative grid items-center gap-8 p-8 md:grid-cols-2 md:p-12 lg:p-16">
+
+          <div className="relative grid items-center gap-8 p-8 md:grid-cols-[1.2fr_0.8fr] md:p-12 lg:p-14">
             <motion.div variants={slideFromLeft}>
-              <p className="text-small font-medium uppercase tracking-widest text-primary">
-                {eyebrow}
-              </p>
-              <h2 className="mt-3 text-[clamp(1.5rem,3vw,2.35rem)] font-bold leading-tight text-foreground">
-                {title}
-              </h2>
+              {eyebrow && <p className="store-section-eyebrow mb-4">{eyebrow}</p>}
+              <h2 className="store-section-title max-w-lg">{title}</h2>
               {subtitle && (
-                <p className="mt-3 max-w-md text-body text-muted-foreground">{subtitle}</p>
+                <p className="store-section-subtitle mt-3">{subtitle}</p>
               )}
               {cta && (
-                <Button size="lg" className="mt-8 shadow-lg shadow-primary/20" asChild>
+                <Button size="lg" className="mt-8 shadow-md shadow-primary/15" asChild>
                   <Link href={cta.href}>
                     {cta.label}
                     <ArrowRight className="h-4 w-4" />
@@ -529,12 +518,13 @@ export function PromoBannerSection({ config }: SectionProps) {
               )}
             </motion.div>
             <motion.div variants={slideFromRight} className="hidden md:flex md:justify-end">
-              <div className="relative flex h-44 w-44 items-center justify-center lg:h-52 lg:w-52">
-                <div className="absolute inset-0 animate-pulse rounded-full bg-primary/20 blur-xl" />
-                <div className="relative flex h-full w-full items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-5xl font-bold text-primary ring-4 ring-primary/10 lg:text-6xl">
-                  {discountLabel}
+              {discountLabel && (
+                <div className="flex h-40 w-40 items-center justify-center rounded-2xl border border-primary/20 bg-primary/8 lg:h-48 lg:w-48">
+                  <span className="text-5xl font-bold tracking-tight text-primary lg:text-6xl">
+                    {discountLabel}
+                  </span>
                 </div>
-              </div>
+              )}
             </motion.div>
           </div>
         </motion.div>
@@ -543,32 +533,256 @@ export function PromoBannerSection({ config }: SectionProps) {
   );
 }
 
-/* ─── Newsletter ─── */
-export function NewsletterSection({ config }: SectionProps) {
-  const t = useTranslations("home");
-  const title = (config.title as string) ?? t("newsletterTitle");
-  const subtitle = (config.subtitle as string) ?? t("newsletterSubtitle");
-  const emailPlaceholder = (config.emailPlaceholder as string) || t("emailPlaceholder");
-  const buttonLabel = (config.buttonLabel as string) ?? t("subscribe");
-  const privacyNote = (config.privacyNote as string) || t("newsletterPrivacy");
+/* ─── Promo grid (3 sales cards) ─── */
+const PROMO_VARIANTS: Record<string, string> = {
+  lavender: "store-promo-tile--lavender",
+  cream: "store-promo-tile--cream",
+  mint: "store-promo-tile--mint",
+};
+
+export function PromoGridSection({ config }: SectionProps) {
+  const sectionTitle = (config.sectionTitle as string) ?? "";
+  const sectionSubtitle = (config.sectionSubtitle as string) ?? "";
+  const tiles = (config.tiles as Array<{
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    image?: string;
+    variant?: string;
+  }>) ?? [];
+
+  if (tiles.length === 0) return null;
 
   return (
-    <section className="pb-16 md:pb-24">
+    <section className="store-section store-section--tight">
+      <div className="container-store">
+        {(sectionTitle || sectionSubtitle) && (
+          <div className="mb-8">
+            {sectionTitle && <h2 className="store-section-title">{sectionTitle}</h2>}
+            {sectionSubtitle && (
+              <p className="store-section-subtitle mt-2">{sectionSubtitle}</p>
+            )}
+          </div>
+        )}
+        <div className="store-promo-grid">
+          {tiles.map((tile, i) => (
+            <motion.div
+              key={`${tile.title}-${i}`}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={viewportOnce}
+              transition={{ duration: 0.35, delay: i * 0.06 }}
+            >
+              <Link
+                href={tile.ctaHref || "/products"}
+                className={cn(
+                  "store-promo-tile group block transition-transform hover:-translate-y-1",
+                  PROMO_VARIANTS[tile.variant ?? "lavender"] ?? PROMO_VARIANTS.lavender
+                )}
+              >
+                <div className="relative z-10 max-w-[65%]">
+                  {tile.eyebrow && (
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      {tile.eyebrow}
+                    </p>
+                  )}
+                  <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground md:text-2xl">
+                    {tile.title}
+                  </h3>
+                  {tile.subtitle && (
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {tile.subtitle}
+                    </p>
+                  )}
+                  {tile.ctaLabel && (
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                      {tile.ctaLabel}
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  )}
+                </div>
+                {tile.image && (
+                  <div className="store-promo-tile__image">
+                    <Image
+                      src={tile.image}
+                      alt={tile.title}
+                      fill
+                      className="object-contain"
+                      sizes="140px"
+                    />
+                  </div>
+                )}
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Product slider (best sellers / new arrivals) ─── */
+export function ProductSliderSection({ config }: SectionProps) {
+  const products = (config.products as Parameters<typeof ProductSliderCard>[0]["product"][]) ?? [];
+  const title = (config.title as string) ?? "";
+  const viewAllLabel = (config.viewAllLabel as string) ?? "";
+  const viewAllHref = (config.viewAllHref as string) || "/products";
+  const showNewBadge = Boolean(config.showNewBadge);
+  const emptyMessage = (config.emptyMessage as string) ?? "";
+
+  if (!title && products.length === 0) return null;
+
+  return (
+    <section className="store-section store-section--tight">
+      <div className="container-store">
+        <motion.div initial="hidden" whileInView="visible" viewport={viewportOnce} variants={fadeUp}>
+          <CmsSectionHeader
+            title={title}
+            viewAllLabel={viewAllLabel}
+            viewAllHref={viewAllHref}
+          />
+        </motion.div>
+
+        {products.length > 0 ? (
+          <ProductCarousel>
+            {products.map((product) => (
+              <ProductSliderCard
+                key={product._id}
+                product={product}
+                showNewBadge={showNewBadge}
+              />
+            ))}
+          </ProductCarousel>
+        ) : emptyMessage ? (
+          <p className="text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Brand strip ─── */
+export function BrandStripSection({ config }: SectionProps) {
+  const title = (config.title as string) ?? "";
+  const brands = (config.brands as Array<{
+    _id: string;
+    name: string;
+    slug: string;
+    logo?: string;
+  }>) ?? [];
+
+  if (!title || brands.length === 0) return null;
+
+  return (
+    <section className="store-section store-section--muted store-section--tight">
+      <div className="container-store">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          variants={fadeUp}
+          className="store-brand-strip"
+        >
+          <h2 className="store-section-title">{title}</h2>
+          <div className="store-brand-strip__logos">
+            {brands.map((brand) => (
+              <Link
+                key={brand._id}
+                href={`/products?brand=${encodeURIComponent(brand.slug)}`}
+                className="store-brand-logo"
+                title={brand.name}
+              >
+                {brand.logo ? (
+                  <Image
+                    src={brand.logo}
+                    alt={brand.name}
+                    width={100}
+                    height={32}
+                    className="h-7 w-auto max-w-[6rem] object-contain"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-foreground">{brand.name}</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Value proposition ─── */
+export function ValuePropositionSection({ config }: SectionProps) {
+  const eyebrow = (config.eyebrow as string) ?? "";
+  const title = (config.title as string) ?? "";
+  const subtitle = (config.subtitle as string) ?? "";
+  const items = (config.items as Array<{ title: string; description: string }>) ?? [];
+
+  if (!title && items.length === 0) return null;
+
+  return (
+    <section className="store-section store-section--muted">
+      <div className="container-store">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          variants={fadeUp}
+          className="mb-10 text-center"
+        >
+          {eyebrow && (
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              {eyebrow}
+            </p>
+          )}
+          {title && <h2 className="store-section-title">{title}</h2>}
+          {subtitle && (
+            <p className="store-section-subtitle mx-auto mt-3">{subtitle}</p>
+          )}
+        </motion.div>
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          className="store-value-grid"
+        >
+          {items.map((item) => (
+            <motion.div key={item.title} variants={staggerItem} className="store-value-card">
+              <h3 className="store-value-card__title">{item.title}</h3>
+              <p className="store-value-card__text">{item.description}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Newsletter ─── */
+export function NewsletterSection({ config }: SectionProps) {
+  const title = (config.title as string) ?? "";
+  const subtitle = (config.subtitle as string) ?? "";
+  const emailPlaceholder = (config.emailPlaceholder as string) ?? "";
+  const buttonLabel = (config.buttonLabel as string) ?? "";
+  const privacyNote = (config.privacyNote as string) ?? "";
+
+  return (
+    <section className="store-section store-section--tight pb-20 md:pb-28">
       <div className="container-store">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
           variants={scaleIn}
-          className="relative overflow-hidden rounded-[var(--radius-lg)] border border-border/70 bg-card p-8 shadow-[var(--shadow-card)] md:p-12"
+          className="store-newsletter p-8 md:p-12"
         >
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-brand-accent/10 blur-3xl" />
           <div className="relative mx-auto max-w-xl text-center">
-            <h2 className="text-[clamp(1.5rem,3vw,2rem)] font-bold text-foreground">{title}</h2>
-            {subtitle && (
-              <p className="mt-3 text-body text-muted-foreground">{subtitle}</p>
-            )}
+            <h2 className="store-section-title">{title}</h2>
+            {subtitle && <p className="store-section-subtitle mx-auto mt-3">{subtitle}</p>}
             <form
               className="mt-8 flex flex-col gap-3 sm:flex-row"
               onSubmit={(e) => e.preventDefault()}
@@ -576,9 +790,10 @@ export function NewsletterSection({ config }: SectionProps) {
               <Input
                 type="email"
                 placeholder={emailPlaceholder}
-                className="h-12 flex-1 bg-background"
+                className="h-12 flex-1 rounded-full bg-background px-5"
+                aria-label={emailPlaceholder}
               />
-              <Button type="submit" size="lg" className="shrink-0 shadow-md shadow-primary/20">
+              <Button type="submit" size="lg" className="shrink-0 rounded-full px-8">
                 {buttonLabel}
               </Button>
             </form>

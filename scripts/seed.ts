@@ -17,6 +17,7 @@ import {
   Product,
   CmsPage,
 } from "../src/models";
+import { REFERENCE_HOMEPAGE_SECTIONS } from "./homepage-reference-layout";
 
 async function seed() {
   await connectDB();
@@ -296,112 +297,9 @@ async function seed() {
   }
   console.log("Products seeded");
 
-  // Homepage sections
+  // Homepage sections — reference layout (see scripts/homepage-reference-layout.ts)
   await HomepageSection.deleteMany({});
-  const sections = [
-    {
-      type: "hero_slider",
-      order: 0,
-      enabled: true,
-      config: {
-        heroBadge: "Free shipping over $100",
-        exploreNewLabel: "New arrivals",
-        exploreNewHref: "/new-arrivals",
-        slides: [
-          {
-            title: "Shop the season's bestsellers",
-            subtitle: "Premium picks, fast delivery, and easy returns — everything you need in one store.",
-            cta: { label: "Shop Now", href: "/products" },
-            image: "https://images.unsplash.com/photo-1441986300917-64644bd600d8?auto=format&fit=crop&w=1920&q=80",
-          },
-          {
-            title: "New arrivals just dropped",
-            subtitle: "Fresh styles and limited drops. Grab yours before they're gone.",
-            cta: { label: "Explore New", href: "/new-arrivals" },
-            image: "https://images.unsplash.com/photo-1483985988350-763728e1935b?auto=format&fit=crop&w=1920&q=80",
-          },
-        ],
-      },
-    },
-    {
-      type: "trust_badges",
-      order: 1,
-      enabled: true,
-      config: {
-        badges: [
-          { icon: "truck", title: "Free Shipping", description: "On orders $100+" },
-          { icon: "shield", title: "Secure Payment", description: "256-bit encryption" },
-          { icon: "refresh", title: "Easy Returns", description: "30-day guarantee" },
-          { icon: "headphones", title: "24/7 Support", description: "Always here to help" },
-        ],
-      },
-    },
-    {
-      type: "flash_sale",
-      order: 2,
-      enabled: true,
-      config: {
-        eyebrow: "Limited time",
-        title: "Flash Sale",
-        subtitle: "Lightning deals — grab them before the clock hits zero.",
-        endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        ctaLabel: "Shop all deals",
-        ctaHref: "/deals",
-        selectionMode: "auto",
-        limit: 4,
-        productLinks: [],
-      },
-    },
-    {
-      type: "featured_products",
-      order: 3,
-      enabled: true,
-      config: {
-        title: "Featured Products",
-        subtitle: "Handpicked favorites from our collection",
-        viewAllLabel: "View All",
-        layout: "grid",
-        selectionMode: "auto",
-        limit: 4,
-        productLinks: [],
-      },
-    },
-    {
-      type: "category_showcase",
-      order: 4,
-      enabled: true,
-      config: {
-        title: "Shop by Category",
-        subtitle: "Find exactly what you're looking for",
-      },
-    },
-    {
-      type: "promo_banner",
-      order: 5,
-      enabled: true,
-      config: {
-        eyebrow: "Limited offer",
-        title: "Summer Sale — Up to 40% Off",
-        subtitle: "Limited time offer on select items",
-        discountLabel: "40%",
-        cta: { label: "Shop Deals", href: "/deals" },
-      },
-    },
-    {
-      type: "newsletter",
-      order: 6,
-      enabled: true,
-      config: {
-        title: "Stay in the Loop",
-        subtitle: "Get exclusive offers and new arrivals delivered to your inbox.",
-        emailPlaceholder: "Enter your email",
-        buttonLabel: "Subscribe",
-        privacyNote: "No spam. Unsubscribe anytime.",
-      },
-    },
-  ];
-
-  await HomepageSection.insertMany(sections);
+  await HomepageSection.insertMany(REFERENCE_HOMEPAGE_SECTIONS);
   console.log("Homepage sections seeded");
 
   // CMS Pages

@@ -114,6 +114,58 @@ export async function resolveHomepageProducts(
   return resolveFeaturedProducts(limit, locale);
 }
 
+export async function resolveProductSliderProducts(
+  config: Record<string, unknown>,
+  locale?: Locale
+) {
+  const limit = (config.limit as number) ?? 8;
+  const preset = (config.preset as string) ?? "featured";
+  const mode = (config.selectionMode as string) ?? "auto";
+  const links = (config.productLinks as string[]) ?? [];
+
+  if (mode === "manual" && links.length > 0) {
+    return resolveManualProductCards(links, limit, locale);
+  }
+
+  if (preset === "bestsellers") {
+    const products = await Product.find({ status: "published", featured: true })
+      .sort({ featured: -1, "inventory.stock": -1, createdAt: -1 })
+      .limit(limit)
+      .lean();
+    if (products.length > 0) {
+      return products.map((p) =>
+        toProductCardData(p as unknown as Record<string, unknown>, locale)
+      );
+    }
+  }
+
+  if (preset === "new_arrivals") {
+    const products = await Product.find({ status: "published", isNewArrival: true })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    if (products.length > 0) {
+      return products.map((p) =>
+        toProductCardData(p as unknown as Record<string, unknown>, locale)
+      );
+    }
+  }
+
+  if (preset === "deals") {
+    const products = await Product.find({ status: "published", onSale: true })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    if (products.length > 0) {
+      return products.map((p) =>
+        toProductCardData(p as unknown as Record<string, unknown>, locale)
+      );
+    }
+  }
+
+  return resolveHomepageProducts(config, locale);
+}
+
 export async function resolveHomepageCategories(config: Record<string, unknown>) {
   const mode = (config.selectionMode as string) ?? "auto";
   const links = (config.categoryLinks as string[]) ?? [];

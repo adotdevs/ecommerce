@@ -42,6 +42,25 @@ export function normalizeSectionConfig(
       if (next.limit == null) next.limit = 4;
       break;
     }
+    case "product_slider": {
+      if (!next.preset) next.preset = "bestsellers";
+      if (!next.selectionMode) {
+        next.selectionMode =
+          Array.isArray(next.productLinks) && next.productLinks.length > 0
+            ? "manual"
+            : "auto";
+      }
+      if (!Array.isArray(next.productLinks)) next.productLinks = [];
+      if (next.limit == null) next.limit = 8;
+      break;
+    }
+    case "promo_grid": {
+      if (!Array.isArray(next.tiles)) next.tiles = [];
+      break;
+    }
+    case "brand_strip": {
+      break;
+    }
   }
 
   return next;

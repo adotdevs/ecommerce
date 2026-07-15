@@ -24,7 +24,6 @@ function discountPercent(price: number, compareAt?: number) {
   return Math.round(((compareAt - price) / compareAt) * 100);
 }
 
-/** Deterministic “claimed” fill so cards feel urgent without real inventory events */
 function claimedPercent(id: string) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
@@ -70,16 +69,13 @@ export function FlashSaleCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl",
-        "border border-amber-500/25 bg-[#0c0a08]",
-        "shadow-[0_0_0_1px_rgba(245,158,11,0.08),0_20px_40px_-20px_rgba(0,0,0,0.6)]",
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-[var(--radius-lg)]",
+        "border border-amber-500/25 bg-card shadow-[var(--shadow-card)]",
         className
       )}
     >
-      <div className="pointer-events-none absolute -right-8 top-[38%] h-28 w-28 rounded-full bg-amber-500/20 blur-2xl transition-opacity group-hover:opacity-100" />
-
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-white">
+        <div className="store-product-media">
           {image ? (
             <RemoteImage
               src={image.url}
@@ -90,52 +86,54 @@ export function FlashSaleCard({
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-white text-amber-200/40">
+            <div className="flex h-full items-center justify-center text-muted-foreground">
               —
             </div>
           )}
 
           {off != null && (
-            <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-black shadow-lg">
+            <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-black shadow-sm">
               <Zap className="h-3 w-3 fill-current" />
               −{off}%
             </div>
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2.5 bg-gradient-to-b from-[#1a1208] to-[#0c0a08] p-4 pt-3">
+        <div className="flex flex-1 flex-col gap-2.5 border-t border-amber-500/15 bg-gradient-to-b from-amber-500/[0.06] to-transparent p-4">
           {product.brandName && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500/70">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700/80 dark:text-amber-400/80">
               {product.brandName}
             </p>
           )}
-          <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-amber-50">
+          <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
             {product.name}
           </h3>
 
           <div className="flex items-baseline gap-2">
             <PriceDisplay
               amountUsd={product.pricing.price}
-              className="text-lg font-bold text-amber-400"
+              className="text-lg font-bold text-foreground"
             />
             {product.pricing.compareAtPrice != null &&
               product.pricing.compareAtPrice > product.pricing.price && (
                 <PriceDisplay
                   amountUsd={product.pricing.compareAtPrice}
-                  className="text-[13px] text-amber-200/35 line-through"
+                  className="text-[13px] text-muted-foreground line-through"
                 />
               )}
           </div>
 
           <div className="mt-1 space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="inline-flex items-center gap-1 font-medium text-amber-200/70">
-                <Flame className="h-3 w-3 text-amber-500" />
+              <span className="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+                <Flame className="h-3 w-3" />
                 {claimed}% claimed
               </span>
-              <span className="text-amber-200/40">{outOfStock ? "Sold out" : "Selling fast"}</span>
+              <span className="text-muted-foreground">
+                {outOfStock ? "Sold out" : "Selling fast"}
+              </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-amber-950">
+            <div className="h-1.5 overflow-hidden rounded-full bg-amber-500/15">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400"
                 initial={{ width: 0 }}
@@ -148,13 +146,13 @@ export function FlashSaleCard({
         </div>
       </Link>
 
-      <div className="bg-[#0c0a08] px-4 pb-4">
+      <div className="px-4 pb-4">
         <Button
           size="md"
           className={cn(
-            "w-full border-0",
+            "w-full rounded-full border-0",
             justAdded
-              ? "bg-emerald-500 text-white hover:bg-emerald-500"
+              ? "bg-brand-accent text-white hover:bg-brand-accent"
               : "bg-amber-500 text-black hover:bg-amber-400"
           )}
           onClick={handleAdd}
@@ -195,19 +193,18 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
 
   const effectiveEnd = resolveFlashSaleEndsAt(endsAt, now ?? Date.now());
 
-  // Avoid SSR/client time mismatch — show placeholders until mounted
+  const cellClass =
+    "min-w-[3.25rem] rounded-lg border border-amber-500/25 bg-card px-2.5 py-1.5 text-center shadow-sm";
+
   if (now == null) {
     return (
       <div className="flex flex-wrap items-center gap-2" aria-hidden>
         {["Hrs", "Min", "Sec"].map((label) => (
-          <div
-            key={label}
-            className="min-w-[3.25rem] rounded-lg border border-amber-500/25 bg-black/40 px-2.5 py-1.5 text-center backdrop-blur-sm"
-          >
-            <p className="font-mono text-lg font-bold tabular-nums leading-none text-amber-300 md:text-xl">
+          <div key={label} className={cellClass}>
+            <p className="font-mono text-lg font-bold tabular-nums leading-none text-foreground md:text-xl">
               --
             </p>
-            <p className="mt-1 text-[9px] font-medium uppercase tracking-widest text-amber-200/45">
+            <p className="mt-1 text-[9px] font-medium uppercase tracking-widest text-muted-foreground">
               {label}
             </p>
           </div>
@@ -233,17 +230,14 @@ export function FlashCountdown({ endsAt }: { endsAt?: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {cells.map((cell) => (
-          <div
-            key={cell.label}
-            className="min-w-[3.25rem] rounded-lg border border-amber-500/25 bg-black/40 px-2.5 py-1.5 text-center backdrop-blur-sm"
-          >
-            <p className="font-mono text-lg font-bold tabular-nums leading-none text-amber-300 md:text-xl">
-              {String(cell.value).padStart(2, "0")}
-            </p>
-            <p className="mt-1 text-[9px] font-medium uppercase tracking-widest text-amber-200/45">
-              {cell.label}
-            </p>
-          </div>
+        <div key={cell.label} className={cellClass}>
+          <p className="font-mono text-lg font-bold tabular-nums leading-none text-foreground md:text-xl">
+            {String(cell.value).padStart(2, "0")}
+          </p>
+          <p className="mt-1 text-[9px] font-medium uppercase tracking-widest text-muted-foreground">
+            {cell.label}
+          </p>
+        </div>
       ))}
     </div>
   );

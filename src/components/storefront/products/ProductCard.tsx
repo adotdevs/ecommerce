@@ -83,18 +83,30 @@ export function ProductCard({ product, className }: ProductCardProps) {
     setVariantModalOpen(true);
   };
 
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    if (product.hasVariants) {
+      handleVariantAdd(e);
+      return;
+    }
+    if (outOfStock) {
+      handleWishlist(e);
+      return;
+    }
+    handleAddToCart(e);
+  };
+
   return (
     <motion.article
       initial={false}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "group relative flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-border/80 bg-card shadow-[var(--shadow-subtle)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[var(--shadow-card)]",
+        "group relative flex w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border/80 bg-card shadow-[var(--shadow-subtle)] transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card)]",
         className
       )}
     >
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[4/5] overflow-hidden bg-white">
+        <div className="store-product-media">
           {image ? (
             <RemoteImage
               src={image.url}
@@ -111,26 +123,24 @@ export function ProductCard({ product, className }: ProductCardProps) {
           )}
 
           <div className="absolute left-3 top-3 flex flex-col gap-1">
-            {onSale && <Badge variant="destructive">{t("sale")}</Badge>}
-            {product.featured && <Badge variant="default">{t("featured")}</Badge>}
+            {product.featured && !onSale && (
+              <Badge variant="default" className="text-[10px]">
+                {t("featured")}
+              </Badge>
+            )}
+            {onSale && (
+              <Badge variant="destructive" className="text-[10px]">
+                {t("sale")}
+              </Badge>
+            )}
           </div>
 
           <div className="absolute right-3 top-3 flex flex-col gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <Button
               size="icon-sm"
               variant="secondary"
-              className="bg-card/90 backdrop-blur-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleWishlist({
-                  productId: product._id,
-                  name: product.name,
-                  slug: product.slug,
-                  image: image?.url,
-                  price: product.pricing.price,
-                });
-              }}
+              className="bg-card/95 backdrop-blur-sm shadow-sm"
+              onClick={handleWishlist}
               aria-label={t("addToCart")}
             >
               <Heart
@@ -140,38 +150,55 @@ export function ProductCard({ product, className }: ProductCardProps) {
             <Button
               size="icon-sm"
               variant="secondary"
-              className="bg-card/90 backdrop-blur-sm"
+              className="bg-card/95 backdrop-blur-sm shadow-sm"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 toggleCompare(product._id);
               }}
+              aria-label="Compare"
             >
               <GitCompareArrows className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex flex-1 flex-col gap-2 p-4 pt-3">
           {product.brandName && (
-            <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {product.brandName}
             </p>
           )}
-          <h3 className="line-clamp-2 text-small font-medium leading-snug text-foreground">
+          <h3 className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">
             {product.name}
           </h3>
           {reviewCount > 0 && (
             <StarRating rating={rating} count={reviewCount} />
           )}
-          <div className="mt-auto flex items-baseline gap-2">
-            <PriceDisplay amountUsd={product.pricing.price} className="text-body font-semibold" />
-            {onSale && (
-              <PriceDisplay
-                amountUsd={product.pricing.compareAtPrice!}
-                className="text-small text-muted-foreground line-through"
-              />
-            )}
+          <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+              <PriceDisplay amountUsd={product.pricing.price} className="text-base font-bold" />
+              {onSale && (
+                <PriceDisplay
+                  amountUsd={product.pricing.compareAtPrice!}
+                  className="text-small text-muted-foreground line-through"
+                />
+              )}
+            </div>
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              className="shrink-0 rounded-full border border-border bg-background shadow-sm"
+              onClick={handleQuickAdd}
+              disabled={!outOfStock && justAdded}
+              aria-label={t("addToCart")}
+            >
+              {justAdded ? (
+                <Check className="h-4 w-4 text-brand-accent" />
+              ) : (
+                <ShoppingBag className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
       </Link>
@@ -188,7 +215,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               size="md"
               variant={justAdded ? "accent" : "primary"}
               className={cn(
-                "w-full transition-all",
+                "w-full rounded-full",
                 justAdded && "bg-brand-accent text-white hover:bg-brand-accent"
               )}
               onClick={handleVariantAdd}
@@ -218,39 +245,39 @@ export function ProductCard({ product, className }: ProductCardProps) {
             />
           </>
         ) : (
-        <Button
-          size="md"
-          variant={justAdded ? "accent" : "primary"}
-          className={cn(
-            "w-full transition-all",
-            justAdded && "bg-brand-accent text-white hover:bg-brand-accent",
-            showLowStock && !justAdded && "h-auto min-h-10 py-2"
-          )}
-          onClick={outOfStock ? handleWishlist : handleAddToCart}
-          disabled={!outOfStock && justAdded}
-        >
-          {justAdded ? (
-            <>
-              <Check className="h-4 w-4" />
-              {t("addedToCart")}
-            </>
-          ) : outOfStock ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Heart className="h-4 w-4" />
-              {t("addToWishlist")}
-            </span>
-          ) : (
-            <span className="flex flex-col items-center gap-0.5">
+          <Button
+            size="md"
+            variant={justAdded ? "accent" : "primary"}
+            className={cn(
+              "w-full rounded-full",
+              justAdded && "bg-brand-accent text-white hover:bg-brand-accent",
+              showLowStock && !justAdded && "h-auto min-h-10 py-2"
+            )}
+            onClick={outOfStock ? handleWishlist : handleAddToCart}
+            disabled={!outOfStock && justAdded}
+          >
+            {justAdded ? (
+              <>
+                <Check className="h-4 w-4" />
+                {t("addedToCart")}
+              </>
+            ) : outOfStock ? (
               <span className="inline-flex items-center gap-1.5">
-                <ShoppingBag className="h-4 w-4" />
-                {t("addToCart")}
+                <Heart className="h-4 w-4" />
+                {t("addToWishlist")}
               </span>
-              {showLowStock && (
-                <LowStockHint count={stock} compact className="text-white/90" />
-              )}
-            </span>
-          )}
-        </Button>
+            ) : (
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShoppingBag className="h-4 w-4" />
+                  {t("addToCart")}
+                </span>
+                {showLowStock && (
+                  <LowStockHint count={stock} compact className="text-white/90" />
+                )}
+              </span>
+            )}
+          </Button>
         )}
       </div>
     </motion.article>

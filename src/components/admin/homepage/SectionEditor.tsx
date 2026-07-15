@@ -42,7 +42,11 @@ export function HeroSliderEditor({ config, onChange, accessToken }: EditorProps)
     title: string;
     subtitle: string;
     image: string;
+    eyebrow?: string;
+    floatCardTitle?: string;
+    floatCardSubtitle?: string;
     cta?: { label: string; href: string };
+    secondaryCta?: { label: string; href: string };
     productLink?: string;
   }>) ?? [];
 
@@ -60,7 +64,9 @@ export function HeroSliderEditor({ config, onChange, accessToken }: EditorProps)
           title: "Shop the collection",
           subtitle: "Discover bestsellers with free shipping on orders over $100.",
           image: "",
+          eyebrow: "NEW SEASON",
           cta: { label: "Shop Now", href: "/products" },
+          secondaryCta: { label: "Explore Collections", href: "/new-arrivals" },
         },
       ],
     });
@@ -93,6 +99,63 @@ export function HeroSliderEditor({ config, onChange, accessToken }: EditorProps)
         />
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Floating offer title (on image)"
+          value={(config.floatCardTitle as string) ?? ""}
+          onChange={(v) => onChange({ ...config, floatCardTitle: v })}
+        />
+        <Field
+          label="Floating offer subtitle"
+          value={(config.floatCardSubtitle as string) ?? ""}
+          onChange={(v) => onChange({ ...config, floatCardSubtitle: v })}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <Label className="font-semibold">Hero trust points (below CTAs)</Label>
+        {((config.trustPoints as Array<{ icon: string; label: string }>) ?? []).map(
+          (point, i) => (
+            <div key={i} className="grid gap-3 rounded-[var(--radius-md)] border border-border p-3 sm:grid-cols-2">
+              <Field
+                label={`Point ${i + 1} icon`}
+                value={point.icon ?? ""}
+                onChange={(v) => {
+                  const trustPoints = [...((config.trustPoints as typeof point[]) ?? [])];
+                  trustPoints[i] = { ...trustPoints[i], icon: v };
+                  onChange({ ...config, trustPoints });
+                }}
+              />
+              <Field
+                label={`Point ${i + 1} label`}
+                value={point.label ?? ""}
+                onChange={(v) => {
+                  const trustPoints = [...((config.trustPoints as typeof point[]) ?? [])];
+                  trustPoints[i] = { ...trustPoints[i], label: v };
+                  onChange({ ...config, trustPoints });
+                }}
+              />
+            </div>
+          )
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            onChange({
+              ...config,
+              trustPoints: [
+                ...((config.trustPoints as Array<{ icon: string; label: string }>) ?? []),
+                { icon: "truck", label: "Free Shipping" },
+              ],
+            })
+          }
+        >
+          <Plus className="h-4 w-4" /> Add trust point
+        </Button>
+      </div>
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <Label className="text-body font-semibold">Banner slides</Label>
@@ -111,6 +174,11 @@ export function HeroSliderEditor({ config, onChange, accessToken }: EditorProps)
               )}
             </div>
             <Field label="Headline" value={slide.title} onChange={(v) => updateSlide(i, { title: v })} />
+            <Field
+              label="Eyebrow label (overrides global badge for this slide)"
+              value={slide.eyebrow ?? ""}
+              onChange={(v) => updateSlide(i, { eyebrow: v })}
+            />
             <Field
               label="Supporting text"
               value={slide.subtitle}
@@ -146,6 +214,44 @@ export function HeroSliderEditor({ config, onChange, accessToken }: EditorProps)
                 onChange={(v) =>
                   updateSlide(i, { cta: { label: slide.cta?.label ?? "Shop", href: v } })
                 }
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Secondary CTA label"
+                value={slide.secondaryCta?.label ?? ""}
+                onChange={(v) =>
+                  updateSlide(i, {
+                    secondaryCta: {
+                      label: v,
+                      href: slide.secondaryCta?.href ?? "/new-arrivals",
+                    },
+                  })
+                }
+              />
+              <Field
+                label="Secondary CTA link"
+                value={slide.secondaryCta?.href ?? ""}
+                onChange={(v) =>
+                  updateSlide(i, {
+                    secondaryCta: {
+                      label: slide.secondaryCta?.label ?? "Explore",
+                      href: v,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Floating offer title (this slide)"
+                value={slide.floatCardTitle ?? ""}
+                onChange={(v) => updateSlide(i, { floatCardTitle: v })}
+              />
+              <Field
+                label="Floating offer subtitle (this slide)"
+                value={slide.floatCardSubtitle ?? ""}
+                onChange={(v) => updateSlide(i, { floatCardSubtitle: v })}
               />
             </div>
           </div>
@@ -273,12 +379,18 @@ export function CategoryShowcaseEditor({ config, onChange, accessToken }: Editor
         value={(config.title as string) ?? ""}
         onChange={(v) => onChange({ ...config, title: v })}
       />
-      <Field
-        label="Subtitle"
-        value={(config.subtitle as string) ?? ""}
-        onChange={(v) => onChange({ ...config, subtitle: v })}
-        multiline
-      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="View all link label"
+          value={(config.viewAllLabel as string) ?? ""}
+          onChange={(v) => onChange({ ...config, viewAllLabel: v })}
+        />
+        <Field
+          label="View all link URL"
+          value={(config.viewAllHref as string) ?? ""}
+          onChange={(v) => onChange({ ...config, viewAllHref: v })}
+        />
+      </div>
 
       <div className="space-y-2">
         <Label>Category selection</Label>
@@ -441,6 +553,17 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
         onChange={(v) => onChange({ ...config, subtitle: v })}
         multiline
       />
+      <Field
+        label="Countdown label (e.g. Ends in)"
+        value={(config.endsInLabel as string) ?? ""}
+        onChange={(v) => onChange({ ...config, endsInLabel: v })}
+      />
+      <Field
+        label="Empty state message (when no products)"
+        value={(config.emptyMessage as string) ?? ""}
+        onChange={(v) => onChange({ ...config, emptyMessage: v })}
+        multiline
+      />
       <div className="space-y-1.5">
         <Label>Countdown anchor (optional)</Label>
         <Input
@@ -516,6 +639,194 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
   );
 }
 
+export function PromoGridEditor({ config, onChange, accessToken }: EditorProps) {
+  const tiles = (config.tiles as Array<{
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    image?: string;
+    variant?: string;
+  }>) ?? [];
+
+  const updateTile = (index: number, patch: Partial<(typeof tiles)[0]>) => {
+    onChange({
+      ...config,
+      tiles: tiles.map((t, i) => (i === index ? { ...t, ...patch } : t)),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Field label="Section title" value={(config.sectionTitle as string) ?? ""} onChange={(v) => onChange({ ...config, sectionTitle: v })} />
+      <Field label="Section subtitle" value={(config.sectionSubtitle as string) ?? ""} onChange={(v) => onChange({ ...config, sectionSubtitle: v })} multiline />
+      {tiles.map((tile, i) => (
+        <div key={i} className="space-y-3 rounded-[var(--radius-md)] border border-border p-4">
+          <Label className="font-semibold">Promo card {i + 1}</Label>
+          <Field label="Eyebrow" value={tile.eyebrow ?? ""} onChange={(v) => updateTile(i, { eyebrow: v })} />
+          <Field label="Title" value={tile.title ?? ""} onChange={(v) => updateTile(i, { title: v })} />
+          <Field label="Subtitle" value={tile.subtitle ?? ""} onChange={(v) => updateTile(i, { subtitle: v })} multiline />
+          <Field
+            label="Style (lavender, cream, mint)"
+            value={tile.variant ?? "lavender"}
+            onChange={(v) => updateTile(i, { variant: v })}
+          />
+          <ImageUpload
+            label="Product image"
+            value={tile.image ?? ""}
+            onChange={(url) => updateTile(i, { image: url })}
+            accessToken={accessToken}
+            folder="homepage/promo"
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="CTA label" value={tile.ctaLabel ?? ""} onChange={(v) => updateTile(i, { ctaLabel: v })} />
+            <Field label="CTA link" value={tile.ctaHref ?? ""} onChange={(v) => updateTile(i, { ctaHref: v })} />
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange({
+            ...config,
+            tiles: [
+              ...tiles,
+              {
+                eyebrow: "Limited time",
+                title: "Summer Sale",
+                subtitle: "Save up to 40% on selected essentials.",
+                ctaLabel: "Shop the Sale",
+                ctaHref: "/deals",
+                variant: "lavender",
+                image: "",
+              },
+            ],
+          })
+        }
+      >
+        <Plus className="h-4 w-4" /> Add promo card
+      </Button>
+    </div>
+  );
+}
+
+export function ProductSliderEditor({ config, onChange, accessToken }: EditorProps) {
+  const mode = (config.selectionMode as string) ?? "auto";
+  const productLinks = (config.productLinks as string[]) ?? [];
+  const preset = (config.preset as string) ?? "bestsellers";
+
+  return (
+    <div className="space-y-4">
+      <Field label="Section title" value={(config.title as string) ?? ""} onChange={(v) => onChange({ ...config, title: v })} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="View all label" value={(config.viewAllLabel as string) ?? ""} onChange={(v) => onChange({ ...config, viewAllLabel: v })} />
+        <Field label="View all URL" value={(config.viewAllHref as string) ?? ""} onChange={(v) => onChange({ ...config, viewAllHref: v })} />
+      </div>
+      <Field label="Empty state message (when no products)" value={(config.emptyMessage as string) ?? ""} onChange={(v) => onChange({ ...config, emptyMessage: v })} multiline />
+      <div className="space-y-2">
+        <Label>Product preset</Label>
+        <div className="flex flex-wrap gap-2">
+          {(["bestsellers", "new_arrivals", "deals", "featured"] as const).map((p) => (
+            <Button
+              key={p}
+              type="button"
+              size="sm"
+              variant={preset === p ? "primary" : "outline"}
+              onClick={() => onChange({ ...config, preset: p })}
+            >
+              {p.replace("_", " ")}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="showNewBadge"
+          checked={Boolean(config.showNewBadge)}
+          onChange={(e) => onChange({ ...config, showNewBadge: e.target.checked })}
+        />
+        <Label htmlFor="showNewBadge">Show NEW badge on product cards</Label>
+      </div>
+      <div className="space-y-2">
+        <Label>Product selection</Label>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant={mode === "auto" ? "primary" : "outline"} onClick={() => onChange({ ...config, selectionMode: "auto" })}>
+            Auto
+          </Button>
+          <Button type="button" size="sm" variant={mode === "manual" ? "primary" : "outline"} onClick={() => onChange({ ...config, selectionMode: "manual" })}>
+            Manual
+          </Button>
+        </div>
+      </div>
+      {mode === "auto" ? (
+        <Field label="Product limit" value={String((config.limit as number) ?? 8)} onChange={(v) => onChange({ ...config, limit: parseInt(v) || 8 })} />
+      ) : (
+        <LinkListPicker
+          label="Slider products"
+          links={productLinks}
+          onChange={(links) => onChange({ ...config, productLinks: links, selectionMode: "manual" })}
+          accessToken={accessToken}
+          type="product"
+        />
+      )}
+    </div>
+  );
+}
+
+export function BrandStripEditor({ config, onChange }: Omit<EditorProps, "accessToken">) {
+  return (
+    <div className="space-y-4">
+      <Field label="Section title" value={(config.title as string) ?? ""} onChange={(v) => onChange({ ...config, title: v })} />
+      <p className="text-[12px] text-muted-foreground">
+        Brand logos are loaded automatically from your Brands catalog (up to 12).
+      </p>
+    </div>
+  );
+}
+
+export function ValuePropositionEditor({ config, onChange }: Omit<EditorProps, "accessToken">) {
+  const items = (config.items as Array<{ title: string; description: string }>) ?? [];
+
+  const updateItem = (index: number, patch: Partial<(typeof items)[0]>) => {
+    onChange({
+      ...config,
+      items: items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Field label="Eyebrow" value={(config.eyebrow as string) ?? ""} onChange={(v) => onChange({ ...config, eyebrow: v })} />
+      <Field label="Title" value={(config.title as string) ?? ""} onChange={(v) => onChange({ ...config, title: v })} />
+      <Field label="Subtitle" value={(config.subtitle as string) ?? ""} onChange={(v) => onChange({ ...config, subtitle: v })} multiline />
+      {items.map((item, i) => (
+        <div key={i} className="space-y-3 rounded-[var(--radius-md)] border border-border p-4">
+          <Label>Item {i + 1}</Label>
+          <Field label="Title" value={item.title} onChange={(v) => updateItem(i, { title: v })} />
+          <Field label="Description" value={item.description} onChange={(v) => updateItem(i, { description: v })} multiline />
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange({
+            ...config,
+            items: [...items, { title: "Curated quality", description: "Handpicked products you can trust." }],
+          })
+        }
+      >
+        <Plus className="h-4 w-4" /> Add item
+      </Button>
+    </div>
+  );
+}
+
 export function renderSectionEditor(
   type: string,
   props: EditorProps
@@ -531,6 +842,14 @@ export function renderSectionEditor(
       return <CategoryShowcaseEditor {...props} />;
     case "promo_banner":
       return <PromoBannerEditor {...props} />;
+    case "promo_grid":
+      return <PromoGridEditor {...props} />;
+    case "product_slider":
+      return <ProductSliderEditor {...props} />;
+    case "brand_strip":
+      return <BrandStripEditor config={props.config} onChange={props.onChange} />;
+    case "value_proposition":
+      return <ValuePropositionEditor config={props.config} onChange={props.onChange} />;
     case "newsletter":
       return <NewsletterEditor config={props.config} onChange={props.onChange} />;
     case "flash_sale":

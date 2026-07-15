@@ -17,6 +17,7 @@ export interface ProductCardData {
   featured?: boolean;
   onSale?: boolean;
   flashSale?: boolean;
+  isNewArrival?: boolean;
   hasVariants?: boolean;
   variantOptions?: VariantOptionGroup[];
   variants?: ProductVariantInput[];
@@ -68,6 +69,7 @@ export function toProductCardData(
     featured: Boolean(p.featured),
     onSale: Boolean(p.onSale),
     flashSale: Boolean(p.flashSale),
+    isNewArrival: Boolean(p.isNewArrival),
     hasVariants: variants.length > 0,
     variantOptions: variants.length
       ? ((p.variantOptions as unknown[]) ?? []).map((g) => {

@@ -84,8 +84,7 @@ export interface PlaceOrderTelegramContext {
   country?: string;
   paymentMethod?: string;
   shippingMethod?: string;
-  total?: number;
-  currency?: string;
+  totalDisplay?: string;
   itemCount?: number;
   itemsSummary?: string;
   path?: string;
@@ -132,14 +131,7 @@ export function formatPlaceOrderTelegramMessage(
   message += "\n<b>Order</b>\n";
   message += line("Payment method", ctx.paymentMethod);
   message += line("Shipping method", ctx.shippingMethod);
-  message += line(
-    "Total",
-    ctx.total != null && ctx.currency
-      ? `${ctx.total} ${ctx.currency}`
-      : ctx.total != null
-        ? String(ctx.total)
-        : undefined
-  );
+  message += line("Total", ctx.totalDisplay);
   message += line("Items", ctx.itemCount);
   if (ctx.itemsSummary) {
     message += line("Cart", ctx.itemsSummary);

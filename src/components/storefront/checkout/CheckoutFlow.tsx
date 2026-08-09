@@ -303,8 +303,7 @@ export function CheckoutFlow() {
         country: form.country.trim() || undefined,
         paymentMethod: form.paymentMethod,
         shippingMethod: form.shippingMethod,
-        total: totalUsd,
-        currency,
+        totalDisplay: totalFmt,
         itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
         itemsSummary: items
           .map((i) => `${i.quantity}x ${i.name}`)

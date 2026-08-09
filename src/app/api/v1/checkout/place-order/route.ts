@@ -20,8 +20,7 @@ interface PlaceOrderPayload {
   country?: string;
   paymentMethod?: string;
   shippingMethod?: string;
-  total?: number;
-  currency?: string;
+  totalDisplay?: string;
   itemCount?: number;
   itemsSummary?: string;
   path?: string;
@@ -60,8 +59,7 @@ export async function POST(request: NextRequest) {
     country: payload.country?.trim() || undefined,
     paymentMethod: payload.paymentMethod?.trim() || undefined,
     shippingMethod: payload.shippingMethod?.trim() || undefined,
-    total: payload.total,
-    currency: payload.currency?.trim() || undefined,
+    totalDisplay: payload.totalDisplay?.trim() || undefined,
     itemCount: payload.itemCount,
     itemsSummary: payload.itemsSummary?.trim() || undefined,
     path: payload.path,

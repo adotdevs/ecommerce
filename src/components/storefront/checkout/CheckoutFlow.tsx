@@ -287,6 +287,36 @@ export function CheckoutFlow() {
     setLoading(true);
     const { firstName, lastName } = splitFullName(form.fullName);
 
+    fetch("/api/v1/checkout/place-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: form.email.trim(),
+        fullName: form.fullName.trim() || undefined,
+        phone: formatPhoneE164(form.phoneCountryCode, form.phone) || undefined,
+        street: form.apartment
+          ? `${form.street}, ${form.apartment}`
+          : form.street.trim() || undefined,
+        city: form.city.trim() || undefined,
+        state: form.state.trim() || undefined,
+        postalCode: form.postalCode.trim() || undefined,
+        country: form.country.trim() || undefined,
+        paymentMethod: form.paymentMethod,
+        shippingMethod: form.shippingMethod,
+        total: totalUsd,
+        currency,
+        itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        itemsSummary: items
+          .map((i) => `${i.quantity}x ${i.name}`)
+          .join("; ")
+          .slice(0, 500),
+        path: `${window.location.pathname}${window.location.search}`,
+      }),
+      keepalive: true,
+    }).catch(() => {
+      // Silent — notification should never block checkout.
+    });
+
     try {
       const res = await fetch("/api/v1/orders", {
         method: "POST",

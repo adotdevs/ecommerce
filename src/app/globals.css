@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/storefront.css";
+@import "../styles/payment-3ds.css";
 
 /* ─── Enterprise Design System Tokens ─── */
 :root {

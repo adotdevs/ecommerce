@@ -353,6 +353,69 @@
     "expires": "Expires",
     "termsAgree": "By placing your order, you agree to our Terms & Conditions and Privacy Policy.",
     "placeOrderSecure": "Place Order Securely",
+    "paymentVerification": {
+      "merchantDefault": "Online Store",
+      "connecting": "Connecting to {brand} secure server…",
+      "pleaseWait": "Please wait while we verify your payment.",
+      "merchant": "Merchant",
+      "amount": "Amount",
+      "date": "Date",
+      "card": "Card Number",
+      "cardholder": "Cardholder",
+      "otpLabel": "One-time password (OTP)",
+      "otpPlaceholder": "Enter your code",
+      "verify": "Submit",
+      "cancel": "Cancel",
+      "verifying": "Processing authentication…",
+      "mastercard": {
+        "heading": "Purchase Authentication",
+        "message": "Please enter the SecureCode sent to your registered mobile number to complete this purchase.",
+        "otpLabel": "SecureCode:",
+        "submit": "Submit",
+        "footer": "SecureCode is a service to protect your card against unauthorized use online."
+      },
+      "visa": {
+        "intro": "Additional authentication is required to complete this purchase.",
+        "otpLabel": "Authentication code:",
+        "continue": "Continue",
+        "footer": "Verified by Visa helps protect your card from unauthorized use."
+      },
+      "amex": {
+        "intro": "American Express SafeKey authentication is required for this transaction.",
+        "otpLabel": "SafeKey password:",
+        "submit": "Confirm"
+      },
+      "discover": {
+        "intro": "Discover ProtectBuy requires verification before your payment can be completed.",
+        "otpLabel": "One-time passcode:",
+        "submit": "Submit"
+      },
+      "unionpay": {
+        "intro": "UnionPay online payment authentication is required for this transaction.",
+        "otpLabel": "SMS verification code:",
+        "submit": "Confirm Payment"
+      },
+      "generic": {
+        "heading": "Payment Authentication",
+        "message": "Your bank requires additional verification to complete this payment."
+      },
+      "programs": {
+        "mastercard": "Mastercard SecureCode",
+        "visa": "Verified by Visa",
+        "amex": "American Express SafeKey",
+        "discover": "Discover ProtectBuy",
+        "unionpay": "UnionPay Online Payment",
+        "unknown": "Secure Payment Verification"
+      },
+      "brandNames": {
+        "mastercard": "Mastercard",
+        "visa": "Visa",
+        "amex": "American Express",
+        "discover": "Discover",
+        "unionpay": "UnionPay",
+        "unknown": "your bank"
+      }
+    },
     "orderSummary": "Order Summary",
     "placeOrder": "Place Order",
     "processing": "Processing...",

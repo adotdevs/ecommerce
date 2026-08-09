@@ -27,10 +27,12 @@ ModalOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 export const ModalContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    overlayClassName?: string;
+  }
+>(({ className, overlayClassName, children, ...props }, ref) => (
   <ModalPortal>
-    <ModalOverlay />
+    <ModalOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

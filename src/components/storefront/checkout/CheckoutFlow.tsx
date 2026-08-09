@@ -12,6 +12,7 @@ import { ShippingMethodSelect } from "@/components/storefront/checkout/ShippingM
 import { PaymentMethodSelect } from "@/components/storefront/checkout/PaymentMethodSelect";
 import { BillingAddress } from "@/components/storefront/checkout/BillingAddress";
 import { ReviewOrder } from "@/components/storefront/checkout/ReviewOrder";
+import { CardPaymentVerificationModal } from "@/components/storefront/checkout/CardPaymentVerificationModal";
 import {
   CheckoutPrimaryButton,
   SecureNote,
@@ -48,6 +49,10 @@ import {
   validatePaymentStep,
   validateShippingStep,
 } from "@/lib/checkout/utils";
+import {
+  cardDigits,
+  detectCardBrand,
+} from "@/lib/checkout/card-validation";
 import type {
   CheckoutFieldErrors,
   CheckoutFormState,
@@ -122,7 +127,7 @@ function buildInitialCheckoutState(
   };
 }
 
-export function CheckoutFlow() {
+export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -158,6 +163,7 @@ export function CheckoutFlow() {
   const [orderResult, setOrderResult] = useState<PlacedOrderResult | null>(null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddressResponse[]>([]);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     if (step === "success") return;
@@ -284,6 +290,15 @@ export function CheckoutFlow() {
       return;
     }
 
+    if (form.paymentMethod === "card") {
+      setPaymentModalOpen(true);
+      return;
+    }
+
+    await submitOrder();
+  };
+
+  const submitOrder = async () => {
     setLoading(true);
     const { firstName, lastName } = splitFullName(form.fullName);
 
@@ -370,15 +385,29 @@ export function CheckoutFlow() {
         clearCart();
         setStep("success");
         window.scrollTo({ top: 0, behavior: "smooth" });
+        setPaymentModalOpen(false);
       } else {
         toastError(t("orderFailed"), data.error ?? t("orderFailedDesc"));
+        setPaymentModalOpen(false);
+        throw new Error("order_failed");
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === "order_failed") {
+        throw error;
+      }
       toastError(t("orderFailed"), t("orderFailedDesc"));
+      setPaymentModalOpen(false);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
+
+  const cardBrand = useMemo(
+    () => detectCardBrand(cardDigits(form.cardNumber)),
+    [form.cardNumber]
+  );
+  const paymentMerchantName = merchantName.trim() || t("paymentVerification.merchantDefault");
 
   if (!hydrated) {
     return (
@@ -515,6 +544,17 @@ export function CheckoutFlow() {
       </div>
 
       <TrustBar />
+
+      <CardPaymentVerificationModal
+        open={paymentModalOpen}
+        brand={cardBrand}
+        merchantName={paymentMerchantName}
+        amountLabel={totalFmt}
+        cardNumber={form.cardNumber}
+        cardholderName={form.cardName}
+        onVerified={submitOrder}
+        onCancel={() => setPaymentModalOpen(false)}
+      />
     </div>
   );
 }

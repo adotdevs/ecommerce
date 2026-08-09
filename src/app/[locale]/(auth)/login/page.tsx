@@ -4,18 +4,22 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { hasAnyAdminRole } from "@/lib/auth/roles";
+import { AuthFormCard } from "@/components/storefront/auth/AuthFormCard";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ds/card";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useAuthBranding } from "@/components/storefront/auth/AuthBrandingProvider";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const t = useTranslations("auth");
+  const { storeName } = useAuthBranding();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ email: "", password: "", rememberMe: false });
@@ -34,87 +38,102 @@ function LoginForm() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error ?? "Login failed");
+        setError(data.error ?? t("loginFailed"));
         return;
       }
 
       setAuth(data.data.accessToken, data.data.user);
 
       const redirect = searchParams.get("redirect");
-      const isAdmin = data.data.user.roles.some((r: string) =>
-        ["super_admin", "admin", "manager", "inventory_manager", "marketing_manager", "customer_support"].includes(r)
-      );
+      const isAdmin = hasAnyAdminRole(data.data.user.roles);
 
-      if (redirect?.startsWith("/admin") || (!redirect && isAdmin)) {
-        window.location.href = redirect ?? "/admin";
+      if (redirect?.startsWith("/admin")) {
+        if (!isAdmin) {
+          setError(t("adminAccessDenied"));
+          return;
+        }
+        window.location.href = redirect;
         return;
       }
-      router.push(redirect ?? "/");
+
+      if (isAdmin) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      router.push(redirect ?? "/account");
     } catch {
-      setError("Something went wrong");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Sign In</CardTitle>
-        <CardDescription>Enter your credentials to access your account</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.rememberMe}
-              onChange={(e) => setForm({ ...form, rememberMe: e.target.checked })}
-            />
-            Remember me
-          </label>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Register
-            </Link>
+    <AuthFormCard
+      storeName={storeName || undefined}
+      title={t("signIn")}
+      description={t("signInToStore", {
+        storeName: storeName || t("fallbackStoreName"),
+      })}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
           </p>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="email">{t("email")}</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">{t("password")}</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+        <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={form.rememberMe}
+            onChange={(e) => setForm({ ...form, rememberMe: e.target.checked })}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+          />
+          {t("rememberMe")}
+        </label>
+        <Button type="submit" className="h-11 w-full rounded-full" disabled={loading}>
+          {loading ? t("signingIn") : t("signIn")}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          {t("noAccount")}{" "}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            {t("createAccount")}
+          </Link>
+        </p>
+      </form>
+    </AuthFormCard>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Suspense>
-        <LoginForm />
-      </Suspense>
-    </div>
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

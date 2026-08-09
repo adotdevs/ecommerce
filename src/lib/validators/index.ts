@@ -223,4 +223,5 @@ export const checkoutSchema = z.object({
     .default("standard"),
   promoCode: z.string().max(32).optional(),
   notes: z.string().optional(),
+  saveAddress: z.boolean().optional(),
 });

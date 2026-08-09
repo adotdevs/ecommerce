@@ -23,6 +23,7 @@ import { VariantQuickAddModal } from "@/components/storefront/products/VariantQu
 import { isLowStock } from "@/lib/inventory/stock";
 import type { ProductCardData } from "@/lib/catalog/product-card";
 import { isProductCardInStock } from "@/lib/catalog/product-card";
+import { formatCategoryName } from "@/lib/utils";
 
 interface ProductCardProps {
   product: ProductCardData;
@@ -63,7 +64,9 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
 
   const subtitleParts = [
-    product.categoryNames?.[0],
+    product.categoryNames?.[0]
+      ? formatCategoryName(product.categoryNames[0])
+      : undefined,
     product.brandName,
   ].filter(Boolean);
 

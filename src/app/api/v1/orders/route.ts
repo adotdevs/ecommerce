@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
 import { Order, Product, PromoCode } from "@/models";
 import { getAuthUser } from "@/lib/auth/session";
+import { isCustomerUser } from "@/lib/auth/roles";
+import { saveCheckoutAddressForUser } from "@/lib/customer/save-checkout-address";
 import { checkoutSchema } from "@/lib/validators";
 import { generateOrderNumber } from "@/lib/utils";
 import { apiSuccess, apiError } from "@/lib/api/response";
@@ -163,6 +165,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (
+      user &&
+      isCustomerUser(user.roles) &&
+      (parsed.data.saveAddress ?? body.saveAddress)
+    ) {
+      await saveCheckoutAddressForUser(
+        user.id,
+        parsed.data.shippingAddress ?? shippingAddress
+      );
+    }
+
     return apiSuccess(order, 201);
   } catch (err) {
     console.error(err);
@@ -177,6 +190,9 @@ export async function GET(request: NextRequest) {
   await connectDB();
   const user = getAuthUser(request);
   if (!user) return apiError("Unauthorized", 401);
+  if (!isCustomerUser(user.roles)) {
+    return apiError("Customer account required", 403);
+  }
 
   const orders = await Order.find({ userId: user.id })
     .sort({ createdAt: -1 })

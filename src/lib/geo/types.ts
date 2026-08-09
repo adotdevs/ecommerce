@@ -4,6 +4,12 @@ export interface GeoPreferences {
   locale: string;
 }
 
+export interface GeoProbe {
+  source: string;
+  countryCode: string;
+  currency?: string;
+}
+
 export interface IpApiResult {
   status: string;
   countryCode?: string;

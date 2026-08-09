@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ds/input";
 import { cn } from "@/components/ds/utils";
+import { formatCategoryName } from "@/lib/utils";
 
 export interface CatalogFacetOption {
   name: string;
@@ -280,7 +281,7 @@ export function CatalogFilters({
                 }
               >
                 {current.category === c.name && <Check className="h-3.5 w-3.5" />}
-                {c.name}
+                {formatCategoryName(c.name)}
               </button>
             ))}
           </FilterDropdown>
@@ -658,7 +659,7 @@ export function CatalogFilters({
                           })
                         }
                       >
-                        {c.name}
+                        {formatCategoryName(c.name)}
                       </button>
                     ))}
                   </div>

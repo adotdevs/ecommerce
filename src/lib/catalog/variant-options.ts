@@ -240,6 +240,90 @@ const APPAREL_SIZE_ADJUST: Record<string, number> = {
   "3xl": 12,
 };
 
+const PACK_OR_COUNT_GROUP_RE =
+  /pack|bundle|quantity|count|servings?|capsules?|softgels?|tablets?|gummies?|units?|qty|amount|size/i;
+
+/** Extract numeric quantity from option value/label (e.g. "2-pack", "120 count", "3 Pack"). */
+export function extractQuantityFromOption(value: string, label = ""): number {
+  const text = `${value} ${label}`.toLowerCase().replace(/_/g, " ");
+  const pack = text.match(/(\d+)\s*[- ]?\s*pack/);
+  if (pack) return Math.max(1, parseInt(pack[1], 10));
+  const count = text.match(
+    /(\d+)\s*(?:count|ct|caps|capsules|softgels|tablets|gummies|servings|units|pills|pcs|pieces|minigels)/i
+  );
+  if (count) return Math.max(1, parseInt(count[1], 10));
+  const xMult = text.match(/x\s*(\d+)/);
+  if (xMult) return Math.max(1, parseInt(xMult[1], 10));
+  const leading = text.match(/^(\d+)$/);
+  if (leading) return Math.max(1, parseInt(leading[1], 10));
+  const embedded = text.match(/(\d+)/);
+  if (embedded) return Math.max(1, parseInt(embedded[1], 10));
+  return 1;
+}
+
+export function isPackOrCountGroup(group: VariantOptionGroup): boolean {
+  const name = group.name.toLowerCase();
+  if (PACK_OR_COUNT_GROUP_RE.test(name)) return true;
+  return group.values.some((v) => {
+    const text = `${v.value} ${v.label}`.toLowerCase();
+    return /pack|count|ct|capsule|softgel|tablet|gummy|serving/i.test(text);
+  });
+}
+
+function isMultipackGroup(group: VariantOptionGroup): boolean {
+  const name = group.name.toLowerCase();
+  if (/pack|bundle/i.test(name)) return true;
+  return group.values.every((v) =>
+    /pack|bundle/i.test(`${v.value} ${v.label}`.toLowerCase())
+  );
+}
+
+function packBundleDiscount(qty: number): number {
+  if (qty <= 1) return 1;
+  if (qty === 2) return 0.92;
+  if (qty === 3) return 0.88;
+  return Math.max(0.78, 1 - qty * 0.035);
+}
+
+function scaleQuantityPrice(
+  basePrice: number,
+  qty: number,
+  baseQty: number,
+  multipack: boolean
+): number {
+  if (qty <= 0 || baseQty <= 0) return basePrice;
+  if (multipack) {
+    return Math.round(basePrice * qty * packBundleDiscount(qty) * 100) / 100;
+  }
+  if (qty === baseQty) return basePrice;
+  const ratio = qty / baseQty;
+  return Math.round(basePrice * Math.pow(ratio, 0.88) * 100) / 100;
+}
+
+function quantityScaledPrice(
+  basePrice: number,
+  attributes: Record<string, string>,
+  groups: VariantOptionGroup[]
+): number | null {
+  for (const [key, val] of Object.entries(attributes)) {
+    const group = groups.find((g) => defaultAttributeKey(g) === key);
+    if (!group || !isPackOrCountGroup(group)) continue;
+
+    const label = group.values.find((v) => v.value === val)?.label ?? "";
+    const qty = extractQuantityFromOption(val, label);
+    const baseQty = Math.min(
+      ...group.values.map((v) => extractQuantityFromOption(v.value, v.label))
+    );
+    return scaleQuantityPrice(
+      basePrice,
+      qty,
+      baseQty,
+      isMultipackGroup(group)
+    );
+  }
+  return null;
+}
+
 export function suggestVariantPrice(
   basePrice: number,
   attributes: Record<string, string>,
@@ -247,11 +331,14 @@ export function suggestVariantPrice(
 ): number {
   if (!basePrice || basePrice <= 0) return 0;
 
+  const quantityPrice = quantityScaledPrice(basePrice, attributes, groups);
+  let price = quantityPrice ?? basePrice;
   let delta = 0;
 
   for (const [key, val] of Object.entries(attributes)) {
     const group = groups.find((g) => defaultAttributeKey(g) === key);
     if (!group) continue;
+    if (isPackOrCountGroup(group)) continue;
     const normalized = val.toLowerCase();
 
     switch (group.type) {
@@ -283,7 +370,7 @@ export function suggestVariantPrice(
     }
   }
 
-  return Math.max(0, Math.round((basePrice + delta) * 100) / 100);
+  return Math.max(0, Math.round((price + delta) * 100) / 100);
 }
 
 export function applySmartVariantPrices<T extends { price: number; compareAtPrice?: number; attributes: Record<string, string> }>(

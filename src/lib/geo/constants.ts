@@ -1,1 +1,1 @@
-export const GEO_COOKIE_VERSION = "2";
+export const GEO_COOKIE_VERSION = "3";

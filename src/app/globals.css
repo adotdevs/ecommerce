@@ -38,6 +38,8 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  /** Product photo area — matches card in light mode; light stage in dark mode for white-bg images */
+  --product-media-bg: var(--bg-elevated);
 }
 
 .dark {
@@ -73,6 +75,8 @@
   --border: var(--border-default);
   --input: var(--border-default);
   --ring: var(--brand-primary);
+  /** Neutral light stage so supplier photos (white JPEG bg) don't clash with dark cards */
+  --product-media-bg: #ffffff;
 }
 
 @theme inline {

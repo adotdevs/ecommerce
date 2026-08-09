@@ -101,6 +101,9 @@ export const countries: CountryConfig[] = [
   { code: "BR", name: "Brazil", flag: "🇧🇷", currency: "BRL", defaultLocale: "pt" },
   { code: "TR", name: "Turkey", flag: "🇹🇷", currency: "TRY", defaultLocale: "tr" },
   { code: "SG", name: "Singapore", flag: "🇸🇬", currency: "SGD", defaultLocale: "en" },
+  { code: "CH", name: "Switzerland", flag: "🇨🇭", currency: "CHF", defaultLocale: "de" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽", currency: "MXN", defaultLocale: "es" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦", currency: "ZAR", defaultLocale: "en" },
 ];
 
 export const currencies = [
@@ -128,6 +131,47 @@ export type CurrencyCode = (typeof currencies)[number]["code"];
 
 export function getCountryByCode(code: string): CountryConfig | undefined {
   return countries.find((c) => c.code === code);
+}
+
+export function getCountriesByCurrency(currency: string): CountryConfig[] {
+  return countries.filter((c) => c.currency === currency);
+}
+
+/** ISO country code for a currency's representative flag image. */
+export function getCurrencyCountryCode(code: string): string {
+  const matches = getCountriesByCurrency(code);
+  if (matches.length === 0) return "US";
+  const preferred =
+    matches.find((c) => c.code === "US") ??
+    [...matches].sort((a, b) => a.name.localeCompare(b.name))[0];
+  return preferred.code;
+}
+
+/** Representative flag for a currency (primary country that uses it). */
+export function getCurrencyFlag(code: string): string {
+  return getCountryByCode(getCurrencyCountryCode(code))?.flag ?? "💱";
+}
+
+/** Best country label for the active country + currency pair (handles stale store state). */
+export function resolveActiveCountry(
+  countryCode: string,
+  currency?: string
+): CountryConfig {
+  const byCode = getCountryByCode(countryCode);
+  if (byCode && (!currency || byCode.currency === currency)) return byCode;
+  if (currency) {
+    const byCurrency = countries.find((c) => c.currency === currency);
+    if (byCurrency) return byCurrency;
+  }
+  return byCode ?? countries[0];
+}
+
+export function getSortedCountries(): CountryConfig[] {
+  return [...countries].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getCurrencyMeta(code: string) {
+  return currencies.find((c) => c.code === code);
 }
 
 export function getCurrencyRate(code: string, rates?: Record<string, number>): number {

@@ -6,6 +6,9 @@ import {
   newOptionGroup,
   generateVariantsFromOptions,
   sanitizeOptionGroups,
+  applySmartVariantPrices,
+  defaultAttributeKey,
+  optionKey,
 } from "@/lib/catalog/variant-options";
 import { resolveColorHex } from "@/lib/catalog/color-hex";
 import {
@@ -141,6 +144,7 @@ export function inferOptionsFromName(
           id: `opt-pack-${Date.now().toString(36)}`,
           name: "Pack size",
           type: "custom",
+          attributeKey: "pack_size",
           values: [
             { value: "1-pack", label: "1 Pack" },
             { value: "2-pack", label: "2 Pack" },
@@ -342,6 +346,161 @@ function mapSpecifications(
     }));
 }
 
+/** Realistic USD anchor when AI returns generic pricing. */
+function estimateBasePriceFromName(name: string, categories?: string[]): number {
+  const hay = `${name} ${(categories ?? []).join(" ")}`.toLowerCase();
+
+  if (/iphone|galaxy s|pixel pro|flagship phone/i.test(hay)) return 899.99;
+  if (/phone|smartphone|galaxy|pixel/i.test(hay)) return 499.99;
+  if (/macbook|laptop|notebook/i.test(hay)) return 999.99;
+  if (/ipad|tablet/i.test(hay)) return 449.99;
+  if (/watch|airpods|earbuds|headphone|speaker/i.test(hay)) return 149.99;
+  if (/monitor|tv|television/i.test(hay)) return 349.99;
+  if (/shoe|sneaker|boot|footwear/i.test(hay)) return 89.99;
+  if (/jacket|coat|hoodie/i.test(hay)) return 79.99;
+  if (/shirt|dress|apparel|clothing/i.test(hay)) return 39.99;
+  if (/vitamin|supplement|softgel|capsule|gummy|probiotic|omega/i.test(hay))
+    return 24.99;
+  if (/protein|whey|collagen/i.test(hay)) return 34.99;
+  if (/furniture|sofa|chair/i.test(hay)) return 299.99;
+  if (/bag|backpack|wallet/i.test(hay)) return 59.99;
+
+  return 39.99;
+}
+
+function normalizeCompareAt(price: number, compareAt?: number): number | undefined {
+  if (compareAt != null && compareAt > price) {
+    return Math.round(compareAt * 100) / 100;
+  }
+  return Math.round(price * 1.33 * 100) / 100;
+}
+
+/** Map AI variantPrices attributes to the keys/values used by generated variants. */
+function normalizeVariantPriceAttributes(
+  raw: Record<string, string>,
+  groups: VariantOptionGroup[]
+): Record<string, string> {
+  const normalized: Record<string, string> = {};
+
+  for (const [rawKey, rawVal] of Object.entries(raw)) {
+    const keyLower = rawKey.toLowerCase().trim();
+    const valStr = String(rawVal).trim();
+    const valLower = valStr.toLowerCase();
+
+    const group = groups.find((g) => {
+      const attrKey = defaultAttributeKey(g);
+      return (
+        attrKey === keyLower ||
+        optionKey(g.name) === keyLower.replace(/\s+/g, "_") ||
+        g.name.toLowerCase() === keyLower
+      );
+    });
+
+    if (!group) {
+      normalized[rawKey] = valLower.replace(/\s+/g, "-");
+      continue;
+    }
+
+    const attrKey = defaultAttributeKey(group);
+    const match = group.values.find(
+      (v) =>
+        v.value === valLower ||
+        v.value === valStr.toLowerCase().replace(/\s+/g, "-") ||
+        v.label.toLowerCase() === valLower
+    );
+    normalized[attrKey] = match?.value ?? valLower.replace(/\s+/g, "-");
+  }
+
+  return normalized;
+}
+
+function applyAiVariantPrices(
+  variants: FullProductSuggestion["variants"],
+  variantPrices: AiFullResponse["variantPrices"],
+  groups: VariantOptionGroup[]
+) {
+  if (!variantPrices?.length) return variants;
+
+  const priceMap = new Map(
+    variantPrices.map((vp) => [
+      JSON.stringify(normalizeVariantPriceAttributes(vp.attributes ?? {}, groups)),
+      vp,
+    ])
+  );
+
+  return variants.map((v) => {
+    const vp = priceMap.get(JSON.stringify(v.attributes));
+    if (!vp) return v;
+    return {
+      ...v,
+      price: Number(vp.price) || v.price,
+      compareAtPrice: vp.compareAtPrice
+        ? Number(vp.compareAtPrice)
+        : v.compareAtPrice,
+      stock: vp.stock != null ? Number(vp.stock) : v.stock,
+    };
+  });
+}
+
+function enforceDistinctVariantPrices(
+  variants: FullProductSuggestion["variants"],
+  basePrice: number,
+  compareAt: number | undefined,
+  groups: VariantOptionGroup[]
+) {
+  if (variants.length <= 1 || !groups.length) return variants;
+
+  const distinct = new Set(variants.map((v) => v.price));
+  if (distinct.size > 1) return variants;
+
+  return applySmartVariantPrices(variants, basePrice, compareAt, groups);
+}
+
+function buildProductAiSystemPrompt(): string {
+  return `You are a senior Amazon/e-commerce catalog manager. Return one JSON object with accurate, sellable product data.
+
+Schema:
+{
+  "name": string — full retail title, Title Case, brand + model + key specs,
+  "shortDescription": string — max 180 chars, compelling,
+  "description": string — 4-6 short paragraphs plus bullet highlights,
+  "highlights": string[] — 6-8 specific benefits,
+  "tags": string[] — 6-10 search keywords,
+  "seo": { "title", "description", "keywords": string[] },
+  "pricing": { "price": number, "compareAtPrice": number, "currency": "USD" },
+  "variantOptions": [] OR [{ "type", "name", "values": [{ "value", "label", "hex?" }] }],
+  "variantPrices": [{ "attributes": { key: value }, "price", "compareAtPrice", "stock" }],
+  "specifications": [{ "section", "key", "value" }] — MINIMUM 12 real specs,
+  "faqs": [{ "question", "answer" }] — 6-8 helpful Q&As,
+  "warranty": string,
+  "weight": number (kg)
+}
+
+VARIANT RULES (critical):
+- Ask: "Would a shopper choose this before buying?" If no → "variantOptions": [].
+- NEVER add Color for vitamins, supplements, softgels, food, drinks, medicine, books, software.
+- Supplements/vitamins: use Pack size (1/2/3 Pack) OR Count (30/60/120 count) — never fake colors.
+- Apparel: color + apparel_size. Footwear: color + shoe_size. Phones/laptops: color + capacity when realistic.
+- Color hex must be accurate when color is used.
+
+PRICING RULES (critical):
+- Use realistic US retail prices for this exact product category.
+- pricing.price = price of the SMALLEST/cheapest variant (1-pack or lowest count).
+- compareAtPrice = MSRP, typically 20-40% above price.
+- When variantOptions is non-empty, variantPrices is REQUIRED with one entry per variant combo.
+- Each variant MUST have a DIFFERENT price:
+  • Pack size: 1-pack = base, 2-pack ≈ base×1.85, 3-pack ≈ base×2.65 (bundle discount).
+  • Count: scale sub-linearly (120ct cheaper per unit than 60ct).
+  • Color/material/capacity: small realistic deltas.
+- variantPrices attributes keys MUST match option keys: pack_size, count, flavor, color, capacity, shoe_size, apparel_size.
+- variantPrices attribute values MUST match option values exactly (e.g. "1-pack" not "1 Pack").
+
+COPY RULES:
+- Be specific to the product — no generic filler.
+- Never use em dashes or en dashes. Use commas, periods, or hyphens.
+- Specifications must be factual for the product category (${SPEC_SECTIONS.join(", ")}).`;
+}
+
 async function openAiFullSuggest(
   input: ProductCopyInput,
   sku: string
@@ -354,35 +513,16 @@ async function openAiFullSuggest(
     .filter(Boolean)
     .join("\n");
 
+  const priceAnchor = estimateBasePriceFromName(input.name, input.categories);
+
   const parsed = await openAiChatJson<AiFullResponse>(
-    `You are an expert e-commerce catalog manager. Return complete product JSON:
-{
-  "name": string, full retail title with brand/model/key specs. Proper Title Case.
-  "shortDescription": string (max 200 chars),
-  "description": string (4-6 paragraphs + bullets),
-  "highlights": string[] (5-8),
-  "tags": string[],
-  "seo": { "title", "description", "keywords": string[] },
-  "pricing": { "price": number (USD), "compareAtPrice": number, "currency": "USD" },
-  "variantOptions": [] OR option groups shoppers actually choose for THIS product,
-  "variantPrices": [{ "attributes": { optionKey: value }, "price", "compareAtPrice", "stock" }],
-  "specifications": [{ "section", "key", "value" }], MINIMUM 12 category-appropriate specs (${SPEC_SECTIONS.join(", ")}),
-  "faqs": [{ "question", "answer" }], 6-8,
-  "warranty": string,
-  "weight": number (kg)
-}
-CRITICAL variantRules — think carefully before adding any option:
-- Ask: "Would a shopper pick this option for THIS exact product?" If unsure, use "variantOptions": [].
-- Empty variantOptions is correct for many products (single SKU): vitamins, supplements, softgels, food, groceries, books, software, services, one-size accessories.
-- NEVER invent Color / colour swatches for vitamins, supplements, medicine, food, drinks, or similar consumables.
-- Only add Color when the product is truly sold in different colors or finishes (apparel, shoes, phones, bags, cases, furniture).
-- Footwear: color + shoe_size. Apparel: color + apparel_size. Phones/storage devices: color + capacity when realistic.
-- Supplements/vitamins: if variants exist, prefer Pack size, Count, or Flavor — never fake color chips.
-- Each color (only when used) MUST have a distinct accurate hex.
-- Never use em dashes or en dashes. Use commas, periods, or hyphens.
-- variantPrices only when variantOptions is non-empty.`,
-    `Product seed name: ${input.name}\n${context}\nBase SKU: ${sku}\nDecide options only from what this product type truly needs.`,
-    { temperature: 0.4, maxTokens: 3500 }
+    buildProductAiSystemPrompt(),
+    `Product seed: ${input.name}
+${context}
+Base SKU: ${sku}
+Price anchor (USD, adjust to market): ~$${priceAnchor} for smallest variant.
+Generate complete catalog-ready JSON. If variants exist, every variant must have distinct pricing in variantPrices.`,
+    { temperature: 0.35, maxTokens: 4000 }
   );
 
   if (!parsed?.shortDescription || !parsed.description) return null;
@@ -392,8 +532,6 @@ CRITICAL variantRules — think carefully before adding any option:
     parsed.name?.trim() || input.name,
     input.categories
   );
-  // Prefer AI options when present; otherwise smart inference (often empty).
-  // Never force Color when neither AI nor inference wants it.
   const variantOptions = sanitizeOptionGroups(
     filterRelevantOptionGroups(
       mapped.length ? mapped : inferred,
@@ -402,10 +540,16 @@ CRITICAL variantRules — think carefully before adding any option:
     )
   );
 
-  const basePrice = Number(parsed.pricing?.price) || 49.99;
-  const compareAt = parsed.pricing?.compareAtPrice
-    ? Number(parsed.pricing.compareAtPrice)
-    : undefined;
+  let basePrice =
+    Number(parsed.pricing?.price) > 0
+      ? Number(parsed.pricing?.price)
+      : priceAnchor;
+  const compareAt = normalizeCompareAt(
+    basePrice,
+    parsed.pricing?.compareAtPrice
+      ? Number(parsed.pricing.compareAtPrice)
+      : undefined
+  );
 
   let variants = generateVariantsFromOptions(
     variantOptions,
@@ -414,20 +558,18 @@ CRITICAL variantRules — think carefully before adding any option:
     true
   );
 
-  if (parsed.variantPrices?.length) {
-    const priceMap = new Map(
-      parsed.variantPrices.map((vp) => [JSON.stringify(vp.attributes), vp])
-    );
-    variants = variants.map((v) => {
-      const vp = priceMap.get(JSON.stringify(v.attributes));
-      if (!vp) return v;
-      return {
-        ...v,
-        price: Number(vp.price) || v.price,
-        compareAtPrice: vp.compareAtPrice ? Number(vp.compareAtPrice) : v.compareAtPrice,
-        stock: vp.stock != null ? Number(vp.stock) : v.stock,
-      };
-    });
+  variants = applyAiVariantPrices(variants, parsed.variantPrices, variantOptions);
+  variants = enforceDistinctVariantPrices(
+    variants,
+    basePrice,
+    compareAt,
+    variantOptions
+  );
+
+  // Base price = cheapest variant after smart pricing.
+  if (variants.length > 0) {
+    const prices = variants.map((v) => v.price).filter((p) => p > 0);
+    if (prices.length) basePrice = Math.min(...prices);
   }
 
   const aiName = sanitizeAiDashes(
@@ -488,9 +630,12 @@ CRITICAL variantRules — think carefully before adding any option:
     specifications: finalSpecs,
     faqs: (parsed.faqs ?? [])
       .filter((f) => f.question && f.answer)
-      .map((f) => ({ question: String(f.question), answer: String(f.answer) }))
+      .map((f) => ({
+        question: sanitizeAiDashes(String(f.question)),
+        answer: sanitizeAiDashes(String(f.answer)),
+      }))
       .slice(0, 10),
-    warranty: parsed.warranty ? String(parsed.warranty) : undefined,
+    warranty: parsed.warranty ? sanitizeAiDashes(String(parsed.warranty)) : undefined,
     weight: parsed.weight != null ? Number(parsed.weight) : undefined,
   };
 }

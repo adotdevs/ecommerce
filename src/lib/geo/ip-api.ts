@@ -1,7 +1,8 @@
+import type { NextRequest } from "next/server";
+import { resolveGeoFromRequest, fetchAllIpProbes, resolveGeoConsensus } from "./multi-provider";
 import type { IpApiResult } from "./types";
 
-const IP_API_FIELDS = "status,countryCode,currency,query";
-const IP_API_TIMEOUT_MS = 4000;
+const IP_API_TIMEOUT_MS = 4500;
 
 function isPrivateOrLocalIp(ip: string): boolean {
   if (!ip || ip === "127.0.0.1" || ip === "::1" || ip === "unknown") return true;
@@ -21,70 +22,30 @@ export function getClientIp(request: Request): string | null {
   const realIp = request.headers.get("x-real-ip")?.trim();
   if (realIp && !isPrivateOrLocalIp(realIp)) return realIp;
 
-  // Next.js / Vercel
   const vercelIp = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
   if (vercelIp && !isPrivateOrLocalIp(vercelIp)) return vercelIp;
 
   return null;
 }
 
-export async function fetchGeoFromIpApi(ip: string): Promise<IpApiResult | null> {
-  if (isPrivateOrLocalIp(ip)) return null;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), IP_API_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=${IP_API_FIELDS}`,
-      { signal: controller.signal, cache: "no-store" }
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as IpApiResult;
-    if (data.status !== "success" || !data.countryCode) return null;
-    return data;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-interface IpapiCoResult {
-  country_code?: string;
-  currency?: string;
-  error?: boolean;
-}
-
-/** HTTPS fallback when ip-api.com is unavailable. */
-export async function fetchGeoFromIpapiCo(ip: string): Promise<IpApiResult | null> {
-  if (isPrivateOrLocalIp(ip)) return null;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), IP_API_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
-      signal: controller.signal,
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as IpapiCoResult;
-    if (data.error || !data.country_code) return null;
-    return {
-      status: "success",
-      countryCode: data.country_code,
-      currency: data.currency,
-      query: ip,
-    };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
+/** Consensus across ip-api.com, ipapi.co, ipwho.is, and freeipapi.com. */
 export async function fetchGeoByIp(ip: string): Promise<IpApiResult | null> {
-  return (await fetchGeoFromIpApi(ip)) ?? (await fetchGeoFromIpapiCo(ip));
+  if (isPrivateOrLocalIp(ip)) return null;
+
+  const probes = await fetchAllIpProbes(ip);
+  const consensus = resolveGeoConsensus(probes);
+  if (!consensus) return null;
+
+  return {
+    status: "success",
+    countryCode: consensus.countryCode,
+    currency: consensus.currency,
+    query: ip,
+  };
 }
+
+export async function fetchGeoForRequest(request: NextRequest) {
+  return resolveGeoFromRequest(request, getClientIp(request));
+}
+
+export { isPrivateOrLocalIp, IP_API_TIMEOUT_MS };

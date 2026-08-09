@@ -50,7 +50,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
 
   if (!current) {
     return (
-      <div className="aspect-square rounded-[var(--radius-lg)] border border-border bg-secondary" />
+      <div className="aspect-square rounded-[var(--radius-lg)] border border-border product-media-surface" />
     );
   }
 
@@ -63,7 +63,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         setLens({ x: 50, y: 50 });
       }}
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-[var(--radius-sm)] border-2 bg-secondary transition-all duration-200",
+        "relative shrink-0 overflow-hidden rounded-[var(--radius-sm)] border-2 product-media-surface transition-all duration-200",
         vertical ? "h-[72px] w-[72px]" : "h-16 w-16",
         i === active
           ? "border-primary ring-2 ring-primary/20"
@@ -88,7 +88,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         <div className="relative min-w-0 flex-1 overflow-visible">
           <div
             ref={containerRef}
-            className="relative aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-white p-3"
+            className="relative aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border product-media-surface p-3"
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
             onMouseMove={(e) => updateLens(e.clientX, e.clientY)}
@@ -141,7 +141,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           {/* Hover zoom pane — floats beside image on desktop */}
           {hovering && (
             <div
-              className="pointer-events-none absolute left-[calc(100%+1rem)] top-0 z-20 hidden aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-[var(--shadow-card)] lg:block"
+              className="pointer-events-none absolute left-[calc(100%+1rem)] top-0 z-20 hidden aspect-square w-full overflow-hidden rounded-[var(--radius-lg)] border border-border product-media-surface shadow-[var(--shadow-card)] lg:block"
               aria-hidden
             >
               <div

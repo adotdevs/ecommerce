@@ -6,8 +6,10 @@ import { PERMISSIONS } from "@/config/permissions";
 import { cmsPageSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
 import { apiSuccess, apiError, apiNotFound } from "@/lib/api/response";
+import { ensureCmsPages } from "@/lib/cms/cms-page-content";
 
 export async function GET(request: NextRequest) {
+  await ensureCmsPages();
   await connectDB();
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");

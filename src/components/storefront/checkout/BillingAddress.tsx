@@ -4,10 +4,9 @@ import { useTranslations } from "next-intl";
 import { CheckoutCard } from "@/components/storefront/checkout/CheckoutCard";
 import {
   CheckoutField,
-  CheckoutSelect,
   RadioOptionCard,
 } from "@/components/storefront/checkout/CheckoutField";
-import { COUNTRY_OPTIONS } from "@/lib/checkout/constants";
+import { CheckoutAddressFields } from "@/components/storefront/checkout/CheckoutAddressFields";
 import type { CheckoutFieldErrors, CheckoutFormState } from "@/lib/checkout/types";
 
 interface BillingAddressProps {
@@ -22,6 +21,7 @@ export function BillingAddress({
   onChange,
 }: BillingAddressProps) {
   const t = useTranslations("checkout");
+  const countryCode = form.country;
 
   return (
     <CheckoutCard title={t("billingTitle")}>
@@ -64,55 +64,33 @@ export function BillingAddress({
                 }
                 className="md:col-span-2"
               />
-              <CheckoutField
-                id="billingCity"
-                label={t("city")}
-                value={form.billingCity}
-                onChange={(billingCity) => onChange({ billingCity })}
-                placeholder={t("placeholders.city")}
-                error={
-                  errors.billingCity
+              <CheckoutAddressFields
+                countryCode={countryCode}
+                idPrefix="billing"
+                values={{
+                  city: form.billingCity,
+                  state: form.billingState,
+                  postalCode: form.billingPostalCode,
+                }}
+                errors={{
+                  city: errors.billingCity
                     ? t(`errors.${errors.billingCity}`)
-                    : undefined
-                }
-              />
-              <CheckoutField
-                id="billingState"
-                label={t("state")}
-                value={form.billingState}
-                onChange={(billingState) => onChange({ billingState })}
-                placeholder={t("placeholders.state")}
-                error={
-                  errors.billingState
+                    : undefined,
+                  state: errors.billingState
                     ? t(`errors.${errors.billingState}`)
-                    : undefined
-                }
-              />
-              <CheckoutField
-                id="billingPostalCode"
-                label={t("postalCode")}
-                value={form.billingPostalCode}
-                onChange={(billingPostalCode) => onChange({ billingPostalCode })}
-                placeholder={t("placeholders.postalCode")}
-                error={
-                  errors.billingPostalCode
+                    : undefined,
+                  postalCode: errors.billingPostalCode
                     ? t(`errors.${errors.billingPostalCode}`)
-                    : undefined
-                }
-              />
-              <CheckoutSelect
-                id="billingCountry"
-                label={t("country")}
-                value={form.billingCountry}
-                onChange={(billingCountry) => onChange({ billingCountry })}
-                options={COUNTRY_OPTIONS.map((c) => ({
-                  value: c.value,
-                  label: c.label,
-                }))}
-                error={
-                  errors.billingCountry
-                    ? t(`errors.${errors.billingCountry}`)
-                    : undefined
+                    : undefined,
+                }}
+                onChange={(patch) =>
+                  onChange({
+                    ...(patch.city !== undefined ? { billingCity: patch.city } : {}),
+                    ...(patch.state !== undefined ? { billingState: patch.state } : {}),
+                    ...(patch.postalCode !== undefined
+                      ? { billingPostalCode: patch.postalCode }
+                      : {}),
+                  })
                 }
               />
             </div>

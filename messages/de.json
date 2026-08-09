@@ -42,7 +42,8 @@
     "currency": "Währung",
     "selectCountry": "Land/Region auswählen",
     "selectLanguage": "Sprache auswählen",
-    "selectCurrency": "Währung wählen"
+    "selectCurrency": "Währung wählen",
+    "deliverTo": "Lieferung nach"
   },
   "theme": {
     "title": "Dunkelmodus bevorzugt?",

@@ -9,6 +9,7 @@ import { CategoryProductsView } from "@/components/storefront/catalog/CategoryPr
 import { ProductSkeletonGrid } from "@/components/storefront/catalog/ProductSkeletonCard";
 import { queryCatalogProducts } from "@/lib/catalog/query";
 import type { CatalogSearchParams } from "@/lib/catalog/render-page";
+import { formatCategoryName } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string }>;
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const category = await Category.findOne({ slug }).lean();
   if (!category) return { title: "Category" };
   return {
-    title: category.seo?.title || category.name,
+    title: category.seo?.title || formatCategoryName(category.name),
     description: category.seo?.description || category.description,
   };
 }

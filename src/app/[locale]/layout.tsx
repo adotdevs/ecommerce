@@ -13,6 +13,21 @@ import {
 import type { CurrencyCode } from "@/config/locales";
 import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
 
+export const dynamic = "force-dynamic";
+
+function readPrefCookie(
+  cookieStore: Awaited<ReturnType<typeof cookies>>,
+  name: string
+): string | undefined {
+  const raw = cookieStore.get(name)?.value;
+  if (!raw) return undefined;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -39,12 +54,13 @@ export default async function LocaleLayout({
 
   const serverPreferences = {
     country:
-      cookieStore.get("preferred-country")?.value ??
-      cookieStore.get("country-detected")?.value ??
+      readPrefCookie(cookieStore, "preferred-country") ??
+      readPrefCookie(cookieStore, "country-detected") ??
       "US",
-    currency: (cookieStore.get("preferred-currency")?.value ?? "USD") as CurrencyCode,
-    locale: (cookieStore.get("preferred-locale")?.value ??
-      cookieStore.get("NEXT_LOCALE")?.value ??
+    currency: (readPrefCookie(cookieStore, "preferred-currency") ??
+      "USD") as CurrencyCode,
+    locale: (readPrefCookie(cookieStore, "preferred-locale") ??
+      readPrefCookie(cookieStore, "NEXT_LOCALE") ??
       locale) as Locale,
   };
 

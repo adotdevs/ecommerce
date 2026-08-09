@@ -42,7 +42,8 @@
     "currency": "العملة",
     "selectCountry": "اختر البلد والمنطقة",
     "selectLanguage": "اختر اللغة",
-    "selectCurrency": "اختر العملة"
+    "selectCurrency": "اختر العملة",
+    "deliverTo": "التوصيل إلى"
   },
   "theme": {
     "title": "هل تفضّل الوضع الداكن؟",

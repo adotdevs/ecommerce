@@ -17,10 +17,7 @@ export const PAYMENT_METHODS: {
   logo?: string;
 }[] = [
   { id: "card", labelKey: "card", apiValue: "stripe" },
-  { id: "easypaisa", labelKey: "easypaisa", apiValue: "bank_transfer" },
-  { id: "jazzcash", labelKey: "jazzcash", apiValue: "bank_transfer" },
-  { id: "paypal", labelKey: "paypal", apiValue: "paypal", logo: "/payments/paypal.svg" },
-  { id: "cod", labelKey: "cod", apiValue: "bank_transfer" },
+  { id: "paypal", labelKey: "paypal", apiValue: "paypal", logo: "/payments/paypal.svg" }
 ];
 
 export const COUNTRY_OPTIONS = [

@@ -13,6 +13,7 @@ interface CheckoutFieldProps {
   required?: boolean;
   error?: string;
   icon?: LucideIcon;
+  endAdornment?: React.ReactNode;
   valid?: boolean;
   className?: string;
   inputClassName?: string;
@@ -28,11 +29,13 @@ export function CheckoutField({
   required,
   error,
   icon: Icon,
+  endAdornment,
   valid,
   className,
   inputClassName,
 }: CheckoutFieldProps) {
   const showValid = valid && value.trim().length > 0 && !error;
+  const hasTrailing = showValid || Boolean(endAdornment);
 
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -51,18 +54,24 @@ export function CheckoutField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
+          autoComplete={id === "cardNumber" ? "cc-number" : id === "cardName" ? "cc-name" : id === "cardExpiry" ? "cc-exp" : id === "cardCvv" ? "cc-csc" : undefined}
           className={cn(
             "flex h-12 w-full rounded-xl border bg-background text-sm text-foreground transition-colors md:h-[52px]",
             "placeholder:text-muted-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
-            Icon ? "pl-10 pr-10" : "px-4",
+            Icon ? "pl-10" : "pl-4",
+            hasTrailing ? "pr-11" : "pr-4",
             error ? "border-destructive" : "border-border",
             inputClassName
           )}
         />
-        {showValid && (
+        {showValid ? (
           <Check className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-accent" />
-        )}
+        ) : endAdornment ? (
+          <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2">
+            {endAdornment}
+          </div>
+        ) : null}
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

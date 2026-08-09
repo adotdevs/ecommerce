@@ -18,6 +18,7 @@ import {
   CmsPage,
 } from "../src/models";
 import { REFERENCE_HOMEPAGE_SECTIONS } from "./homepage-reference-layout";
+import { DEFAULT_CMS_PAGES } from "../src/lib/cms/cms-pages";
 
 async function seed() {
   await connectDB();
@@ -303,75 +304,27 @@ async function seed() {
   console.log("Homepage sections seeded");
 
   // CMS Pages
-  const cmsPages = [
-    {
-      title: "About Us",
-      slug: "about",
-      status: "published" as const,
-      publishedAt: new Date(),
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          config: {
-            title: "Our Story",
-            subtitle: "Building the future of premium ecommerce",
-            image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1200",
-          },
+  const cmsSlugs = ["about", "contact", "privacy"] as const;
+  for (const slug of cmsSlugs) {
+    const content = DEFAULT_CMS_PAGES[slug];
+    await CmsPage.findOneAndUpdate(
+      { slug },
+      {
+        title: typeof content.pageTitle === "string" ? content.pageTitle : slug,
+        slug,
+        content,
+        status: "published",
+        publishedAt: new Date(),
+        sourceLocale: "en",
+        translationStatus: "idle",
+        seo: {
+          title: typeof content.seoTitle === "string" ? content.seoTitle : undefined,
+          description:
+            typeof content.seoDescription === "string" ? content.seoDescription : undefined,
         },
-        {
-          id: "text-1",
-          type: "text",
-          config: {
-            content:
-              "YourStore was founded with a simple mission: to deliver world-class products with an unmatched shopping experience. We curate every item in our collection to meet the highest standards of quality and design.",
-          },
-        },
-      ],
-      seo: {
-        title: "About Us | YourStore",
-        description: "Learn about YourStore's mission and values.",
       },
-    },
-    {
-      title: "Contact",
-      slug: "contact",
-      status: "published" as const,
-      publishedAt: new Date(),
-      blocks: [
-        {
-          id: "text-1",
-          type: "text",
-          config: {
-            content:
-              "We'd love to hear from you. Reach us at support@yourstore.com or call +1 (800) 555-0199.",
-          },
-        },
-      ],
-    },
-    {
-      title: "Privacy Policy",
-      slug: "privacy",
-      status: "published" as const,
-      publishedAt: new Date(),
-      blocks: [
-        {
-          id: "text-1",
-          type: "text",
-          config: {
-            content:
-              "Your privacy is important to us. This policy describes how we collect, use, and protect your personal information.",
-          },
-        },
-      ],
-    },
-  ];
-
-  for (const page of cmsPages) {
-    await CmsPage.findOneAndUpdate({ slug: page.slug }, page, {
-      upsert: true,
-      new: true,
-    });
+      { upsert: true, new: true }
+    );
   }
   console.log("CMS pages seeded");
 

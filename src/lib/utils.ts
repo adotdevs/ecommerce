@@ -14,6 +14,15 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** Title-case category/label text for storefront display (e.g. "water bottles" → "Water Bottles"). */
+export function formatCategoryName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.replace(/\w\S*/g, (word) =>
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  );
+}
+
 export function formatPrice(
   amount: number,
   currency = "USD",

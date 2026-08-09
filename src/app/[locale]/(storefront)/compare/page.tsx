@@ -71,7 +71,7 @@ export default function ComparePage() {
               <th className="border-b p-3 text-left font-medium text-muted-foreground" />
               {products.map((p) => (
                 <th key={p._id} className="border-b p-3 text-left align-top">
-                  <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-muted">
+                  <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl product-media-surface">
                     {p.media?.[0] && (
                       <Image src={p.media[0].url} alt={p.name} fill className="object-cover" />
                     )}

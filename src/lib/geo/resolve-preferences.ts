@@ -1,13 +1,14 @@
 import type { NextRequest } from "next/server";
 import { defaultLocale } from "@/config/locales";
 import { resolveStoreLocale } from "@/lib/i18n/enabled-locales";
-import { fetchGeoByIp, getClientIp } from "./ip-api";
+import { getClientIp } from "./ip-api";
 import {
   currencyFromCountry,
   currencyFromLocale,
   localeFromCountry,
   normalizeLocale,
 } from "./country-preferences";
+import { resolveGeoFromRequest } from "./multi-provider";
 import type { GeoPreferences } from "./types";
 import { GEO_COOKIE_VERSION } from "./constants";
 
@@ -23,11 +24,14 @@ function localeFromAcceptLanguage(header: string | null): string | null {
   return null;
 }
 
-function finalizePreferences(
-  country: string,
-  idealLocale: string,
-  currency: string
+/** Strict: country drives both locale and currency together. */
+function strictPreferencesFromCountry(
+  countryCode: string,
+  ipCurrency?: string
 ): GeoPreferences {
+  const country = countryCode.toUpperCase();
+  const idealLocale = localeFromCountry(country);
+  const currency = currencyFromCountry(country, ipCurrency);
   return {
     country,
     currency,
@@ -35,24 +39,9 @@ function finalizePreferences(
   };
 }
 
-async function detectCountryFromIp(
-  request: NextRequest
-): Promise<{ countryCode: string; ipCurrency?: string } | null> {
-  const ip = getClientIp(request);
-  if (!ip) return null;
-
-  const geo = await fetchGeoByIp(ip);
-  if (!geo?.countryCode) return null;
-
-  return {
-    countryCode: geo.countryCode.toUpperCase(),
-    ipCurrency: geo.currency?.toUpperCase(),
-  };
-}
-
 /**
- * Resolve storefront preferences from IP / CDN headers.
- * Country is auto-detected; locale falls back to English if unavailable.
+ * Resolve storefront preferences from CDN headers + multiple IP geolocation APIs.
+ * Country, currency, and locale are always derived together from detected country.
  */
 export async function resolveGeoPreferences(
   request: NextRequest
@@ -61,43 +50,26 @@ export async function resolveGeoPreferences(
   const devCountry = process.env.DEV_GEO_COUNTRY?.toUpperCase();
 
   if (devCountry) {
-    const idealLocale = localeFromCountry(devCountry);
-    const currency = currencyFromCountry(devCountry);
-    return finalizePreferences(devCountry, idealLocale, currency);
+    return strictPreferencesFromCountry(devCountry);
   }
 
-  let countryCode =
-    request.headers.get("x-vercel-ip-country") ??
-    request.headers.get("cf-ipcountry") ??
-    null;
+  const ip = getClientIp(request);
+  const consensus = await resolveGeoFromRequest(request, ip);
 
-  let ipCurrency: string | undefined;
-
-  if (!countryCode) {
-    const ipGeo = await detectCountryFromIp(request);
-    if (ipGeo) {
-      countryCode = ipGeo.countryCode;
-      ipCurrency = ipGeo.ipCurrency;
-    }
-  }
-
-  if (countryCode) {
-    countryCode = countryCode.toUpperCase();
-    const idealLocale = localeFromCountry(countryCode);
-    const currency = currencyFromCountry(countryCode, ipCurrency);
-    return finalizePreferences(countryCode, idealLocale, currency);
+  if (consensus) {
+    return strictPreferencesFromCountry(consensus.countryCode, consensus.currency);
   }
 
   const langLocale = localeFromAcceptLanguage(acceptLang);
   if (langLocale) {
-    return finalizePreferences(
-      "US",
-      langLocale,
-      currencyFromLocale(langLocale)
-    );
+    return {
+      country: "US",
+      locale: resolveStoreLocale(langLocale),
+      currency: currencyFromLocale(langLocale),
+    };
   }
 
-  return finalizePreferences("US", defaultLocale, "USD");
+  return strictPreferencesFromCountry("US");
 }
 
 export function isManualLocale(request: NextRequest): boolean {
@@ -111,6 +83,10 @@ export function isManualCurrency(request: NextRequest): boolean {
   return request.cookies.get("preferences-manual-currency")?.value === "true";
 }
 
+export function isManualCountry(request: NextRequest): boolean {
+  return request.cookies.get("preferences-manual-country")?.value === "true";
+}
+
 export function isGeoReady(request: NextRequest): boolean {
   return (
     request.cookies.get("geo-preferences-set")?.value === "1" &&
@@ -121,12 +97,15 @@ export function isGeoReady(request: NextRequest): boolean {
 export function buildPreferencesFromCookies(
   request: NextRequest,
   manualLocale: boolean,
-  manualCurrency: boolean
+  manualCurrency: boolean,
+  manualCountry: boolean
 ): GeoPreferences {
-  const country =
-    request.cookies.get("preferred-country")?.value ??
-    request.cookies.get("country-detected")?.value ??
-    "US";
+  const detectedCountry =
+    request.cookies.get("country-detected")?.value ?? "US";
+
+  const country = manualCountry
+    ? (request.cookies.get("preferred-country")?.value ?? detectedCountry)
+    : detectedCountry;
 
   const currency = manualCurrency
     ? (request.cookies.get("preferred-currency")?.value ?? "USD")

@@ -1,7 +1,12 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
+import { useLocale } from "next-intl";
 import type { Locale, CurrencyCode } from "@/config/locales";
+import {
+  useExchangeRates,
+  useLocaleHydrated,
+} from "@/stores/locale-store";
 
 export interface DisplayPreferences {
   currency: CurrencyCode;
@@ -28,8 +33,21 @@ export function DisplayPreferencesProvider({
   value: DisplayPreferences;
   children: React.ReactNode;
 }) {
+  const hydrated = useLocaleHydrated();
+  const storeRates = useExchangeRates();
+  const routeLocale = useLocale() as Locale;
+
+  const liveValue = useMemo(
+    () => ({
+      ...value,
+      locale: routeLocale,
+      exchangeRates: hydrated ? storeRates : value.exchangeRates,
+    }),
+    [value, routeLocale, hydrated, storeRates]
+  );
+
   return (
-    <DisplayPreferencesContext.Provider value={value}>
+    <DisplayPreferencesContext.Provider value={liveValue}>
       {children}
     </DisplayPreferencesContext.Provider>
   );

@@ -79,7 +79,7 @@ export default function WishlistPage() {
             >
               <Link
                 href={`/products/${item.slug}`}
-                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted"
+                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl product-media-surface"
               >
                 {item.image && (
                   <Image

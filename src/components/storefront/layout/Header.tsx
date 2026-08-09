@@ -20,9 +20,10 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { Button } from "@/components/ds/button";
 import { SearchAutocomplete } from "@/components/storefront/search/SearchAutocomplete";
-import { RegionSelector } from "@/components/storefront/layout/RegionSelector";
+import { RegionSelector, DeliverToSelector, TopBarPreferences } from "@/components/storefront/layout/RegionSelector";
 import { ThemeToggle } from "@/components/storefront/layout/ThemeToggle";
 import { cn } from "@/components/ds/utils";
+import { formatCategoryName } from "@/lib/utils";
 import type { SiteSettingsPublic } from "@/types";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 
@@ -98,7 +99,7 @@ export function Header({ settings }: HeaderProps) {
               {settings?.announcement ?? settings?.deliveryInfo}
             </p>
             <div className="flex shrink-0 items-center gap-1.5 text-background/85 [&_button]:text-background/85 [&_button:hover]:bg-background/10 [&_a]:text-background/85 [&_a:hover]:bg-background/10">
-              <RegionSelector compact />
+              <TopBarPreferences />
               <div className="mx-0.5 h-5 w-px bg-background/20" />
               <ThemeToggle />
               <TopBarIcon href="/wishlist" label={t("header.wishlist")} count={displayWishlistCount}>
@@ -139,6 +140,8 @@ export function Header({ settings }: HeaderProps) {
                 ) : null}
               </Link>
 
+              <DeliverToSelector className="hidden shrink-0 sm:flex" />
+
               <nav className="hidden items-center lg:flex">
                 <div
                   className="relative"
@@ -163,7 +166,7 @@ export function Header({ settings }: HeaderProps) {
                               className="rounded-[var(--radius-sm)] px-3 py-2 text-small transition-colors hover:bg-secondary"
                               onClick={() => setMegaOpen(false)}
                             >
-                              {cat.name}
+                              {formatCategoryName(cat.name)}
                             </Link>
                           ))}
                         </div>
@@ -305,7 +308,7 @@ export function Header({ settings }: HeaderProps) {
                   className="block rounded-[var(--radius-sm)] px-3 py-2.5 text-small font-medium hover:bg-secondary"
                   onClick={() => setMobileOpen(false)}
                 >
-                  {cat.name}
+                  {formatCategoryName(cat.name)}
                 </Link>
               ))}
               <div className="my-3 h-px bg-border" />

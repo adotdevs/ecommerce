@@ -8,8 +8,15 @@ import {
   CheckoutPrimaryButton,
   SecureNote,
 } from "@/components/storefront/checkout/CheckoutPrimaryButton";
-import { COUNTRY_OPTIONS } from "@/lib/checkout/constants";
+import { getAddressFieldConfig, formatAddressLine } from "@/lib/checkout/address-fields";
+import { formatPhoneDisplay } from "@/lib/checkout/phone-fields";
 import { calculateShippingUsd } from "@/lib/checkout/shipping";
+import {
+  CARD_BRAND_LOGOS,
+  cardDigits,
+  detectCardBrand,
+  isSupportedBrand,
+} from "@/lib/checkout/card-validation";
 import {
   getPaymentLabelKey,
   maskCardNumber,
@@ -71,14 +78,13 @@ export function ReviewOrder({
   const shippingPrice = calculateShippingUsd(subtotalUsd, form.shippingMethod);
   const shippingFmt = useFormattedPrice(shippingPrice);
 
-  const countryLabel =
-    COUNTRY_OPTIONS.find((c) => c.value === form.country)?.label ?? form.country;
+  const config = getAddressFieldConfig(form.country);
 
   const addressLine = [
     form.street,
     form.apartment,
-    `${form.city}, ${form.state} ${form.postalCode}`,
-    countryLabel,
+    formatAddressLine(form.country, form.city, form.state, form.postalCode),
+    config.countryName,
   ]
     .filter(Boolean)
     .join("\n");
@@ -92,7 +98,7 @@ export function ReviewOrder({
       >
         <p className="font-medium text-foreground">{form.fullName}</p>
         <p className="whitespace-pre-line">{addressLine}</p>
-        <p>{form.phone}</p>
+        <p>{formatPhoneDisplay(form.phoneCountryCode, form.phone)}</p>
         <p>{form.email}</p>
       </ReviewSection>
 
@@ -115,17 +121,22 @@ export function ReviewOrder({
         editLabel={t("edit")}
       >
         <div className="flex items-center gap-2">
-          {form.paymentMethod === "card" && (
-            <div className="relative h-5 w-8">
-              <Image
-                src="/payments/visa.svg"
-                alt="Card"
-                fill
-                className="object-contain"
-                sizes="32px"
-              />
-            </div>
-          )}
+          {form.paymentMethod === "card" && (() => {
+            const brand = detectCardBrand(cardDigits(form.cardNumber));
+            const logo =
+              isSupportedBrand(brand) ? CARD_BRAND_LOGOS[brand] : null;
+            return logo ? (
+              <div className="relative h-5 w-8">
+                <Image
+                  src={logo.src}
+                  alt={logo.alt}
+                  fill
+                  className="object-contain"
+                  sizes="32px"
+                />
+              </div>
+            ) : null;
+          })()}
           <p className="font-medium text-foreground">
             {t(`paymentMethods.${getPaymentLabelKey(form.paymentMethod)}`)}
           </p>

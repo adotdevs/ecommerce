@@ -26,14 +26,14 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
       <div className="flex gap-4 md:gap-5">
         <Link
           href={`/products/${item.slug}`}
-          className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[var(--radius-md)] bg-secondary md:h-28 md:w-28"
+          className="product-line-thumb product-line-thumb--md relative h-24 w-24 shrink-0 overflow-hidden rounded-[var(--radius-md)] product-media-surface md:h-28 md:w-28"
         >
           {item.image ? (
             <Image
               src={item.image}
               alt={title}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-contain transition-transform duration-300 group-hover:scale-[1.03]"
               sizes="112px"
             />
           ) : (

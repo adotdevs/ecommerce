@@ -11,6 +11,7 @@ import {
 } from "@/components/storefront/catalog/CatalogFilters";
 import { CatalogInfiniteGrid } from "@/components/storefront/catalog/CatalogInfiniteGrid";
 import { EmptyProductsState } from "@/components/storefront/catalog/EmptyProductsState";
+import { formatCategoryName } from "@/lib/utils";
 import type { ProductCardData } from "@/lib/catalog/product-card";
 
 interface CategoryProductsViewProps {
@@ -53,6 +54,8 @@ export function CategoryProductsView({
     router.push(pathname);
   }, [pathname, router]);
 
+  const categoryLabel = formatCategoryName(category.name);
+
   return (
     <div className="catalog-page">
       <div className="catalog-page__inner">
@@ -65,7 +68,7 @@ export function CategoryProductsView({
           <span className="catalog-breadcrumb__sep" aria-hidden>
             ›
           </span>
-          <span className="catalog-breadcrumb__current">{category.name}</span>
+          <span className="catalog-breadcrumb__current">{categoryLabel}</span>
         </nav>
 
         <header className="catalog-heading">
@@ -85,7 +88,7 @@ export function CategoryProductsView({
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {labels.collection}
           </p>
-          <h1 className="catalog-heading__title">{category.name}</h1>
+          <h1 className="catalog-heading__title">{categoryLabel}</h1>
           <p className="catalog-heading__count">
             {tProducts("found", { count: total })}
           </p>

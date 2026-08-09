@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import { decodeAccessTokenPayload } from "@/lib/auth/decode-token";
+import { hasAnyAdminRole, isCustomerUser } from "@/lib/auth/roles";
 import { currencyFromCountry } from "@/lib/geo/country-preferences";
 import { GEO_COOKIE_VERSION } from "@/lib/geo/constants";
 import {
@@ -9,6 +11,7 @@ import {
   buildPreferencesFromCookies,
   isManualLocale,
   isManualCurrency,
+  isManualCountry,
   isGeoReady,
 } from "@/lib/geo/resolve-preferences";
 
@@ -77,31 +80,73 @@ function buildLocalizedPath(
     : `/${locale}${pathWithoutLocale}`;
 }
 
+function isAccountPath(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length < 2) return false;
+  const [locale, section] = segments;
+  return routing.locales.includes(locale as (typeof routing.locales)[number]) && section === "account";
+}
+
+function getLocaleFromPath(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const first = segments[0];
+  if (first && routing.locales.includes(first as (typeof routing.locales)[number])) {
+    return first;
+  }
+  return routing.defaultLocale;
+}
+
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get("access_token")?.value;
+  const authUser = token ? decodeAccessTokenPayload(token) : null;
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
     if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-      const token = request.cookies.get("access_token")?.value;
-      if (!token) {
+      if (!authUser) {
+        const locale = routing.defaultLocale;
         return NextResponse.redirect(
-          new URL("/en/login?redirect=/admin", request.url)
+          new URL(`/${locale}/login?redirect=/admin`, request.url)
+        );
+      }
+      if (!hasAnyAdminRole(authUser.roles)) {
+        const locale = routing.defaultLocale;
+        return NextResponse.redirect(
+          new URL(`/${locale}/account`, request.url)
         );
       }
     }
     return NextResponse.next();
   }
 
+  if (isAccountPath(pathname)) {
+    const locale = getLocaleFromPath(pathname);
+    if (!authUser) {
+      return NextResponse.redirect(
+        new URL(`/${locale}/login?redirect=/${locale}/account`, request.url)
+      );
+    }
+    if (!isCustomerUser(authUser.roles)) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+  }
+
   const manualLocale = isManualLocale(request);
   const manualCurrency = isManualCurrency(request);
+  const manualCountry = isManualCountry(request);
   const geoReady = isGeoReady(request);
   const pathnameLocale = getPathnameLocale(pathname);
 
   let prefs = geoReady
-    ? buildPreferencesFromCookies(request, manualLocale, manualCurrency)
+    ? buildPreferencesFromCookies(
+        request,
+        manualLocale,
+        manualCurrency,
+        manualCountry
+      )
     : await resolveGeoPreferences(request);
 
-  if (geoReady && !manualCurrency) {
+  if (geoReady && !manualCurrency && !manualCountry) {
     prefs = { ...prefs, currency: currencyFromCountry(prefs.country) };
   }
 
@@ -132,10 +177,16 @@ export default async function middleware(request: NextRequest) {
   if (!geoReady) {
     setPreferenceCookies(response, prefs, manualLocale);
   } else {
-    response.cookies.set("preferred-country", prefs.country, {
-      path: "/",
-      maxAge: COOKIE_MAX_AGE,
-    });
+    if (!manualCountry) {
+      response.cookies.set("preferred-country", prefs.country, {
+        path: "/",
+        maxAge: COOKIE_MAX_AGE,
+      });
+      response.cookies.set("country-detected", prefs.country, {
+        path: "/",
+        maxAge: COOKIE_MAX_AGE,
+      });
+    }
     if (!manualCurrency) {
       response.cookies.set("preferred-currency", prefs.currency, {
         path: "/",

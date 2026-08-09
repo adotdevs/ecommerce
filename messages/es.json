@@ -42,7 +42,8 @@
     "currency": "Moneda",
     "selectCountry": "Seleccionar país y región",
     "selectLanguage": "Seleccionar idioma",
-    "selectCurrency": "Seleccionar moneda"
+    "selectCurrency": "Seleccionar moneda",
+    "deliverTo": "Enviar a"
   },
   "theme": {
     "title": "¿Prefieres el modo oscuro?",

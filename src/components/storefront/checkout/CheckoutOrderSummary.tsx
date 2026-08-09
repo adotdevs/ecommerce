@@ -65,13 +65,13 @@ function CheckoutLineItem({ item }: { item: CartItem }) {
 
   return (
     <div className="flex gap-3 py-3">
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary">
+      <div className="product-line-thumb product-line-thumb--sm relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border product-media-surface">
         {item.image ? (
           <Image
             src={item.image}
             alt={title}
             fill
-            className="object-cover"
+            className="object-contain"
             sizes="56px"
           />
         ) : (

@@ -22,6 +22,7 @@ import { Label } from "@/components/ds/label";
 import type { CatalogPageConfig } from "@/lib/cms/catalog-pages";
 import type { CategoryDirectoryItem } from "@/lib/catalog/categories-directory";
 import { cn } from "@/components/ds/utils";
+import { formatCategoryName } from "@/lib/utils";
 import {
   fadeUp,
   staggerContainer,
@@ -351,20 +352,20 @@ export function CategoriesDirectory({
                         {cat.image ? (
                           <Image
                             src={cat.image}
-                            alt={cat.name}
+                            alt={formatCategoryName(cat.name)}
                             fill
                             className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"
                             sizes="(max-width:768px) 100vw, 33vw"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/15 to-secondary text-3xl font-bold text-primary/35">
-                            {cat.name.charAt(0)}
+                            {formatCategoryName(cat.name).charAt(0)}
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
                           <h2 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">
-                            {cat.name}
+                            {formatCategoryName(cat.name)}
                           </h2>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
                             <Package className="h-3 w-3" />

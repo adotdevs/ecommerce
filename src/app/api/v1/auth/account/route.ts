@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);
     if (!authUser) return apiUnauthorized();
-    if (!hasAnyAdminRole(authUser)) return apiForbidden();
+    if (!hasAnyAdminRole(authUser.roles)) return apiForbidden();
 
     const body = await request.json();
     const parsed = changeAccountSchema.safeParse(body);

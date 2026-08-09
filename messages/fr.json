@@ -34,7 +34,8 @@
     "currency": "Devise",
     "selectCountry": "Sélectionner pays et région",
     "selectLanguage": "Sélectionner la langue",
-    "selectCurrency": "Sélectionner la devise"
+    "selectCurrency": "Sélectionner la devise",
+    "deliverTo": "Livrer à"
   },
   "theme": {
     "title": "Préférez le mode sombre ?",

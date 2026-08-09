@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { cn } from "@/components/ds/utils";
+import { formatCategoryName } from "@/lib/utils";
 import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { ProductCard } from "@/components/storefront/products/ProductCard";
 import {
@@ -448,19 +449,19 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
                   {cat.image ? (
                     <RemoteImage
                       src={cat.image}
-                      alt={cat.name}
+                      alt={formatCategoryName(cat.name)}
                       fill
                       className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                       sizes="120px"
                     />
                   ) : (
                     <span className="text-2xl font-semibold text-muted-foreground">
-                      {cat.name.charAt(0)}
+                      {formatCategoryName(cat.name).charAt(0)}
                     </span>
                   )}
                 </div>
                 <span className="store-category-orbit__label group-hover:text-primary">
-                  {cat.name}
+                  {formatCategoryName(cat.name)}
                 </span>
               </Link>
             </motion.div>
@@ -584,20 +585,14 @@ export function PromoGridSection({ config }: SectionProps) {
               >
                 <div className="relative z-10 max-w-[65%]">
                   {tile.eyebrow && (
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      {tile.eyebrow}
-                    </p>
+                    <p className="store-promo-tile__eyebrow">{tile.eyebrow}</p>
                   )}
-                  <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground md:text-2xl">
-                    {tile.title}
-                  </h3>
+                  <h3 className="store-promo-tile__title">{tile.title}</h3>
                   {tile.subtitle && (
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {tile.subtitle}
-                    </p>
+                    <p className="store-promo-tile__subtitle">{tile.subtitle}</p>
                   )}
                   {tile.ctaLabel && (
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                    <span className="store-promo-tile__cta">
                       {tile.ctaLabel}
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </span>

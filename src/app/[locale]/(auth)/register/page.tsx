@@ -1,46 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter, Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth-store";
+import { AuthFormCard } from "@/components/storefront/auth/AuthFormCard";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ds/card";
+import { useAuthBranding } from "@/components/storefront/auth/AuthBrandingProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const t = useTranslations("auth");
+  const { storeName } = useAuthBranding();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [storeTagline, setStoreTagline] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
     firstName: "",
     lastName: "",
   });
-
-  useEffect(() => {
-    fetch("/api/v1/settings/site")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data) {
-          setStoreName(d.data.storeName ?? "");
-          setStoreTagline(d.data.storeTagline ?? "");
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const registerDescription =
-    storeName && storeTagline
-      ? `Join ${storeName} — ${storeTagline}`
-      : storeName
-        ? `Join ${storeName}`
-        : storeTagline || undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,82 +38,90 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error ?? "Registration failed");
+        setError(data.error ?? t("registerFailed"));
         return;
       }
 
       setAuth(data.data.accessToken, data.data.user);
-      router.push("/");
+      router.push("/account");
     } catch {
-      setError("Something went wrong");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Create Account</CardTitle>
-          {registerDescription && (
-            <CardDescription>{registerDescription}</CardDescription>
-          )}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="firstName">First name</Label>
-                <Input
-                  id="firstName"
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName">Last name</Label>
-                <Input
-                  id="lastName"
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={8}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create Account"}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthFormCard
+      storeName={storeName || undefined}
+      title={t("createAccount")}
+      description={t("createAccountAt", {
+        storeName: storeName || t("fallbackStoreName"),
+      })}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">{t("firstName")}</Label>
+            <Input
+              id="firstName"
+              autoComplete="given-name"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              className="h-11 rounded-xl"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">{t("lastName")}</Label>
+            <Input
+              id="lastName"
+              autoComplete="family-name"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              className="h-11 rounded-xl"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">{t("email")}</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">{t("password")}</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+        <Button type="submit" className="h-11 w-full rounded-full" disabled={loading}>
+          {loading ? t("creatingAccount") : t("createAccount")}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          {t("hasAccount")}{" "}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            {t("signIn")}
+          </Link>
+        </p>
+      </form>
+    </AuthFormCard>
   );
 }

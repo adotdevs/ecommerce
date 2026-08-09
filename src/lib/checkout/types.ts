@@ -14,6 +14,7 @@ export interface CheckoutFormState {
   emailOffers: boolean;
   fullName: string;
   phone: string;
+  phoneCountryCode: string;
   street: string;
   apartment: string;
   city: string;
@@ -21,6 +22,8 @@ export interface CheckoutFormState {
   postalCode: string;
   country: string;
   saveAddress: boolean;
+  /** Selected saved account address id, or empty when entering manually */
+  selectedSavedAddressId: string;
   shippingMethod: ShippingMethodId;
   paymentMethod: CheckoutPaymentMethod;
   cardNumber: string;

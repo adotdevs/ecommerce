@@ -5,6 +5,7 @@ import { StorefrontMain } from "@/components/storefront/layout/StorefrontMain";
 import { NavigationProgress } from "@/components/storefront/layout/NavigationProgress";
 import { ThemePreferencePrompt } from "@/components/storefront/layout/ThemePreferencePrompt";
 import { PersistedStoreSync } from "@/components/providers/PersistedStoreSync";
+import { CustomerSessionKeeper } from "@/components/storefront/CustomerSessionKeeper";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { toPublicSiteSettings } from "@/lib/site/branding";
 import { Suspense } from "react";
@@ -21,6 +22,7 @@ export default async function StorefrontLayout({
   return (
     <>
       <PersistedStoreSync />
+      <CustomerSessionKeeper />
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>

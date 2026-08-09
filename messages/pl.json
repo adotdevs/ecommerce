@@ -45,7 +45,8 @@
     "currency": "Waluta",
     "selectCountry": "Wybierz kraj i region",
     "selectLanguage": "Wybierz język",
-    "selectCurrency": "Wybierz walutę"
+    "selectCurrency": "Wybierz walutę",
+    "deliverTo": "Dostawa do"
   },
   "theme": {
     "title": "Preferujesz tryb ciemny?",

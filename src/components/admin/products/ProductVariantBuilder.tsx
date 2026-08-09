@@ -214,7 +214,7 @@ export function ProductVariantBuilder({
         <CardHeader>
           <CardTitle>Product options</CardTitle>
           <p className="text-[12px] text-muted-foreground">
-            Add options like Color, Shoe Size, or Material. Variants are generated from all combinations.
+            Add options like Color, Shoe Size, Pack size, or Material. Variants are generated from all combinations.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -343,7 +343,7 @@ export function ProductVariantBuilder({
             <div>
               <CardTitle>Variants ({variants.length})</CardTitle>
               <p className="text-[12px] text-muted-foreground">
-                Enter one base price — others auto-fill with smart adjustments by color, size, material, etc. You can edit any row after.
+                Enter one base price — others auto-fill with smart adjustments by pack size, count, color, size, material, etc. You can edit any row after.
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-2">

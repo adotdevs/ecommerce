@@ -26,6 +26,12 @@ export interface IUser extends Document {
   otp?: string;
   otpExpiry?: Date;
   addresses: IUserAddress[];
+  preferences?: {
+    locale?: string;
+    currency?: string;
+    country?: string;
+    emailOffers?: boolean;
+  };
 }
 
 const UserSchema = new Schema<IUser>(
@@ -41,20 +47,26 @@ const UserSchema = new Schema<IUser>(
     resetTokenExpiry: Date,
     otp: String,
     otpExpiry: Date,
-    addresses: [
-      {
-        label: String,
-        firstName: String,
-        lastName: String,
-        street: String,
-        city: String,
-        state: String,
-        postalCode: String,
-        country: String,
-        phone: String,
-        isDefault: Boolean,
-      },
-    ],
+  addresses: [
+    {
+      label: String,
+      firstName: String,
+      lastName: String,
+      street: String,
+      city: String,
+      state: String,
+      postalCode: String,
+      country: String,
+      phone: String,
+      isDefault: Boolean,
+    },
+  ],
+  preferences: {
+    locale: String,
+    currency: String,
+    country: String,
+    emailOffers: { type: Boolean, default: false },
+  },
   },
   { timestamps: true }
 );

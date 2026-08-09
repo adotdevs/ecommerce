@@ -146,9 +146,7 @@ export const REFERENCE_HOMEPAGE_SECTIONS = [
     enabled: true,
     config: {
       eyebrow: "FLASH SALE",
-      title: "Limited-time deals",
-      subtitle:
-        "Prices drop for 7 days — reset automatically when the timer ends.",
+      title: "Limited-time deals", 
       endsInLabel: "Ends in",
       ctaLabel: "View all deals",
       ctaHref: "/deals",

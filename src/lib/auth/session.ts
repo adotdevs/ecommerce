@@ -44,14 +44,4 @@ export function hasPermission(user: AuthUser, permission: string): boolean {
   return user.permissions.includes(permission as AuthUser["permissions"][number]);
 }
 
-export function hasAnyAdminRole(user: AuthUser): boolean {
-  const adminRoles = [
-    "super_admin",
-    "admin",
-    "manager",
-    "inventory_manager",
-    "marketing_manager",
-    "customer_support",
-  ];
-  return user.roles.some((r) => adminRoles.includes(r));
-}
+export { hasAnyAdminRole, isCustomerUser } from "@/lib/auth/roles";

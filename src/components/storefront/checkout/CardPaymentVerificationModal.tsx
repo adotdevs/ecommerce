@@ -11,10 +11,11 @@ import {
   isSupportedBrand,
   type SupportedCardBrand,
 } from "@/lib/checkout/card-validation";
-import { cn } from "@/components/ds/utils";
 
 type Phase = "loading" | "verify" | "submitting";
 type PaymentBrand = SupportedCardBrand | "unknown";
+
+const VISA_LOADER_LOGO = "/payments/visa-loader.png";
 
 interface CardPaymentVerificationModalProps {
   open: boolean;
@@ -22,414 +23,122 @@ interface CardPaymentVerificationModalProps {
   merchantName: string;
   amountLabel: string;
   cardNumber: string;
-  cardholderName: string;
+  phoneHint?: string;
   onVerified: () => Promise<void>;
   onCancel: () => void;
-}
-
-interface ScreenProps {
-  merchantName: string;
-  amountLabel: string;
-  last4: string;
-  cardholderName: string;
-  dateLabel: string;
-  otp: string;
-  onOtpChange: (value: string) => void;
-  onVerify: () => void;
-  onCancel: () => void;
-  verifyDisabled: boolean;
-  t: ReturnType<typeof useTranslations<"checkout.paymentVerification">>;
 }
 
 function resolvePaymentBrand(brand: CardBrand): PaymentBrand {
   return isSupportedBrand(brand) ? brand : "unknown";
 }
 
-function BrandLogo({
-  brand,
-  size = "md",
-  className,
-}: {
-  brand: PaymentBrand;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-}) {
-  if (brand === "unknown") return null;
-  const logo = CARD_BRAND_LOGOS[brand];
-  return (
-    <span
-      className={cn(
-        "payment-3ds-brand-logo",
-        size === "sm" && "payment-3ds-brand-logo--sm",
-        size === "md" && "payment-3ds-brand-logo--md",
-        size === "lg" && "payment-3ds-brand-logo--lg",
-        className
-      )}
-    >
-      <Image src={logo.src} alt={logo.alt} fill className="object-contain" sizes="96px" />
-    </span>
-  );
+function maskCardForDisplay(cardNumber: string): string {
+  const digits = cardDigits(cardNumber);
+  if (digits.length >= 10) {
+    return `${digits.slice(0, 6)}******${digits.slice(-4)}`;
+  }
+  if (digits.length >= 4) {
+    return `******${digits.slice(-4)}`;
+  }
+  return "************";
 }
 
-function ThreeDSWindow({
-  title,
-  children,
-  className,
-}: {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
+function MastercardMark({ withWordmark = false }: { withWordmark?: boolean }) {
   return (
-    <div className={cn("payment-3ds-window", className)}>
-      <div className="payment-3ds-window__titlebar">
-        <span className="payment-3ds-window__titlebar-dot" aria-hidden />
-        <span className="payment-3ds-window__title">{title}</span>
-      </div>
-      <div className="payment-3ds-window__body">{children}</div>
+    <div
+      className={`payment-3ds-mastercard-mark${withWordmark ? " payment-3ds-mastercard-mark--wordmark" : ""}`}
+    >
+      <svg
+        className="payment-3ds-mastercard-mark__circles"
+        viewBox="0 0 48 30"
+        aria-hidden
+        focusable="false"
+      >
+        <circle cx="18" cy="15" r="12" fill="#EB001B" />
+        <circle cx="30" cy="15" r="12" fill="#F79E1B" />
+      </svg>
+      {withWordmark ? <span className="payment-3ds-mastercard-mark__text">mastercard</span> : null}
     </div>
   );
 }
 
-function TransactionTable({
-  rows,
-}: {
-  rows: Array<{ label: string; value: string }>;
-}) {
-  return (
-    <table className="payment-3ds-table">
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.label}>
-            <td>{row.label}</td>
-            <td>{row.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function OtpSection({
-  label,
-  placeholder,
-  otp,
-  onOtpChange,
-  onVerify,
-  onCancel,
-  verifyLabel,
-  cancelLabel,
-  verifyDisabled,
-  primaryClassName,
-}: {
-  label: string;
-  placeholder: string;
-  otp: string;
-  onOtpChange: (value: string) => void;
-  onVerify: () => void;
-  onCancel: () => void;
-  verifyLabel: string;
-  cancelLabel: string;
-  verifyDisabled: boolean;
-  primaryClassName?: string;
-}) {
-  return (
-    <>
-      <label className="payment-3ds-field-label" htmlFor="payment-3ds-otp">
-        {label}
-      </label>
-      <input
-        id="payment-3ds-otp"
-        type="password"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={8}
-        value={otp}
-        onChange={(event) => onOtpChange(event.target.value.replace(/\D/g, ""))}
-        placeholder={placeholder}
-        className="payment-3ds-input"
-      />
-      <div className="payment-3ds-actions">
-        <button
-          type="button"
-          className={cn("payment-3ds-btn", primaryClassName)}
-          disabled={verifyDisabled}
-          onClick={onVerify}
-        >
-          {verifyLabel}
-        </button>
-        <button type="button" className="payment-3ds-btn" onClick={onCancel}>
-          {cancelLabel}
-        </button>
-      </div>
-    </>
-  );
-}
-
-function LoaderScreen({
-  title,
+function BrandBadge({
   brand,
-  heading,
-  subtext,
+  programLabel,
+}: {
+  brand: PaymentBrand;
+  programLabel: string;
+}) {
+  if (brand === "unknown") return null;
+
+  return (
+    <div className="payment-3ds-brand-badge">
+      <NetworkLogo brand={brand} variant="badge" />
+      <span className="payment-3ds-brand-badge__divider" aria-hidden />
+      <span className="payment-3ds-brand-badge__program">{programLabel}</span>
+    </div>
+  );
+}
+
+function NetworkLogo({
+  brand,
+  variant = "header",
+}: {
+  brand: PaymentBrand;
+  variant?: "loader" | "header" | "badge";
+}) {
+  if (brand === "unknown") return null;
+
+  if (brand === "mastercard") {
+    return <MastercardMark withWordmark={variant === "loader"} />;
+  }
+
+  if (brand === "visa") {
+    return (
+      <span className={`payment-3ds-visa-wordmark payment-3ds-visa-wordmark--${variant}`}>
+        <Image
+          src={VISA_LOADER_LOGO}
+          alt="Visa"
+          fill
+          className="object-contain"
+          sizes="80px"
+        />
+      </span>
+    );
+  }
+
+  const logo = CARD_BRAND_LOGOS[brand];
+  return (
+    <span
+      className={`payment-3ds-logo-network${variant === "loader" ? " payment-3ds-logo-network--loader" : ""}`}
+    >
+      <Image src={logo.src} alt={logo.alt} fill className="object-contain" sizes="52px" />
+    </span>
+  );
+}
+
+function AccordionItem({
+  title,
+  body,
 }: {
   title: string;
-  brand: PaymentBrand;
-  heading: string;
-  subtext: string;
+  body: string;
 }) {
-  return (
-    <ThreeDSWindow title={title}>
-      <div className="payment-3ds-loader">
-        <BrandLogo brand={brand} size="lg" />
-        <div className="payment-3ds-loader__spinner" aria-hidden />
-        <p className="payment-3ds-loader__text">{heading}</p>
-        <p className="payment-3ds-loader__subtext">{subtext}</p>
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function MastercardScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
+  const [open, setOpen] = useState(false);
 
   return (
-    <ThreeDSWindow title={t("programs.mastercard")}>
-      <div className="payment-3ds-mastercard__header">
-        <BrandLogo brand="mastercard" size="md" />
-        <p className="payment-3ds-mastercard__program">
-          Secure<span>Code</span>
-        </p>
-      </div>
-      <div className="payment-3ds-mastercard__content">
-        <h2 className="payment-3ds-mastercard__heading">{t("mastercard.heading")}</h2>
-        <p className="payment-3ds-mastercard__message">{t("mastercard.message")}</p>
-        <TransactionTable
-          rows={[
-            { label: t("merchant"), value: merchantName },
-            { label: t("amount"), value: amountLabel },
-            { label: t("date"), value: dateLabel },
-            { label: t("card"), value: `XXXX-XXXX-XXXX-${last4}` },
-          ]}
-        />
-        <OtpSection
-          label={t("mastercard.otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("mastercard.submit")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-        />
-        <p className="payment-3ds-footer-note">{t("mastercard.footer")}</p>
-      </div>
-    </ThreeDSWindow>
+    <li>
+      <button
+        type="button"
+        className="payment-3ds-accordion-header"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {title}
+      </button>
+      {open ? <div className="payment-3ds-accordion-body">{body}</div> : null}
+    </li>
   );
-}
-
-function VisaScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
-
-  return (
-    <ThreeDSWindow title={t("programs.visa")}>
-      <div className="payment-3ds-visa__banner">
-        <p className="payment-3ds-visa__banner-text">
-          Verified by <span>Visa</span>
-        </p>
-        <BrandLogo brand="visa" size="md" />
-      </div>
-      <div className="payment-3ds-visa__content">
-        <p className="payment-3ds-visa__intro">{t("visa.intro")}</p>
-        <div className="payment-3ds-visa__details">
-          <TransactionTable
-            rows={[
-              { label: t("merchant"), value: merchantName },
-              { label: t("amount"), value: amountLabel },
-              { label: t("date"), value: dateLabel },
-              { label: t("card"), value: `•••• •••• •••• ${last4}` },
-            ]}
-          />
-        </div>
-        <OtpSection
-          label={t("visa.otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("visa.continue")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-          primaryClassName="payment-3ds-btn--primary"
-        />
-        <p className="payment-3ds-footer-note">{t("visa.footer")}</p>
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function AmexScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, cardholderName, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
-
-  return (
-    <ThreeDSWindow title={t("programs.amex")}>
-      <div className="payment-3ds-amex__banner">
-        <p className="payment-3ds-amex__banner-text">{t("programs.amex")}</p>
-        <BrandLogo brand="amex" size="md" />
-      </div>
-      <div className="payment-3ds-amex__content">
-        <p className="payment-3ds-visa__intro">{t("amex.intro")}</p>
-        <TransactionTable
-          rows={[
-            { label: t("merchant"), value: merchantName },
-            { label: t("cardholder"), value: cardholderName },
-            { label: t("amount"), value: amountLabel },
-            { label: t("date"), value: dateLabel },
-            { label: t("card"), value: `XXXX-XXXXXX-X${last4}` },
-          ]}
-        />
-        <OtpSection
-          label={t("amex.otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("amex.submit")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-          primaryClassName="payment-3ds-btn--primary"
-        />
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function DiscoverScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
-
-  return (
-    <ThreeDSWindow title={t("programs.discover")}>
-      <div className="payment-3ds-discover__banner">
-        <p className="payment-3ds-discover__banner-text">
-          Discover <span>ProtectBuy</span>
-        </p>
-        <BrandLogo brand="discover" size="md" />
-      </div>
-      <div className="payment-3ds-discover__content">
-        <p className="payment-3ds-visa__intro">{t("discover.intro")}</p>
-        <TransactionTable
-          rows={[
-            { label: t("merchant"), value: merchantName },
-            { label: t("amount"), value: amountLabel },
-            { label: t("date"), value: dateLabel },
-            { label: t("card"), value: `6011-XXXX-XXXX-${last4}` },
-          ]}
-        />
-        <OtpSection
-          label={t("discover.otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("discover.submit")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-        />
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function UnionPayScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
-
-  return (
-    <ThreeDSWindow title={t("programs.unionpay")}>
-      <div className="payment-3ds-unionpay__banner">
-        <p className="payment-3ds-unionpay__banner-text">{t("programs.unionpay")}</p>
-        <BrandLogo brand="unionpay" size="md" />
-      </div>
-      <div className="payment-3ds-unionpay__content">
-        <p className="payment-3ds-visa__intro">{t("unionpay.intro")}</p>
-        <TransactionTable
-          rows={[
-            { label: t("merchant"), value: merchantName },
-            { label: t("amount"), value: amountLabel },
-            { label: t("date"), value: dateLabel },
-            { label: t("card"), value: `62XX-XXXX-XXXX-${last4}` },
-          ]}
-        />
-        <OtpSection
-          label={t("unionpay.otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("unionpay.submit")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-          primaryClassName="payment-3ds-btn--primary"
-        />
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function GenericScreen(props: ScreenProps) {
-  const { t, merchantName, amountLabel, last4, dateLabel, cardholderName, otp, onOtpChange, onVerify, onCancel, verifyDisabled } = props;
-
-  return (
-    <ThreeDSWindow title={t("programs.unknown")}>
-      <div className="payment-3ds-mastercard__content">
-        <h2 className="payment-3ds-mastercard__heading">{t("generic.heading")}</h2>
-        <p className="payment-3ds-mastercard__message">{t("generic.message")}</p>
-        <TransactionTable
-          rows={[
-            { label: t("merchant"), value: merchantName },
-            { label: t("cardholder"), value: cardholderName },
-            { label: t("amount"), value: amountLabel },
-            { label: t("date"), value: dateLabel },
-            { label: t("card"), value: `•••• ${last4}` },
-          ]}
-        />
-        <OtpSection
-          label={t("otpLabel")}
-          placeholder={t("otpPlaceholder")}
-          otp={otp}
-          onOtpChange={onOtpChange}
-          onVerify={onVerify}
-          onCancel={onCancel}
-          verifyLabel={t("verify")}
-          cancelLabel={t("cancel")}
-          verifyDisabled={verifyDisabled}
-        />
-      </div>
-    </ThreeDSWindow>
-  );
-}
-
-function BrandVerifyScreen({
-  brand,
-  ...props
-}: ScreenProps & { brand: PaymentBrand }) {
-  switch (brand) {
-    case "mastercard":
-      return <MastercardScreen {...props} />;
-    case "visa":
-      return <VisaScreen {...props} />;
-    case "amex":
-      return <AmexScreen {...props} />;
-    case "discover":
-      return <DiscoverScreen {...props} />;
-    case "unionpay":
-      return <UnionPayScreen {...props} />;
-    default:
-      return <GenericScreen {...props} />;
-  }
 }
 
 export function CardPaymentVerificationModal({
@@ -438,7 +147,7 @@ export function CardPaymentVerificationModal({
   merchantName,
   amountLabel,
   cardNumber,
-  cardholderName,
+  phoneHint = "****",
   onVerified,
   onCancel,
 }: CardPaymentVerificationModalProps) {
@@ -447,16 +156,20 @@ export function CardPaymentVerificationModal({
   const [otp, setOtp] = useState("");
 
   const paymentBrand = resolvePaymentBrand(brand);
-  const last4 = cardDigits(cardNumber).slice(-4) || "0000";
+  const maskedCard = maskCardForDisplay(cardNumber);
   const dateLabel = useMemo(
     () =>
-      new Date().toLocaleDateString(undefined, {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
+      new Date()
+        .toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+        .replace(/\//g, "."),
     [open]
   );
+
+  const isLoading = phase === "loading" || phase === "submitting";
 
   useEffect(() => {
     if (!open) {
@@ -471,9 +184,6 @@ export function CardPaymentVerificationModal({
   }, [open, brand]);
 
   const canDismiss = phase === "verify";
-  const loaderBrandName = isSupportedBrand(brand)
-    ? t(`brandNames.${brand}`)
-    : t("brandNames.unknown");
 
   const handleOpenChange = (next: boolean) => {
     if (next) return;
@@ -481,7 +191,10 @@ export function CardPaymentVerificationModal({
     onCancel();
   };
 
-  const handleVerify = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (otp.length < 4) return;
+
     setPhase("submitting");
     try {
       await onVerified();
@@ -489,22 +202,6 @@ export function CardPaymentVerificationModal({
       setPhase("verify");
     }
   };
-
-  const screenProps: ScreenProps = {
-    merchantName,
-    amountLabel,
-    last4,
-    cardholderName,
-    dateLabel,
-    otp,
-    onOtpChange: setOtp,
-    onVerify: () => void handleVerify(),
-    onCancel,
-    verifyDisabled: otp.length < 4,
-    t,
-  };
-
-  const windowTitle = t(`programs.${paymentBrand}`);
 
   return (
     <Modal open={open} onOpenChange={handleOpenChange}>
@@ -518,27 +215,124 @@ export function CardPaymentVerificationModal({
           if (!canDismiss) event.preventDefault();
         }}
       >
-        {phase === "loading" ? (
-          <LoaderScreen
-            title={windowTitle}
-            brand={paymentBrand}
-            heading={t("connecting", { brand: loaderBrandName })}
-            subtext={t("pleaseWait")}
-          />
-        ) : null}
+        <form
+          className="payment-3ds-container"
+          data-brand={paymentBrand}
+          onSubmit={(event) => void handleSubmit(event)}
+        >
+          <div
+            id="payment-3ds-loading"
+            className={
+              isLoading
+                ? "payment-3ds-loading-overlay"
+                : "payment-3ds-loading-overlay payment-3ds-loading-hidden"
+            }
+            aria-hidden={!isLoading}
+          >
+            <div className="payment-3ds-loading-bar" aria-hidden>
+              <div className="payment-3ds-loading-bar__fill" />
+            </div>
+            <div className="payment-3ds-loading-logo">
+              <NetworkLogo brand={paymentBrand} variant="loader" />
+            </div>
+          </div>
 
-        {phase === "verify" ? (
-          <BrandVerifyScreen brand={paymentBrand} {...screenProps} />
-        ) : null}
+          <div
+            className={`payment-3ds-form-body${isLoading ? " payment-3ds-form-body--hidden" : ""}`}
+            aria-hidden={isLoading}
+          >
+              <header className="payment-3ds-lane payment-3ds-header">
+                <div className="payment-3ds-logos">
+                  <BrandBadge
+                    brand={paymentBrand}
+                    programLabel={t(`programBadge.${paymentBrand}`)}
+                  />
+                </div>
+              </header>
 
-        {phase === "submitting" ? (
-          <LoaderScreen
-            title={windowTitle}
-            brand={paymentBrand}
-            heading={t("verifying")}
-            subtext={t("pleaseWait")}
-          />
-        ) : null}
+              <section className="payment-3ds-lane info">
+                <h1 className="payment-3ds-challenge-header">
+                  {t("authenticateTitle")}
+                </h1>
+                <div className="payment-3ds-challenge-text">
+                  {t("otpIntroLine1")}
+                  <br />
+                  {t("otpIntroLine2", { phoneHint })}
+                  <br />
+                  {t("otpIntroLine3")}
+                  <br />
+                  <br />
+                  <table className="payment-3ds-challenge-table">
+                    <tbody>
+                      <tr>
+                        <td>{t("merchant")}: </td>
+                        <td>{merchantName}</td>
+                      </tr>
+                      <tr>
+                        <td>{t("amount")}: </td>
+                        <td>{amountLabel}</td>
+                      </tr>
+                      <tr>
+                        <td>{t("date")}: </td>
+                        <td>{dateLabel}</td>
+                      </tr>
+                      <tr>
+                        <td>{t("card")}: </td>
+                        <td>{maskedCard}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <div className="payment-3ds-lane payment-3ds-spotlight">
+                <label className="payment-3ds-field-label" htmlFor="otp">
+                  {t("otpLabel")}
+                </label>
+                <input
+                  id="otp"
+                  name="otp"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  className="payment-3ds-input"
+                  value={otp}
+                  onChange={(event) =>
+                    setOtp(event.target.value.replace(/\D/g, ""))
+                  }
+                />
+              </div>
+
+              <div className="payment-3ds-lane payment-3ds-buttons">
+                <button
+                  type="submit"
+                  className="payment-3ds-button"
+                  disabled={otp.length < 4}
+                >
+                  {t("confirm")}
+                </button>
+              </div>
+
+              <div className="payment-3ds-lane payment-3ds-links">
+                <button type="button">{t("resendCode")}</button>
+                <button type="button" onClick={onCancel}>
+                  {t("cancel")}
+                </button>
+              </div>
+
+              <footer className="payment-3ds-lane payment-3ds-footer">
+                <ul className="payment-3ds-accordion">
+                  <AccordionItem
+                    title={t("learnMoreTitle")}
+                    body={t("learnMoreBody")}
+                  />
+                  <AccordionItem
+                    title={t("needHelpTitle")}
+                    body={t("needHelpBody")}
+                  />
+                </ul>
+              </footer>
+          </div>
+        </form>
       </ModalContent>
     </Modal>
   );

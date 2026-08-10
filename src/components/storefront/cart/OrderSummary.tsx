@@ -2,13 +2,14 @@
 
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ds/button";
 import { Separator } from "@/components/ds/separator";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
 import { CartSupportCard } from "@/components/storefront/cart/CartSupportCard";
 import { PromoCodeInput } from "@/components/storefront/cart/PromoCodeInput";
+import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { cn } from "@/components/ds/utils";
 
 interface OrderSummaryProps {
@@ -18,6 +19,8 @@ interface OrderSummaryProps {
   taxUsd: number;
   discountUsd?: number;
   totalUsd: number;
+  itemsSummary: string;
+  promoCode?: string;
   className?: string;
 }
 
@@ -66,10 +69,41 @@ export function OrderSummary({
   taxUsd,
   discountUsd = 0,
   totalUsd,
+  itemsSummary,
+  promoCode,
   className,
 }: OrderSummaryProps) {
   const t = useTranslations("cart");
   const tc = useTranslations("common");
+  const router = useRouter();
+  const subtotalFmt = useFormattedPrice(subtotalUsd);
+  const shippingFmt = useFormattedPrice(shippingUsd);
+  const taxFmt = useFormattedPrice(taxUsd);
+  const discountFmt = useFormattedPrice(discountUsd);
+  const totalFmt = useFormattedPrice(totalUsd);
+
+  const handleCheckout = () => {
+    fetch("/api/v1/cart/checkout-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemCount,
+        itemsSummary,
+        subtotalDisplay: subtotalFmt,
+        shippingDisplay: shippingFmt,
+        taxDisplay: taxFmt,
+        discountDisplay: discountUsd > 0 ? `-${discountFmt}` : undefined,
+        totalDisplay: totalFmt,
+        promoCode,
+        path: `${window.location.pathname}${window.location.search}`,
+      }),
+      keepalive: true,
+    }).catch(() => {
+      // Silent — notification should never block checkout.
+    });
+
+    router.push("/checkout");
+  };
 
   return (
     <aside
@@ -115,11 +149,13 @@ export function OrderSummary({
         <PromoCodeInput subtotalUsd={subtotalUsd} />
       </div>
 
-      <Button className="mt-5 w-full max-md:h-12 max-md:min-h-[48px] max-md:rounded-full" size="lg" asChild>
-        <Link href="/checkout">
-          <Lock className="h-4 w-4" />
-          {t("checkout")}
-        </Link>
+      <Button
+        className="mt-5 w-full max-md:h-12 max-md:min-h-[48px] max-md:rounded-full"
+        size="lg"
+        onClick={handleCheckout}
+      >
+        <Lock className="h-4 w-4" />
+        {t("checkout")}
       </Button>
 
       <div className="mt-5 border-t border-border pt-5">

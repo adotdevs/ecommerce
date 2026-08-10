@@ -1,363 +1,436 @@
-/* Authentic card-provider 3DS popup styling (always light, independent of site theme) */
+/* 3DS ACS auth screen — matches entersekt-style markup */
 
 .payment-3ds-overlay {
-  background: rgb(0 0 0 / 55%) !important;
+  background: rgb(0 0 0 / 50%) !important;
   backdrop-filter: none !important;
 }
 
 .payment-3ds-shell {
-  max-width: 440px;
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 16px !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  padding: 0 !important;
+  transform: none !important;
+  translate: none !important;
 }
 
-.payment-3ds-window {
+.payment-3ds-shell[data-state="open"],
+.payment-3ds-shell[data-state="closed"] {
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  translate: none !important;
+}
+
+.payment-3ds-container {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 400px;
+  min-height: 520px;
+  max-height: 825px;
+  flex: 0 1 auto;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-content: stretch;
+  margin: auto;
   overflow: hidden;
-  border: 1px solid #808080;
+  border-radius: 2px;
   background: #fff;
-  box-shadow:
-    0 12px 40px rgb(0 0 0 / 35%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
-  color: #222;
+  box-shadow: 0 8px 14px 3px #0000000c;
+  color: #333;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
-.payment-3ds-window * {
+.payment-3ds-container * {
   box-sizing: border-box;
 }
 
-.payment-3ds-window__titlebar {
+.payment-3ds-lane {
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.payment-3ds-header {
+  padding-top: 12px;
+  margin-bottom: 20px;
+}
+
+/* Header logos — network badge (circles | ID Check) */
+.payment-3ds-logos {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 8px;
-  border-bottom: 1px solid #808080;
-  background: linear-gradient(180deg, #f0f0f0 0%, #dcdcdc 100%);
-  color: #111;
-  font-size: 11px;
-  font-weight: 700;
+  min-height: 36px;
 }
 
-.payment-3ds-window__titlebar-dot {
-  width: 14px;
-  height: 14px;
-  border: 1px solid #999;
-  background: linear-gradient(180deg, #fff 0%, #ddd 100%);
-}
-
-.payment-3ds-window__body {
-  background: #fff;
-}
-
-.payment-3ds-loader {
-  display: flex;
-  flex-direction: column;
+.payment-3ds-brand-badge {
+  display: inline-flex;
   align-items: center;
-  padding: 28px 24px 32px;
-  text-align: center;
+  gap: 14px;
 }
 
-.payment-3ds-loader__spinner {
-  width: 34px;
-  height: 34px;
-  border: 3px solid #d9d9d9;
-  border-top-color: #333;
-  border-radius: 50%;
-  animation: payment-3ds-spin 0.8s linear infinite;
-}
-
-@keyframes payment-3ds-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.payment-3ds-loader__text {
-  margin-top: 16px;
-  color: #333;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.payment-3ds-loader__subtext {
-  margin-top: 6px;
-  max-width: 280px;
-  color: #666;
-  font-size: 11px;
-}
-
-.payment-3ds-brand-logo {
-  position: relative;
-  display: inline-block;
+.payment-3ds-brand-badge__divider {
+  width: 1px;
+  height: 30px;
+  background: #c4c4c4;
   flex-shrink: 0;
 }
 
-.payment-3ds-brand-logo--sm {
-  width: 46px;
+.payment-3ds-brand-badge__program {
+  color: #333;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Loading overlay — same size as OTP form */
+.payment-3ds-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  padding: 72px 24px 48px;
+}
+
+.payment-3ds-loading-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.payment-3ds-loading-bar {
+  position: relative;
+  width: min(220px, 70%);
   height: 28px;
+  flex-shrink: 0;
+  transform: skewX(-18deg);
+  background: #ebe8f5;
+  overflow: hidden;
 }
 
-.payment-3ds-brand-logo--md {
-  width: 72px;
+.payment-3ds-loading-bar__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: #5c4ee5;
+  animation: payment-3ds-bar 1.8s ease-in-out infinite;
+}
+
+.payment-3ds-container[data-brand="visa"] .payment-3ds-loading-bar {
+  background: #e8edfc;
+}
+
+.payment-3ds-container[data-brand="visa"] .payment-3ds-loading-bar__fill {
+  background: #1a39d2;
+}
+
+.payment-3ds-container[data-brand="amex"] .payment-3ds-loading-bar__fill {
+  background: #006fcf;
+}
+
+.payment-3ds-container[data-brand="discover"] .payment-3ds-loading-bar__fill {
+  background: #ff6000;
+}
+
+.payment-3ds-container[data-brand="unionpay"] .payment-3ds-loading-bar__fill {
+  background: #e21836;
+}
+
+@keyframes payment-3ds-bar {
+  0% {
+    width: 18%;
+    left: 0;
+  }
+  50% {
+    width: 62%;
+    left: 12%;
+  }
+  100% {
+    width: 28%;
+    left: 72%;
+  }
+}
+
+.payment-3ds-loading-logo {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+/* Header network logo inside badge */
+.payment-3ds-logo-network {
+  position: relative;
+  display: inline-block;
+  height: 28px;
+  width: 44px;
+}
+
+.payment-3ds-logo-network--loader {
   height: 44px;
+  width: 68px;
 }
 
-.payment-3ds-brand-logo--lg {
-  width: 96px;
-  height: 56px;
-}
-
-.payment-3ds-brand-logo img,
-.payment-3ds-brand-logo [data-nimg="fill"] {
+.payment-3ds-logo-network img,
+.payment-3ds-logo-network [data-nimg="fill"] {
   object-fit: contain !important;
 }
 
-/* Mastercard SecureCode */
-.payment-3ds-mastercard__header {
+.payment-3ds-form-body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid #d9d9d9;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-.payment-3ds-mastercard__program {
-  color: #000;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.payment-3ds-form-body--hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-.payment-3ds-mastercard__program span {
-  color: #eb001b;
-}
-
-.payment-3ds-mastercard__content {
-  padding: 14px 16px 16px;
-}
-
-.payment-3ds-mastercard__heading {
+/* Info section */
+.payment-3ds-challenge-header {
   margin: 0 0 10px;
-  color: #111;
-  font-size: 13px;
+  color: #222;
+  font-size: 16px;
   font-weight: 700;
 }
 
-.payment-3ds-mastercard__message {
-  margin: 0 0 12px;
+.payment-3ds-challenge-text {
   color: #444;
-  font-size: 11px;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
-.payment-3ds-table {
+.payment-3ds-challenge-table {
   width: 100%;
-  margin: 0 0 14px;
+  margin-top: 8px;
   border-collapse: collapse;
 }
 
-.payment-3ds-table td {
-  padding: 5px 0;
+.payment-3ds-challenge-table td {
+  padding: 2px 8px 2px 0;
   vertical-align: top;
-  font-size: 11px;
+  font-size: 14px;
 }
 
-.payment-3ds-table td:first-child {
-  width: 38%;
-  padding-right: 10px;
-  color: #555;
+.payment-3ds-challenge-table td:first-child {
+  white-space: nowrap;
 }
 
-.payment-3ds-table td:last-child {
-  color: #111;
-  font-weight: 700;
+/* OTP input */
+.payment-3ds-spotlight {
+  margin-bottom: 12px;
 }
 
 .payment-3ds-field-label {
   display: block;
   margin-bottom: 6px;
-  color: #222;
-  font-size: 11px;
-  font-weight: 700;
+  color: #888;
+  font-size: 12px;
 }
 
 .payment-3ds-input {
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #7f9db9;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #bbb;
+  border-radius: 0;
   background: #fff;
-  color: #111;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 12px;
+  color: #222;
+  font-family: inherit;
+  font-size: 14px;
   outline: none;
 }
 
 .payment-3ds-input:focus {
-  border-color: #4d90fe;
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 10%);
+  border-color: #666;
 }
 
-.payment-3ds-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
+/* Buttons */
+.payment-3ds-buttons {
+  margin-bottom: 8px;
 }
 
-.payment-3ds-btn {
-  min-width: 84px;
-  padding: 5px 14px;
-  border: 1px solid #707070;
-  background: linear-gradient(180deg, #fefefe 0%, #e3e3e3 100%);
-  color: #111;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
-  font-weight: 400;
+.payment-3ds-button {
+  width: 100%;
+  height: 42px;
+  border: 0;
+  border-radius: 0;
+  background: #3d9a50;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
-.payment-3ds-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #fff 0%, #ececec 100%);
+.payment-3ds-button:hover:not(:disabled) {
+  background: #358846;
 }
 
-.payment-3ds-btn:disabled {
-  opacity: 0.55;
+.payment-3ds-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.payment-3ds-btn--primary {
-  border-color: #1a1f71;
-  background: linear-gradient(180deg, #2d3a9a 0%, #1a1f71 100%);
-  color: #fff;
+/* Links */
+.payment-3ds-links {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 8px;
 }
 
-.payment-3ds-btn--primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #3544ad 0%, #202889 100%);
-}
-
-.payment-3ds-link {
-  margin-top: 10px;
-  padding: 0;
+.payment-3ds-links a,
+.payment-3ds-links button {
   border: 0;
   background: none;
-  color: #1a1f71;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
-  text-decoration: underline;
+  padding: 0;
+  color: #0066cc;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
   cursor: pointer;
 }
 
-/* Verified by Visa */
-.payment-3ds-visa__banner {
+.payment-3ds-links a:hover,
+.payment-3ds-links button:hover {
+  text-decoration: underline;
+}
+
+/* Accordion footer */
+.payment-3ds-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+.payment-3ds-accordion {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payment-3ds-accordion li {
+  border-top: 1px solid #e8e8e8;
+}
+
+.payment-3ds-accordion-header {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
-  min-height: 54px;
-  padding: 10px 16px;
-  background: #1a1f71;
-  color: #fff;
+  border: 0;
+  background: none;
+  padding: 12px 0;
+  color: #0066cc;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
 }
 
-.payment-3ds-visa__banner-text {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.payment-3ds-visa__banner-text span {
-  font-style: italic;
+.payment-3ds-accordion-header::after {
+  content: "+";
+  font-size: 16px;
   font-weight: 400;
 }
 
-.payment-3ds-visa__content {
-  padding: 16px;
+.payment-3ds-accordion-header[aria-expanded="true"]::after {
+  content: "−";
 }
 
-.payment-3ds-visa__intro {
-  margin: 0 0 14px;
-  color: #222;
-  font-size: 12px;
+.payment-3ds-accordion-body {
+  padding: 0 0 12px;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.payment-3ds-visa__details {
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  border: 1px solid #c8c8c8;
-  background: #f7f7f7;
-}
-
-/* Amex SafeKey */
-.payment-3ds-amex__banner {
-  display: flex;
+.payment-3ds-mastercard-mark {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 10px 16px;
-  background: linear-gradient(180deg, #006fcf 0%, #005baa 100%);
-  color: #fff;
+  justify-content: center;
 }
 
-.payment-3ds-amex__banner-text {
-  font-size: 16px;
-  font-weight: 700;
+.payment-3ds-mastercard-mark--wordmark {
+  gap: 10px;
 }
 
-.payment-3ds-amex__content {
-  padding: 16px;
+.payment-3ds-mastercard-mark__circles {
+  display: block;
+  width: 40px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
-/* Discover ProtectBuy */
-.payment-3ds-discover__banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 10px 16px;
-  background: #fff;
-  border-bottom: 3px solid #ff6000;
+.payment-3ds-mastercard-mark--wordmark .payment-3ds-mastercard-mark__circles {
+  width: 52px;
+  height: 32px;
 }
 
-.payment-3ds-discover__banner-text {
+.payment-3ds-mastercard-mark__text {
   color: #111;
-  font-size: 16px;
-  font-weight: 700;
+  font-family: "Mark Offc For MC", Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: lowercase;
 }
 
-.payment-3ds-discover__banner-text span {
-  color: #ff6000;
+.payment-3ds-visa-wordmark {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
-.payment-3ds-discover__content {
-  padding: 16px;
+.payment-3ds-visa-wordmark--loader {
+  height: 36px;
+  width: 100px;
 }
 
-/* UnionPay */
-.payment-3ds-unionpay__banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  padding: 10px 16px;
-  background: linear-gradient(180deg, #e21836 0%, #c41230 100%);
-  color: #fff;
+.payment-3ds-visa-wordmark--badge,
+.payment-3ds-visa-wordmark--header {
+  height: 22px;
+  width: 64px;
 }
 
-.payment-3ds-unionpay__banner-text {
-  font-size: 15px;
-  font-weight: 700;
-}
+@media (max-width: 640px) {
+  .payment-3ds-shell {
+    padding: 0 !important;
+  }
 
-.payment-3ds-unionpay__content {
-  padding: 16px;
-}
-
-.payment-3ds-footer-note {
-  margin-top: 12px;
-  color: #777;
-  font-size: 10px;
-  line-height: 1.35;
+  .payment-3ds-container {
+    max-width: 100%;
+    max-height: 100%;
+    min-height: 100%;
+    border-radius: 0;
+  }
 }

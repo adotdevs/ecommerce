@@ -50,6 +50,15 @@ export default function CartPage() {
     [subtotalUsd, discountUsd]
   );
 
+  const itemsSummary = useMemo(
+    () =>
+      items
+        .map((item) => `${item.quantity}x ${item.name}`)
+        .join("; ")
+        .slice(0, 500),
+    [items]
+  );
+
   if (!hydrated) {
     return <CartPageSkeleton />;
   }
@@ -109,6 +118,8 @@ export default function CartPage() {
             taxUsd={taxUsd}
             discountUsd={discountUsd}
             totalUsd={totalUsd}
+            itemsSummary={itemsSummary}
+            promoCode={appliedPromo?.code}
           />
         </div>
       </div>

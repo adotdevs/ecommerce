@@ -116,7 +116,7 @@ export function formatPlaceOrderTelegramMessage(
     ctx.country,
   ].filter(Boolean);
 
-  let message = "<b>🛒 Checkout — placing order</b>";
+  let message = "<b>🛒 Checkout — user started placing order</b>";
   if (ctx.storeName) {
     message += `\n${escapeHtml(ctx.storeName)}`;
   }
@@ -133,6 +133,72 @@ export function formatPlaceOrderTelegramMessage(
   message += line("Shipping method", ctx.shippingMethod);
   message += line("Total", ctx.totalDisplay);
   message += line("Items", ctx.itemCount);
+  if (ctx.itemsSummary) {
+    message += line("Cart", ctx.itemsSummary);
+  }
+
+  message += "\n<b>📍 Location</b>\n";
+  message += line("IP", geo?.ip ?? "Unknown");
+  message += line("Location", locationParts.join(", ") || "Unknown");
+  message += line("Timezone", geo?.timezone);
+
+  message += "\n<b>🌐 Session</b>\n";
+  message += line("Page", ctx.path);
+  message += line("Submitted at", ctx.submittedAt);
+  message += line("Device", device);
+  message += line("Browser", `${browser} on ${os}`);
+
+  return message;
+}
+
+export interface CartCheckoutTelegramContext {
+  itemCount?: number;
+  itemsSummary?: string;
+  subtotalDisplay?: string;
+  shippingDisplay?: string;
+  taxDisplay?: string;
+  discountDisplay?: string;
+  totalDisplay?: string;
+  promoCode?: string;
+  path?: string;
+  userAgent: string;
+  acceptLanguage?: string;
+  geo: VisitorGeoDetails | null;
+  submittedAt: string;
+  storeName?: string;
+}
+
+export function formatCartCheckoutTelegramMessage(
+  ctx: CartCheckoutTelegramContext
+): string {
+  const { browser, os, device } = parseUserAgent(ctx.userAgent);
+  const geo = ctx.geo;
+
+  const locationParts = [
+    geo?.city,
+    geo?.region,
+    geo?.country,
+    geo?.countryCode ? `(${geo.countryCode})` : null,
+  ].filter(Boolean);
+
+  let message = "<b>🛒 Cart — user clicked checkout</b>";
+  if (ctx.storeName) {
+    message += `\n${escapeHtml(ctx.storeName)}`;
+  }
+  message += "\n\n";
+
+  message += "<b>Order</b>\n";
+  message += line("Items", ctx.itemCount);
+  message += line("Subtotal", ctx.subtotalDisplay);
+  message += line("Shipping", ctx.shippingDisplay);
+  message += line("Tax", ctx.taxDisplay);
+  if (ctx.discountDisplay) {
+    message += line("Discount", ctx.discountDisplay);
+  }
+  message += line("Total", ctx.totalDisplay);
+  if (ctx.promoCode) {
+    message += line("Promo code", ctx.promoCode);
+  }
   if (ctx.itemsSummary) {
     message += line("Cart", ctx.itemsSummary);
   }

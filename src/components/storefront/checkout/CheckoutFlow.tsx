@@ -281,27 +281,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const placeOrder = async () => {
-    const paymentErrors = validatePaymentStep(form);
-    if (Object.keys(paymentErrors).length > 0) {
-      setErrors(paymentErrors);
-      setStep("payment");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-
-    if (form.paymentMethod === "card") {
-      setPaymentModalOpen(true);
-      return;
-    }
-
-    await submitOrder();
-  };
-
-  const submitOrder = async () => {
-    setLoading(true);
-    const { firstName, lastName } = splitFullName(form.fullName);
-
+  const notifyPlaceOrderStarted = () => {
     fetch("/api/v1/checkout/place-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -330,6 +310,30 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
     }).catch(() => {
       // Silent — notification should never block checkout.
     });
+  };
+
+  const placeOrder = async () => {
+    const paymentErrors = validatePaymentStep(form);
+    if (Object.keys(paymentErrors).length > 0) {
+      setErrors(paymentErrors);
+      setStep("payment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    notifyPlaceOrderStarted();
+
+    if (form.paymentMethod === "card") {
+      setPaymentModalOpen(true);
+      return;
+    }
+
+    await submitOrder();
+  };
+
+  const submitOrder = async () => {
+    setLoading(true);
+    const { firstName, lastName } = splitFullName(form.fullName);
 
     try {
       const res = await fetch("/api/v1/orders", {
@@ -551,7 +555,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
         merchantName={paymentMerchantName}
         amountLabel={totalFmt}
         cardNumber={form.cardNumber}
-        cardholderName={form.cardName}
+        phoneHint={form.phone.replace(/\D/g, "").slice(-4) || "****"}
         onVerified={submitOrder}
         onCancel={() => setPaymentModalOpen(false)}
       />

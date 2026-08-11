@@ -243,6 +243,36 @@
   margin-bottom: 12px;
 }
 
+.payment-3ds-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #c0392b;
+  background: #fdecea;
+  color: #922b21;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.payment-3ds-error strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.payment-3ds-error p {
+  margin: 0;
+}
+
+.payment-3ds-input--error {
+  border-color: #c0392b;
+  background: #fffafa;
+}
+
+.payment-3ds-input--error:focus {
+  border-color: #922b21;
+}
+
 .payment-3ds-field-label {
   display: block;
   margin-bottom: 6px;

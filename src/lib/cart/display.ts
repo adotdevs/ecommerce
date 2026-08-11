@@ -1,4 +1,6 @@
 import type { CartItem } from "@/types";
+import { calculateCheckoutTotals } from "@/lib/checkout/shipping";
+import type { ShippingCalculationOptions } from "@/lib/shipping/settings";
 
 const VARIANT_SEPARATOR = " — ";
 
@@ -21,16 +23,16 @@ export function getCartItemKey(item: CartItem): string {
   return `${item.productId}-${item.variantId ?? "default"}`;
 }
 
+/** @deprecated Use resolveFreeShippingThresholdUsd with shipping settings instead. */
 export const FREE_SHIPPING_THRESHOLD_USD = 100;
+/** @deprecated Use shipping settings instead. */
 export const STANDARD_SHIPPING_USD = 9.99;
 export const ESTIMATED_TAX_RATE = 0.08;
 
-export function calculateCartTotals(subtotalUsd: number, discountUsd = 0) {
-  const shippingUsd =
-    subtotalUsd >= FREE_SHIPPING_THRESHOLD_USD ? 0 : STANDARD_SHIPPING_USD;
-  const taxableUsd = Math.max(0, subtotalUsd - discountUsd);
-  const taxUsd = taxableUsd * ESTIMATED_TAX_RATE;
-  const totalUsd = subtotalUsd + shippingUsd + taxUsd - discountUsd;
-
-  return { shippingUsd, taxUsd, totalUsd, discountUsd };
+export function calculateCartTotals(
+  subtotalUsd: number,
+  discountUsd = 0,
+  options?: ShippingCalculationOptions
+) {
+  return calculateCheckoutTotals(subtotalUsd, "standard", discountUsd, options);
 }

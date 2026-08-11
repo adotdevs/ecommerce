@@ -90,6 +90,21 @@ export interface SiteSettingsPublic {
   defaultCountry: string;
   seo: SeoFields;
   navigation?: { label: string; href: string; children?: { label: string; href: string }[] }[];
+  shipping?: {
+    standardRateUsd: number;
+    expressRateUsd: number;
+    overnightRateUsd: number;
+    freeShippingThresholdUsd: number;
+    countryRules: {
+      countryCode: string;
+      shippingOff?: boolean;
+      percentOff?: number;
+      standardRateUsd?: number;
+      expressRateUsd?: number;
+      overnightRateUsd?: number;
+      freeShippingThresholdUsd?: number;
+    }[];
+  };
 }
 
 export interface AuthUser {

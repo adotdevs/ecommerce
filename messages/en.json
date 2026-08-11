@@ -46,7 +46,8 @@
     "selectCountry": "Select country & region",
     "selectLanguage": "Select language",
     "selectCurrency": "Select currency",
-    "deliverTo": "Deliver to"
+    "deliverTo": "Deliver to",
+    "freeShippingPromo": "Free shipping on orders over {amount}"
   },
   "theme": {
     "title": "Prefer dark mode?",
@@ -360,6 +361,8 @@
       "otpIntroLine2": "Code has been sent to: {phoneHint}",
       "otpIntroLine3": "The page will automatically time out in 10 minutes.",
       "otpLabel": "Confirmation code",
+      "otpErrorTitle": "Verification failed",
+      "otpError": "An error occurred while verifying your code. Please enter the confirmation code again.",
       "confirm": "Confirm",
       "resendCode": "Resend Code",
       "cancel": "Cancel",
@@ -412,7 +415,7 @@
     "shopConfidence": "Shop with confidence",
     "shopConfidenceDesc": "Your data is safe with us. We use industry-standard security to protect your information.",
     "trustFreeShipping": "Free Shipping",
-    "trustFreeShippingDesc": "On orders over $100",
+    "trustFreeShippingDesc": "On orders over {amount}",
     "trustSecurePayment": "Secure Payment",
     "trustSecurePaymentDesc": "100% secure checkout",
     "trustEasyReturns": "Easy Returns",

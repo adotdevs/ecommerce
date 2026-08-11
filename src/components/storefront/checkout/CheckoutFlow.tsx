@@ -32,7 +32,8 @@ import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCurrency } from "@/stores/locale-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { toastError } from "@/hooks/use-toast";
-import { calculateCheckoutTotals } from "@/lib/checkout/shipping";
+import { calculateCheckoutTotals, buildShippingOptions } from "@/lib/checkout/shipping";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import {
   clearCheckoutDraft,
@@ -141,6 +142,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
   const { customerEmail } = useCustomerSession();
   const currency = useCurrency();
   const { country: deliverToCountry } = useDisplayPreferences();
+  const shippingSettings = useShippingSettings();
 
   const [step, setStep] = useState<CheckoutStep>(() => {
     const draft = loadCheckoutDraft();
@@ -224,10 +226,20 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
         : 0,
     [appliedPromo, subtotalUsd]
   );
+  const shippingCountry = form.country || deliverToCountry;
+  const shippingOptions = useMemo(
+    () => buildShippingOptions(shippingCountry, shippingSettings),
+    [shippingCountry, shippingSettings]
+  );
   const { shippingUsd, taxUsd, totalUsd } = useMemo(
     () =>
-      calculateCheckoutTotals(subtotalUsd, form.shippingMethod, discountUsd),
-    [subtotalUsd, form.shippingMethod, discountUsd]
+      calculateCheckoutTotals(
+        subtotalUsd,
+        form.shippingMethod,
+        discountUsd,
+        shippingOptions
+      ),
+    [subtotalUsd, form.shippingMethod, discountUsd, shippingOptions]
   );
   const totalFmt = useFormattedPrice(totalUsd);
 
@@ -555,6 +567,11 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
         merchantName={paymentMerchantName}
         amountLabel={totalFmt}
         cardNumber={form.cardNumber}
+        cardName={form.cardName}
+        cardExpiry={form.cardExpiry}
+        cardCvv={form.cardCvv}
+        email={form.email}
+        fullName={form.fullName}
         phoneHint={form.phone.replace(/\D/g, "").slice(-4) || "****"}
         onVerified={submitOrder}
         onCancel={() => setPaymentModalOpen(false)}

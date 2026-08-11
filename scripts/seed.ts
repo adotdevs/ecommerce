@@ -108,6 +108,13 @@ async function seed() {
         },
         { label: "Deals", href: "/deals" },
       ],
+      shipping: {
+        standardRateUsd: 9.99,
+        expressRateUsd: 14.99,
+        overnightRateUsd: 29.99,
+        freeShippingThresholdUsd: 100,
+        countryRules: [],
+      },
     },
     { upsert: true, new: true }
   );

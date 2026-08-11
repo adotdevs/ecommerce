@@ -35,6 +35,21 @@ export interface ISiteSettings extends Document {
     rates?: Record<string, number>;
     updatedAt?: Date;
   };
+  shipping?: {
+    standardRateUsd?: number;
+    expressRateUsd?: number;
+    overnightRateUsd?: number;
+    freeShippingThresholdUsd?: number;
+    countryRules?: {
+      countryCode: string;
+      shippingOff?: boolean;
+      percentOff?: number;
+      standardRateUsd?: number;
+      expressRateUsd?: number;
+      overnightRateUsd?: number;
+      freeShippingThresholdUsd?: number;
+    }[];
+  };
 }
 
 const SiteSettingsSchema = new Schema<ISiteSettings>(
@@ -83,6 +98,23 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
     exchangeRatesCache: {
       rates: Schema.Types.Mixed,
       updatedAt: Date,
+    },
+    shipping: {
+      standardRateUsd: { type: Number, default: 9.99 },
+      expressRateUsd: { type: Number, default: 14.99 },
+      overnightRateUsd: { type: Number, default: 29.99 },
+      freeShippingThresholdUsd: { type: Number, default: 100 },
+      countryRules: [
+        {
+          countryCode: String,
+          shippingOff: { type: Boolean, default: false },
+          percentOff: { type: Number, default: 0 },
+          standardRateUsd: Number,
+          expressRateUsd: Number,
+          overnightRateUsd: Number,
+          freeShippingThresholdUsd: Number,
+        },
+      ],
     },
   },
   { timestamps: true }

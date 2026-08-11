@@ -16,7 +16,11 @@ import {
   restoreProductStockAtomic,
 } from "@/lib/inventory/stock.server";
 import { releaseSessionReservations } from "@/lib/inventory/reservations";
-import { calculateShippingUsd } from "@/lib/checkout/shipping";
+import {
+  calculateShippingUsd,
+  normalizeShippingSettings,
+} from "@/lib/shipping/settings";
+import { getSiteSettings } from "@/lib/data/site-settings";
 import { ESTIMATED_TAX_RATE } from "@/lib/cart/display";
 import {
   calculatePromoDiscountUsd,
@@ -79,7 +83,18 @@ export async function POST(request: NextRequest) {
       parsed.data.shippingMethod ??
       shippingMethod ??
       "standard";
-    const shipping = calculateShippingUsd(subtotal, method);
+    const siteSettings = await getSiteSettings();
+    const shippingConfig = normalizeShippingSettings(siteSettings?.shipping);
+    const shippingAddressData =
+      parsed.data.shippingAddress ?? shippingAddress ?? undefined;
+    const countryCode =
+      typeof shippingAddressData === "object" && shippingAddressData
+        ? String((shippingAddressData as { country?: string }).country ?? "")
+        : "";
+    const shipping = calculateShippingUsd(subtotal, method, {
+      countryCode: countryCode || undefined,
+      config: shippingConfig,
+    });
 
     let discount = 0;
     let appliedPromoCode: string | undefined;

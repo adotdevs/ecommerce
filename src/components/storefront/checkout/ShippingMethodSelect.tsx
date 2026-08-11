@@ -7,8 +7,11 @@ import {
   CheckoutPrimaryButton,
   SecureNote,
 } from "@/components/storefront/checkout/CheckoutPrimaryButton";
+import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { SHIPPING_METHODS } from "@/lib/checkout/constants";
-import { calculateShippingUsd } from "@/lib/checkout/shipping";
+import { buildShippingOptions } from "@/lib/checkout/shipping";
+import { calculateShippingUsd } from "@/lib/shipping/settings";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import type { CheckoutFormState, ShippingMethodId } from "@/lib/checkout/types";
 
@@ -23,16 +26,23 @@ function ShippingMethodOption({
   method,
   selected,
   subtotalUsd,
+  countryCode,
   onSelect,
 }: {
   method: (typeof SHIPPING_METHODS)[number];
   selected: boolean;
   subtotalUsd: number;
+  countryCode: string;
   onSelect: () => void;
 }) {
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
-  const price = calculateShippingUsd(subtotalUsd, method.id);
+  const shippingSettings = useShippingSettings();
+  const price = calculateShippingUsd(
+    subtotalUsd,
+    method.id,
+    buildShippingOptions(countryCode, shippingSettings)
+  );
   const formatted = useFormattedPrice(price);
 
   return (
@@ -54,6 +64,8 @@ export function ShippingMethodSelect({
   onContinue,
 }: ShippingMethodSelectProps) {
   const t = useTranslations("checkout");
+  const { country: deliverToCountry } = useDisplayPreferences();
+  const countryCode = form.country || deliverToCountry;
 
   return (
     <CheckoutCard
@@ -67,7 +79,8 @@ export function ShippingMethodSelect({
             method={method}
             selected={form.shippingMethod === method.id}
             subtotalUsd={subtotalUsd}
-            onSelect={() => onChange({ shippingMethod: method.id })}
+            countryCode={countryCode}
+            onSelect={() => onChange({ shippingMethod: method.id as ShippingMethodId })}
           />
         ))}
       </div>

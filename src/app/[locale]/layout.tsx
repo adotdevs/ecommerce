@@ -12,6 +12,9 @@ import {
 } from "@/components/providers/DisplayPreferencesContext";
 import type { CurrencyCode } from "@/config/locales";
 import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
+import { getSiteSettings } from "@/lib/data/site-settings";
+import { normalizeShippingSettings } from "@/lib/shipping/settings";
+import { ShippingSettingsProvider } from "@/components/providers/ShippingSettingsContext";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +54,8 @@ export default async function LocaleLayout({
 
   const cookieStore = await cookies();
   const exchangeRates = await fetchLiveExchangeRates();
+  const siteSettings = await getSiteSettings();
+  const shippingSettings = normalizeShippingSettings(siteSettings?.shipping);
 
   const serverPreferences = {
     country:
@@ -75,12 +80,14 @@ export default async function LocaleLayout({
     <div lang={locale} dir={dir}>
       <NextIntlClientProvider messages={messages}>
         <DisplayPreferencesProvider value={displayPrefs}>
-          <LocaleInitializer
-            locale={locale as Locale}
-            serverPreferences={serverPreferences}
-          />
-          <FirstVisitTracker />
-          {children}
+          <ShippingSettingsProvider value={shippingSettings}>
+            <LocaleInitializer
+              locale={locale as Locale}
+              serverPreferences={serverPreferences}
+            />
+            <FirstVisitTracker />
+            {children}
+          </ShippingSettingsProvider>
         </DisplayPreferencesProvider>
       </NextIntlClientProvider>
     </div>

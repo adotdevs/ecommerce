@@ -10,7 +10,9 @@ import {
 } from "@/components/storefront/checkout/CheckoutPrimaryButton";
 import { getAddressFieldConfig, formatAddressLine } from "@/lib/checkout/address-fields";
 import { formatPhoneDisplay } from "@/lib/checkout/phone-fields";
-import { calculateShippingUsd } from "@/lib/checkout/shipping";
+import { calculateShippingUsd } from "@/lib/shipping/settings";
+import { buildShippingOptions } from "@/lib/checkout/shipping";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import {
   CARD_BRAND_LOGOS,
   cardDigits,
@@ -74,8 +76,13 @@ export function ReviewOrder({
 }: ReviewOrderProps) {
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
+  const shippingSettings = useShippingSettings();
   const totalFmt = useFormattedPrice(totalUsd);
-  const shippingPrice = calculateShippingUsd(subtotalUsd, form.shippingMethod);
+  const shippingPrice = calculateShippingUsd(
+    subtotalUsd,
+    form.shippingMethod,
+    buildShippingOptions(form.country, shippingSettings)
+  );
   const shippingFmt = useFormattedPrice(shippingPrice);
 
   const config = getAddressFieldConfig(form.country);

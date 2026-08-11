@@ -1,4 +1,5 @@
 import type { SiteSettingsPublic } from "@/types";
+import { normalizeShippingSettings } from "@/lib/shipping/settings";
 
 type RawSiteSettings = {
   announcement?: string;
@@ -39,6 +40,7 @@ type RawSiteSettings = {
     href?: string;
     children?: { label?: string; href?: string }[];
   }[];
+  shipping?: unknown;
 } | null;
 
 export function resolveStoreName(settings: RawSiteSettings): string {
@@ -150,5 +152,6 @@ export function toPublicSiteSettings(
     defaultCountry: String(settings.defaultCountry ?? "US"),
     seo,
     navigation,
+    shipping: normalizeShippingSettings(settings.shipping),
   };
 }

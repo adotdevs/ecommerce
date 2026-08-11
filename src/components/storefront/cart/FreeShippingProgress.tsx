@@ -2,9 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
-import {
-  FREE_SHIPPING_THRESHOLD_USD,
-} from "@/lib/cart/display";
+import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { buildShippingOptions } from "@/lib/checkout/shipping";
+import { resolveFreeShippingThresholdUsd } from "@/lib/shipping/settings";
 import { cn } from "@/components/ds/utils";
 
 interface FreeShippingProgressProps {
@@ -17,12 +18,17 @@ export function FreeShippingProgress({
   className,
 }: FreeShippingProgressProps) {
   const t = useTranslations("cart");
+  const { country } = useDisplayPreferences();
+  const shippingSettings = useShippingSettings();
+  const shippingOptions = buildShippingOptions(country, shippingSettings);
+  const thresholdUsd = resolveFreeShippingThresholdUsd(shippingOptions);
   const formattedCurrent = useFormattedPrice(subtotalUsd);
-  const formattedGoal = useFormattedPrice(FREE_SHIPPING_THRESHOLD_USD);
-  const remainingUsd = Math.max(0, FREE_SHIPPING_THRESHOLD_USD - subtotalUsd);
+  const formattedGoal = useFormattedPrice(thresholdUsd);
+  const remainingUsd = Math.max(0, thresholdUsd - subtotalUsd);
   const formattedRemaining = useFormattedPrice(remainingUsd);
-  const progress = Math.min(100, (subtotalUsd / FREE_SHIPPING_THRESHOLD_USD) * 100);
-  const unlocked = subtotalUsd >= FREE_SHIPPING_THRESHOLD_USD;
+  const progress =
+    thresholdUsd > 0 ? Math.min(100, (subtotalUsd / thresholdUsd) * 100) : 100;
+  const unlocked = thresholdUsd <= 0 || subtotalUsd >= thresholdUsd;
 
   return (
     <div

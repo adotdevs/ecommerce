@@ -8,7 +8,13 @@ import { Label } from "@/components/ds/label";
 import { Textarea } from "@/components/ds/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
-import { builtInLocaleCodes, localeConfig, type LanguageEntry } from "@/config/locales";
+import { builtInLocaleCodes, localeConfig, countries, type LanguageEntry } from "@/config/locales";
+import {
+  DEFAULT_SHIPPING_SETTINGS,
+  normalizeShippingSettings,
+  type ShippingCountryRule,
+  type ShippingSettings,
+} from "@/lib/shipping/settings";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast, toastError } from "@/hooks/use-toast";
 
@@ -38,6 +44,8 @@ export default function AdminSettingsPage() {
   });
   const [languages, setLanguages] = useState<LanguageEntry[]>([]);
   const [newLang, setNewLang] = useState({ code: "", label: "", nativeLabel: "" });
+  const [shipping, setShipping] = useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
+  const [newCountryRule, setNewCountryRule] = useState("");
 
   useEffect(() => {
     fetch("/api/v1/settings/site")
@@ -68,6 +76,9 @@ export default function AdminSettingsPage() {
               }))
             );
           }
+          if (d.data.shipping) {
+            setShipping(normalizeShippingSettings(d.data.shipping));
+          }
         }
       });
   }, []);
@@ -92,6 +103,7 @@ export default function AdminSettingsPage() {
         supportEmail: form.supportEmail,
         seo: { title: form.seoTitle, description: form.seoDescription },
         languages,
+        shipping,
       }),
     });
     const data = await res.json();
@@ -210,6 +222,67 @@ export default function AdminSettingsPage() {
       ...languages,
       { code, label: meta.label, nativeLabel: meta.nativeLabel, dir: meta.dir, enabled: true },
     ]);
+  };
+
+  const addCountryRule = () => {
+    const code = newCountryRule.trim().toUpperCase();
+    if (!code || shipping.countryRules.some((rule) => rule.countryCode === code)) return;
+    setShipping((current) => ({
+      ...current,
+      countryRules: [
+        ...current.countryRules,
+        { countryCode: code, shippingOff: false, percentOff: 0 },
+      ],
+    }));
+    setNewCountryRule("");
+  };
+
+  const updateCountryRule = (
+    index: number,
+    patch: Partial<ShippingCountryRule>
+  ) => {
+    setShipping((current) => ({
+      ...current,
+      countryRules: current.countryRules.map((rule, i) =>
+        i === index ? { ...rule, ...patch } : rule
+      ),
+    }));
+  };
+
+  const removeCountryRule = (index: number) => {
+    setShipping((current) => ({
+      ...current,
+      countryRules: current.countryRules.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSaveShipping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken) {
+      toastError("You must be logged in to save shipping settings.");
+      return;
+    }
+    const res = await fetch("/api/v1/admin/settings/site", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ shipping: normalizeShippingSettings(shipping) }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setShipping(normalizeShippingSettings(data.data?.shipping ?? shipping));
+      setSaved(true);
+      toast({
+        variant: "success",
+        title: "Shipping saved",
+        description: "Shipping rates and country rules updated.",
+      });
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      toastError(data.error ?? "Failed to save shipping settings");
+    }
   };
 
   return (
@@ -403,6 +476,193 @@ export default function AdminSettingsPage() {
               <Plus className="h-4 w-4" /> Add language
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Shipping</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveShipping} className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Standard rate (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={shipping.standardRateUsd}
+                  onChange={(e) =>
+                    setShipping({ ...shipping, standardRateUsd: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Express rate (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={shipping.expressRateUsd}
+                  onChange={(e) =>
+                    setShipping({ ...shipping, expressRateUsd: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Overnight rate (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={shipping.overnightRateUsd}
+                  onChange={(e) =>
+                    setShipping({ ...shipping, overnightRateUsd: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Free shipping threshold (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={shipping.freeShippingThresholdUsd}
+                  onChange={(e) =>
+                    setShipping({
+                      ...shipping,
+                      freeShippingThresholdUsd: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <Label className="text-base">Country overrides</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Turn shipping off, apply a discount, or override rates per country. Storefront
+                  prices display in the customer&apos;s selected currency.
+                </p>
+              </div>
+
+              {shipping.countryRules.map((rule, index) => {
+                const country = countries.find((entry) => entry.code === rule.countryCode);
+                return (
+                  <div
+                    key={rule.countryCode}
+                    className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-6"
+                  >
+                    <div className="md:col-span-2">
+                      <Label>Country</Label>
+                      <p className="mt-1 text-sm font-medium">
+                        {country ? `${country.flag} ${country.name}` : rule.countryCode}
+                      </p>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor={`shipping-off-${rule.countryCode}`}>Free shipping</Label>
+                        <div className="mt-2">
+                          <Switch
+                            id={`shipping-off-${rule.countryCode}`}
+                            checked={rule.shippingOff === true}
+                            onCheckedChange={(checked) =>
+                              updateCountryRule(index, { shippingOff: checked })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Shipping % off</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={rule.percentOff ?? 0}
+                        disabled={rule.shippingOff === true}
+                        onChange={(e) =>
+                          updateCountryRule(index, { percentOff: Number(e.target.value) })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Std rate override</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Default"
+                        value={rule.standardRateUsd ?? ""}
+                        disabled={rule.shippingOff === true}
+                        onChange={(e) =>
+                          updateCountryRule(index, {
+                            standardRateUsd:
+                              e.target.value === "" ? undefined : Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <Label>Threshold override</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Default"
+                          value={rule.freeShippingThresholdUsd ?? ""}
+                          disabled={rule.shippingOff === true}
+                          onChange={(e) =>
+                            updateCountryRule(index, {
+                              freeShippingThresholdUsd:
+                                e.target.value === "" ? undefined : Number(e.target.value),
+                            })
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeCountryRule(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="flex flex-wrap gap-2">
+                <select
+                  className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                  value={newCountryRule}
+                  onChange={(e) => setNewCountryRule(e.target.value)}
+                >
+                  <option value="">Select country</option>
+                  {countries
+                    .filter(
+                      (country) =>
+                        !shipping.countryRules.some((rule) => rule.countryCode === country.code)
+                    )
+                    .map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.flag} {country.name}
+                      </option>
+                    ))}
+                </select>
+                <Button type="button" variant="secondary" onClick={addCountryRule}>
+                  <Plus className="h-4 w-4" /> Add country rule
+                </Button>
+              </div>
+            </div>
+
+            <Button type="submit">{saved ? "Saved!" : "Save shipping settings"}</Button>
+          </form>
         </CardContent>
       </Card>
 

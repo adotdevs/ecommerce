@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db/mongoose";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { resolveBranding } from "@/lib/site/branding";
 import { apiSuccess } from "@/lib/api/response";
-import { sendTelegramMessage } from "@/lib/telegram/notify";
+import { sendAlert } from "@/lib/notifications/dispatch";
 import { FIRST_VISIT_COOKIE } from "@/lib/visitors/constants";
 import { resolveVisitorGeo } from "@/lib/visitors/geo-details";
 import { formatFirstVisitTelegramMessage } from "@/lib/visitors/format-telegram";
@@ -46,15 +46,20 @@ export async function POST(request: NextRequest) {
   };
 
   const message = formatFirstVisitTelegramMessage(visitContext);
-  const telegramSent = await sendTelegramMessage(message);
+  const delivery = await sendAlert("New visitor — first visit", message);
 
   await connectDB();
-  const record = await saveVisitorLog(visitContext, telegramSent);
+  const record = await saveVisitorLog(visitContext, delivery.sent);
 
   const response = apiSuccess({
     tracked: true,
-    reason: telegramSent ? "sent" : "saved",
+    reason: delivery.sent ? delivery.reason : "saved",
     id: String(record._id),
+    channels: {
+      telegram: delivery.telegram,
+      email: delivery.email,
+      discord: delivery.discord,
+    },
   });
 
   response.cookies.set(FIRST_VISIT_COOKIE, "1", {

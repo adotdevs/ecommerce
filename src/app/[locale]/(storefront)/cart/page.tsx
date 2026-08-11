@@ -8,6 +8,9 @@ import { useCartStore } from "@/stores/cart-store";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
 import { calculateCartTotals } from "@/lib/cart/display";
+import { buildShippingOptions } from "@/lib/checkout/shipping";
+import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import { Button } from "@/components/ds/button";
 import { CartItem } from "@/components/storefront/cart/CartItem";
@@ -26,6 +29,8 @@ export default function CartPage() {
   const appliedPromo = useCartStore((s) => s.appliedPromo);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const { country } = useDisplayPreferences();
+  const shippingSettings = useShippingSettings();
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -46,8 +51,13 @@ export default function CartPage() {
   );
 
   const { shippingUsd, taxUsd, totalUsd } = useMemo(
-    () => calculateCartTotals(subtotalUsd, discountUsd),
-    [subtotalUsd, discountUsd]
+    () =>
+      calculateCartTotals(
+        subtotalUsd,
+        discountUsd,
+        buildShippingOptions(country, shippingSettings)
+      ),
+    [subtotalUsd, discountUsd, country, shippingSettings]
   );
 
   const itemsSummary = useMemo(

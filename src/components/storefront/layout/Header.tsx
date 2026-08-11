@@ -26,6 +26,8 @@ import { cn } from "@/components/ds/utils";
 import { formatCategoryName } from "@/lib/utils";
 import type { SiteSettingsPublic } from "@/types";
 import { useClientMounted } from "@/hooks/use-client-mounted";
+import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 
 interface Category {
   _id: string;
@@ -88,6 +90,13 @@ export function Header({ settings }: HeaderProps) {
       ];
 
   const storeName = settings?.storeName ?? "";
+  const shippingSettings = useShippingSettings();
+  const freeShippingThresholdFmt = useFormattedPrice(
+    shippingSettings.freeShippingThresholdUsd
+  );
+  const topBarMessage = t("header.freeShippingPromo", {
+    amount: freeShippingThresholdFmt,
+  });
 
   return (
     <>
@@ -96,7 +105,7 @@ export function Header({ settings }: HeaderProps) {
         <div className="hidden border-b border-border bg-foreground sm:block">
           <div className="container-store flex h-10 items-center justify-between gap-4">
             <p className="truncate text-[12px] text-background/90">
-              {settings?.announcement ?? settings?.deliveryInfo}
+              {topBarMessage}
             </p>
             <div className="flex shrink-0 items-center gap-1.5 text-background/85 [&_button]:text-background/85 [&_button:hover]:bg-background/10 [&_a]:text-background/85 [&_a:hover]:bg-background/10">
               <TopBarPreferences />
@@ -235,9 +244,9 @@ export function Header({ settings }: HeaderProps) {
         </div>
 
         {/* Mobile announcement strip */}
-        {settings?.announcement && (
+        {topBarMessage && (
           <div className="border-b border-border bg-secondary px-4 py-2 text-center sm:hidden">
-            <p className="truncate text-[11px] text-muted-foreground">{settings.announcement}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{topBarMessage}</p>
           </div>
         )}
       </header>

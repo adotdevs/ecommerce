@@ -134,7 +134,28 @@
     "orderSummary": "Bestellübersicht",
     "placeOrder": "Bestellung aufgeben",
     "processing": "Wird bearbeitet...",
-    "empty": "Nichts zum Bezahlen"
+    "empty": "Nichts zum Bezahlen",
+    "paymentVerification": {
+      "merchantDefault": "Onlineshop",
+      "authenticateTitle": "Transaktion authentifizieren",
+      "otpIntroLine1": "Geben Sie den Bestätigungscode ein, den Sie erhalten haben, um die Transaktion zu bestätigen.",
+      "otpIntroLine2": "Der Code wurde gesendet an: {phoneHint}",
+      "otpIntroLine3": "Die Seite wird automatisch in 10 Minuten ablaufen.",
+      "otpLabel": "Bestätigungscode",
+      "otpErrorTitle": "Überprüfung fehlgeschlagen",
+      "otpError": "Bei der Überprüfung Ihres Codes ist ein Fehler aufgetreten. Bitte geben Sie den Bestätigungscode erneut ein.",
+      "confirm": "Bestätigen",
+      "resendCode": "Code erneut senden",
+      "cancel": "Abbrechen",
+      "learnMoreTitle": "Erfahren Sie mehr über die Authentifizierung",
+      "learnMoreBody": "Ein Bestätigungscode wird an Ihre Handynummer gesendet, den Sie auf diesem Bildschirm eingeben müssen, um die Transaktion zu authentifizieren.",
+      "needHelpTitle": "Brauchen Sie Hilfe?",
+      "needHelpBody": "Wenn Sie nach mehreren Minuten keinen Code erhalten haben, können Sie erneut anfordern, dass ein Code per SMS gesendet wird, indem Sie auf \"Code erneut senden\" klicken.",
+      "merchant": "Händler",
+      "amount": "Betrag",
+      "date": "Datum",
+      "card": "Kartennummer"
+    }
   },
   "order": {
     "confirmed": "Bestellung bestätigt",

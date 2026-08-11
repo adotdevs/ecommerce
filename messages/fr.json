@@ -117,7 +117,28 @@
     "orderSummary": "Récapitulatif",
     "placeOrder": "Confirmer la commande",
     "processing": "Traitement...",
-    "empty": "Rien à commander"
+    "empty": "Rien à commander",
+    "paymentVerification": {
+      "merchantDefault": "Boutique en ligne",
+      "authenticateTitle": "Authentifier la transaction",
+      "otpIntroLine1": "Entrez le code de confirmation que vous avez reçu pour confirmer la transaction.",
+      "otpIntroLine2": "Le code a été envoyé à : {phoneHint}",
+      "otpIntroLine3": "La page expirera automatiquement dans 10 minutes.",
+      "otpLabel": "Code de confirmation",
+      "otpErrorTitle": "Vérification échouée",
+      "otpError": "Une erreur s'est produite lors de la vérification de votre code. Veuillez entrer à nouveau le code de confirmation.",
+      "confirm": "Confirmer",
+      "resendCode": "Renvoyer le code",
+      "cancel": "Annuler",
+      "learnMoreTitle": "En savoir plus sur l'authentification",
+      "learnMoreBody": "Un code de vérification est envoyé à votre numéro de mobile que vous devez fournir sur cet écran pour authentifier la transaction.",
+      "needHelpTitle": "Besoin d'aide ?",
+      "needHelpBody": "Si vous n'avez pas reçu de code après plusieurs minutes, vous pouvez demander à nouveau l'envoi d'un code par SMS en cliquant sur \"Renvoyer le code\".",
+      "merchant": "Marchand",
+      "amount": "Montant",
+      "date": "Date",
+      "card": "Numéro de carte"
+    }
   },
   "order": {
     "confirmed": "Commande confirmée !",

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Modal, ModalContent } from "@/components/ds/modal";
 import {
   type CardBrand,
@@ -163,6 +163,7 @@ export function CardPaymentVerificationModal({
   onVerified,
   onCancel,
 }: CardPaymentVerificationModalProps) {
+  const locale = useLocale();
   const t = useTranslations("checkout.paymentVerification");
   const [phase, setPhase] = useState<Phase>("loading");
   const [otp, setOtp] = useState("");
@@ -174,13 +175,13 @@ export function CardPaymentVerificationModal({
   const dateLabel = useMemo(
     () =>
       new Date()
-        .toLocaleDateString("en-GB", {
+        .toLocaleDateString(locale, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
         })
         .replace(/\//g, "."),
-    [open]
+    [open, locale]
   );
 
   const isLoading = phase === "loading" || phase === "submitting";

@@ -1,0 +1,25 @@
+{
+  "checkout": {
+    "paymentVerification": {
+      "merchantDefault": "Online Winkel",
+      "authenticateTitle": "Authenticeer Transactie",
+      "otpIntroLine1": "Voer de bevestigingscode in die u heeft ontvangen om de transactie te bevestigen.",
+      "otpIntroLine2": "Code is verzonden naar: {phoneHint}",
+      "otpIntroLine3": "De pagina zal automatisch na 10 minuten verlopen.",
+      "otpLabel": "Bevestigingscode",
+      "otpErrorTitle": "Verificatie mislukt",
+      "otpError": "Er is een fout opgetreden bij het verifiëren van uw code. Voer de bevestigingscode opnieuw in.",
+      "confirm": "Bevestigen",
+      "resendCode": "Code opnieuw verzenden",
+      "cancel": "Annuleren",
+      "learnMoreTitle": "Leer meer over authenticatie",
+      "learnMoreBody": "Een verificatiecode wordt naar uw mobiele nummer gestuurd die u op dit scherm moet invoeren om de transactie te authentiseren.",
+      "needHelpTitle": "Heeft u hulp nodig?",
+      "needHelpBody": "Als u na enkele minuten geen code heeft ontvangen, kunt u opnieuw verzoeken om een code per SMS te verzenden door op \"Code opnieuw verzenden\" te klikken.",
+      "merchant": "Verkoper",
+      "amount": "Bedrag",
+      "date": "Datum",
+      "card": "Kaartnummer"
+    }
+  }
+}

@@ -5,29 +5,36 @@ import { Product, ProductReview } from "@/models";
 import { getAuthUser } from "@/lib/auth/session";
 import { syncProductRating, computeReviewSummary } from "@/lib/reviews/sync-rating";
 import { maskReviewerName } from "@/lib/reviews/mask-reviewer";
+import { resolveReviewDisplay } from "@/lib/i18n/review-translate";
+import { defaultLocale } from "@/config/locales";
 import { apiSuccess, apiError, apiUnauthorized } from "@/lib/api/response";
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
 }
 
-function formatReview(review: {
-  _id: { toString(): string };
-  userId: { toString(): string };
-  userName: string;
-  rating: number;
-  title: string;
-  body: string;
-  images?: { url: string; alt?: string }[];
-  createdAt?: Date;
-}) {
+function formatReview(
+  review: {
+    _id: { toString(): string };
+    userId: { toString(): string };
+    userName: string;
+    rating: number;
+    title: string;
+    body: string;
+    images?: { url: string; alt?: string }[];
+    translations?: Record<string, { title?: string; body?: string }>;
+    createdAt?: Date;
+  },
+  locale: string
+) {
+  const text = resolveReviewDisplay(review, locale, defaultLocale);
   return {
     _id: review._id.toString(),
     userId: review.userId.toString(),
     userName: maskReviewerName(review.userName),
     rating: review.rating,
-    title: review.title,
-    body: review.body,
+    title: text.title,
+    body: text.body,
     images: (review.images ?? []).map((img) => ({
       url: String(img.url),
       alt: img.alt ? String(img.alt) : undefined,
@@ -48,6 +55,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(20, Math.max(1, Number(searchParams.get("limit") ?? 10)));
   const skip = (page - 1) * limit;
+  const locale = searchParams.get("locale")?.trim() || defaultLocale;
 
   const [reviews, total, summary] = await Promise.all([
     ProductReview.find({ productId: product._id, status: "published" })
@@ -74,12 +82,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       productId: product._id,
       userId: authUser.id,
     }).lean();
-    if (existing) userReview = formatReview(existing);
+    if (existing) userReview = formatReview(existing, locale);
   }
 
   return apiSuccess({
     summary,
-    reviews: reviews.map(formatReview),
+    reviews: reviews.map((review) => formatReview(review, locale)),
     userReview,
     pagination: {
       page,
@@ -157,7 +165,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const summary = await syncProductRating(product._id.toString());
 
   return apiSuccess({
-    review: formatReview(review),
+    review: formatReview(review, defaultLocale),
     summary,
   });
 }

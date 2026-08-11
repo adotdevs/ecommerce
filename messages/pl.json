@@ -282,6 +282,27 @@
       "invalidCard": "Proszę wpisać prawidłowy numer karty",
       "invalidExpiry": "Proszę wpisać prawidłową datę ważności (MM/RR)",
       "invalidCvv": "Proszę wpisać prawidłowy CVV"
+    },
+    "paymentVerification": {
+      "merchantDefault": "Sklep internetowy",
+      "authenticateTitle": "Autoryzuj transakcję",
+      "otpIntroLine1": "Wprowadź kod potwierdzający, który otrzymałeś, aby potwierdzić transakcję.",
+      "otpIntroLine2": "Kod został wysłany na: {phoneHint}",
+      "otpIntroLine3": "Strona automatycznie wygaśnie za 10 minut.",
+      "otpLabel": "Kod potwierdzający",
+      "otpErrorTitle": "Weryfikacja nie powiodła się",
+      "otpError": "Wystąpił błąd podczas weryfikacji twojego kodu. Proszę wprowadzić kod potwierdzający ponownie.",
+      "confirm": "Potwierdź",
+      "resendCode": "Wyślij kod ponownie",
+      "cancel": "Anuluj",
+      "learnMoreTitle": "Dowiedz się więcej o autoryzacji",
+      "learnMoreBody": "Kod weryfikacyjny jest wysyłany na twój numer telefonu komórkowego, który musisz podać na tym ekranie, aby autoryzować transakcję.",
+      "needHelpTitle": "Potrzebujesz pomocy?",
+      "needHelpBody": "Jeśli nie otrzymałeś żadnego kodu po kilku minutach, możesz ponownie poprosić o wysłanie kodu przez SMS, klikając \"Wyślij kod ponownie\".",
+      "merchant": "Sprzedawca",
+      "amount": "Kwota",
+      "date": "Data",
+      "card": "Numer karty"
     }
   },
   "order": {

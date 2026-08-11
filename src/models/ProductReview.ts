@@ -1,5 +1,10 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 
+export interface ReviewTranslationFields {
+  title?: string;
+  body?: string;
+}
+
 export interface IProductReview extends Document {
   productId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
@@ -10,6 +15,8 @@ export interface IProductReview extends Document {
   images: { url: string; alt?: string }[];
   status: "published" | "hidden";
   source: "customer" | "admin";
+  sourceLocale?: string;
+  translations?: Record<string, ReviewTranslationFields>;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -48,6 +55,8 @@ const ProductReviewSchema = new Schema<IProductReview>(
       enum: ["customer", "admin"],
       default: "customer",
     },
+    sourceLocale: { type: String, default: "en" },
+    translations: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

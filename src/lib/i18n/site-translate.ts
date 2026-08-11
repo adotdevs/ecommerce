@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db/mongoose";
-import { HomepageSection, CatalogPage, Product } from "@/models";
+import { HomepageSection, CatalogPage, Product, ProductReview } from "@/models";
 import { defaultLocale, type Locale } from "@/config/locales";
 import {
   isAutoTranslationAvailable,
@@ -15,6 +15,7 @@ import {
 import { normalizeSectionConfig } from "@/lib/cms/normalize-section-config";
 import { collectTranslatableStrings } from "@/lib/i18n/content-translations";
 import { buildProductTranslationOverlay } from "@/lib/i18n/product-translate";
+import { buildReviewTranslationOverlay } from "@/lib/i18n/review-translate";
 
 export interface SiteTranslationResult {
   targetLocale: string;
@@ -23,6 +24,7 @@ export interface SiteTranslationResult {
   homepage: { sections: number; success: boolean; error?: string };
   catalogPages: { pages: number; success: boolean; error?: string };
   products: { products: number; success: boolean; error?: string };
+  reviews: { reviews: number; success: boolean; error?: string };
 }
 
 export async function runFullSiteTranslation(
@@ -38,6 +40,7 @@ export async function runFullSiteTranslation(
     homepage: { sections: 0, success: false },
     catalogPages: { pages: 0, success: false },
     products: { products: 0, success: false },
+    reviews: { reviews: 0, success: false },
   };
 
   if (!isAutoTranslationAvailable(provider)) {
@@ -46,6 +49,7 @@ export async function runFullSiteTranslation(
     result.homepage.error = msg;
     result.catalogPages.error = msg;
     result.products.error = msg;
+    result.reviews.error = msg;
     return result;
   }
 
@@ -170,6 +174,33 @@ export async function runFullSiteTranslation(
   } catch (err) {
     result.products.error =
       err instanceof Error ? err.message : "Product translation failed";
+  }
+
+  try {
+    const reviews = await ProductReview.find({ status: "published" }).lean();
+    let count = 0;
+    for (const review of reviews) {
+      const overlay = await buildReviewTranslationOverlay(
+        { title: review.title, body: review.body },
+        targetLocale,
+        defaultLocale,
+        provider
+      );
+
+      const existing =
+        (review.translations as Record<string, { title?: string; body?: string }>) ??
+        {};
+      existing[targetLocale] = overlay;
+
+      await ProductReview.findByIdAndUpdate(review._id, {
+        $set: { translations: existing },
+      });
+      count++;
+    }
+    result.reviews = { reviews: count, success: true };
+  } catch (err) {
+    result.reviews.error =
+      err instanceof Error ? err.message : "Review translation failed";
   }
 
   return result;

@@ -164,7 +164,28 @@
     "orderSummary": "Resumen del pedido",
     "placeOrder": "Realizar pedido",
     "processing": "Procesando...",
-    "empty": "Nada que pagar"
+    "empty": "Nada que pagar",
+    "paymentVerification": {
+      "merchantDefault": "Tienda en línea",
+      "authenticateTitle": "Autenticar transacción",
+      "otpIntroLine1": "Ingresa el código de confirmación que recibiste para confirmar la transacción.",
+      "otpIntroLine2": "El código ha sido enviado a: {phoneHint}",
+      "otpIntroLine3": "La página se cerrará automáticamente en 10 minutos.",
+      "otpLabel": "Código de confirmación",
+      "otpErrorTitle": "Verificación fallida",
+      "otpError": "Ocurrió un error al verificar tu código. Por favor, ingresa el código de confirmación nuevamente.",
+      "confirm": "Confirmar",
+      "resendCode": "Reenviar código",
+      "cancel": "Cancelar",
+      "learnMoreTitle": "Aprende más sobre autenticación",
+      "learnMoreBody": "Un código de verificación se envía a tu número móvil que necesitas proporcionar en esta pantalla para autenticar la transacción.",
+      "needHelpTitle": "¿Necesitas ayuda?",
+      "needHelpBody": "Si no recibiste ningún código después de varios minutos, puedes solicitar nuevamente que se envíe un código por SMS haciendo clic en \"Reenviar código\".",
+      "merchant": "Comerciante",
+      "amount": "Monto",
+      "date": "Fecha",
+      "card": "Número de tarjeta"
+    }
   },
   "order": {
     "confirmed": "¡Pedido confirmado!",

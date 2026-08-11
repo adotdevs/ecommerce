@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import {
   Star,
@@ -197,6 +197,7 @@ function ReviewCard({ review }: { review: ReviewItem }) {
 
 export function ProductReviews({ productSlug, initialSummary }: ProductReviewsProps) {
   const t = useTranslations("reviews");
+  const locale = useLocale();
   const accessToken = useAuthStore((s) => s.accessToken);
 
   const [summary, setSummary] = useState<ReviewSummary>(
@@ -230,7 +231,7 @@ export function ProductReviews({ productSlug, initialSummary }: ProductReviewsPr
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
       const res = await fetch(
-        `/api/v1/products/${productSlug}/reviews?page=${p}&limit=8`,
+        `/api/v1/products/${productSlug}/reviews?page=${p}&limit=8&locale=${encodeURIComponent(locale)}`,
         { headers }
       );
       const data = await res.json();
@@ -244,7 +245,7 @@ export function ProductReviews({ productSlug, initialSummary }: ProductReviewsPr
     } finally {
       setLoading(false);
     }
-  }, [productSlug, accessToken]);
+  }, [productSlug, accessToken, locale]);
 
   useEffect(() => {
     fetchReviews(1);

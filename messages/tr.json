@@ -1,0 +1,25 @@
+{
+  "checkout": {
+    "paymentVerification": {
+      "merchantDefault": "Çevrimiçi Mağaza",
+      "authenticateTitle": "İşlemi Doğrula",
+      "otpIntroLine1": "İşlemi onaylamak için aldığınız onay kodunu girin.",
+      "otpIntroLine2": "Kod şu numaraya gönderildi: {phoneHint}",
+      "otpIntroLine3": "Sayfa otomatik olarak 10 dakika içinde zaman aşımına uğrayacaktır.",
+      "otpLabel": "Onay kodu",
+      "otpErrorTitle": "Doğrulama başarısız oldu",
+      "otpError": "Kodunuzu doğrularken bir hata oluştu. Lütfen onay kodunu tekrar girin.",
+      "confirm": "Onayla",
+      "resendCode": "Kodu Yeniden Gönder",
+      "cancel": "İptal",
+      "learnMoreTitle": "Kimlik doğrulama hakkında daha fazla bilgi edinin",
+      "learnMoreBody": "Bir doğrulama kodu, işlemi doğrulamak için bu ekranda sağlamanız gereken cep telefonunuza gönderilir.",
+      "needHelpTitle": "Birine mi ihtiyacınız var?",
+      "needHelpBody": "Birkaç dakika içinde herhangi bir kod almadıysanız, \"Kodu Yeniden Gönder\" butonuna tıklayarak SMS ile kod göndermesini tekrar isteyebilirsiniz.",
+      "merchant": "Tüccar",
+      "amount": "Tutar",
+      "date": "Tarih",
+      "card": "Kart Numarası"
+    }
+  }
+}

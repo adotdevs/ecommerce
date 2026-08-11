@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
+import { Textarea } from "@/components/ds/textarea";
 import { Badge } from "@/components/ds/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import {
@@ -22,6 +23,8 @@ import {
   Package,
   ChevronDown,
   ChevronUp,
+  ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 import type { TranslationProvider } from "@/lib/i18n/translate";
 
@@ -61,6 +64,47 @@ interface TranslationData {
   };
 }
 
+interface PaymentVerificationEntry {
+  key: string;
+  label: string;
+  source: string;
+  path: string;
+  translations: Record<string, string>;
+}
+
+interface PaymentVerificationData {
+  totalKeys: number;
+  entries: PaymentVerificationEntry[];
+  localeCoverage: Record<
+    string,
+    { translated: number; total: number; percent: number }
+  >;
+}
+
+interface ReviewTranslationItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productSlug: string;
+  userName: string;
+  rating: number;
+  sourceTitle: string;
+  sourceBody: string;
+  translatedTitle?: string;
+  translatedBody?: string;
+  translated: boolean;
+  coverage: number;
+  createdAt?: string;
+}
+
+interface ReviewTranslationData {
+  totalReviews: number;
+  localeCoverage: Record<
+    string,
+    { translated: number; total: number; percent: number }
+  >;
+}
+
 interface ProductTranslationItem {
   id: string;
   name: string;
@@ -89,12 +133,31 @@ export default function AdminTranslationsPage() {
   const [provider, setProvider] = useState<TranslationProvider>("openai");
   const [search, setSearch] = useState("");
   const [namespaceFilter, setNamespaceFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState<"ui" | "products">("ui");
+  const [activeTab, setActiveTab] = useState<
+    "ui" | "products" | "paymentVerification" | "reviews"
+  >("ui");
   const [productItems, setProductItems] = useState<ProductTranslationItem[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [translatingProducts, setTranslatingProducts] = useState(false);
+  const [pvData, setPvData] = useState<PaymentVerificationData | null>(null);
+  const [pvLoading, setPvLoading] = useState(false);
+  const [pvDrafts, setPvDrafts] = useState<Record<string, string>>({});
+  const [pvSaving, setPvSaving] = useState(false);
+  const [pvTranslating, setPvTranslating] = useState(false);
+  const [pvSearch, setPvSearch] = useState("");
+  const [reviewItems, setReviewItems] = useState<ReviewTranslationItem[]>([]);
+  const [reviewMeta, setReviewMeta] = useState<ReviewTranslationData | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewUntranslatedOnly, setReviewUntranslatedOnly] = useState(false);
+  const [expandedReview, setExpandedReview] = useState<string | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<
+    Record<string, { title: string; body: string }>
+  >({});
+  const [reviewSavingId, setReviewSavingId] = useState<string | null>(null);
+  const [translatingReviews, setTranslatingReviews] = useState(false);
 
   const load = useCallback(() => {
     if (!accessToken) return;
@@ -170,6 +233,284 @@ export default function AdminTranslationsPage() {
       return () => clearTimeout(timer);
     }
   }, [activeTab, loadProducts, accessToken, productSearch]);
+
+  const loadPaymentVerification = useCallback(() => {
+    if (!accessToken) return;
+    setPvLoading(true);
+    fetch("/api/v1/admin/translations/payment-verification", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setPvData(d.data);
+        } else {
+          toastError("Could not load 3DS translations", d.error ?? "Request failed");
+        }
+      })
+      .catch(() => toastError("Could not load 3DS translations", "Network error."))
+      .finally(() => setPvLoading(false));
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (activeTab === "paymentVerification" && accessToken) {
+      loadPaymentVerification();
+    }
+  }, [activeTab, accessToken, loadPaymentVerification]);
+
+  useEffect(() => {
+    if (!pvData || !targetLocale) {
+      setPvDrafts({});
+      return;
+    }
+    const drafts: Record<string, string> = {};
+    for (const entry of pvData.entries) {
+      drafts[entry.key] = entry.translations[targetLocale] ?? "";
+    }
+    setPvDrafts(drafts);
+  }, [pvData, targetLocale]);
+
+  const filteredPvEntries = useMemo(() => {
+    if (!pvData?.entries) return [];
+    const q = pvSearch.trim().toLowerCase();
+    if (!q) return pvData.entries;
+    return pvData.entries.filter(
+      (e) =>
+        e.label.toLowerCase().includes(q) ||
+        e.source.toLowerCase().includes(q) ||
+        (pvDrafts[e.key] ?? "").toLowerCase().includes(q)
+    );
+  }, [pvData, pvSearch, pvDrafts]);
+
+  const pvCoverage = targetLocale
+    ? pvData?.localeCoverage?.[targetLocale]
+    : null;
+
+  const handleSavePaymentVerification = async () => {
+    if (!accessToken || !targetLocale) return;
+    setPvSaving(true);
+    try {
+      const res = await fetch("/api/v1/admin/translations/payment-verification", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ locale: targetLocale, values: pvDrafts }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast({
+          variant: "success",
+          title: "3DS page saved",
+          description: `Updated ${result.data?.saved ?? 0} strings for ${targetLabel}.`,
+        });
+        loadPaymentVerification();
+        load();
+      } else {
+        toastError("Save failed", result.error);
+      }
+    } catch {
+      toastError("Save failed", "Network error.");
+    } finally {
+      setPvSaving(false);
+    }
+  };
+
+  const handleTranslatePaymentVerification = async (allLocales = false) => {
+    if (!accessToken) return;
+    if (!allLocales && !targetLocale) return;
+
+    const message = allLocales
+      ? "Auto-translate the 3DS OTP page to ALL enabled languages?"
+      : `Auto-translate the 3DS OTP page to ${targetLabel}?`;
+
+    if (!confirm(message)) return;
+
+    setPvTranslating(true);
+    try {
+      const res = await fetch("/api/v1/admin/translations/payment-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          targetLocale: allLocales ? undefined : targetLocale,
+          allLocales,
+          provider,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        const count = (result.data?.results as { translated: number }[])?.length ?? 1;
+        toast({
+          variant: "success",
+          title: "3DS page translated",
+          description: allLocales
+            ? `Updated ${count} languages.`
+            : `${result.data?.results?.[0]?.translated ?? 0} strings translated.`,
+        });
+        loadPaymentVerification();
+        load();
+      } else {
+        toastError("Translation failed", result.error);
+      }
+    } catch {
+      toastError("Translation failed", "Network error.");
+    } finally {
+      setPvTranslating(false);
+    }
+  };
+
+  const loadReviews = useCallback(() => {
+    if (!accessToken) return;
+    const locale = targetLocale || targetLanguages[0]?.code;
+    if (!locale) return;
+    setReviewsLoading(true);
+    const params = new URLSearchParams({
+      locale,
+      limit: "50",
+    });
+    if (reviewSearch.trim()) params.set("q", reviewSearch.trim());
+    if (reviewUntranslatedOnly) params.set("untranslatedOnly", "true");
+
+    fetch(`/api/v1/admin/translations/reviews?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setReviewItems(d.data?.reviews ?? []);
+          setReviewMeta({
+            totalReviews: d.data?.totalReviews ?? 0,
+            localeCoverage: d.data?.localeCoverage ?? {},
+          });
+        } else {
+          toastError("Could not load reviews", d.error ?? "Request failed");
+          setReviewItems([]);
+        }
+      })
+      .catch(() => {
+        toastError("Could not load reviews", "Network error.");
+        setReviewItems([]);
+      })
+      .finally(() => setReviewsLoading(false));
+  }, [
+    accessToken,
+    targetLocale,
+    targetLanguages,
+    reviewSearch,
+    reviewUntranslatedOnly,
+  ]);
+
+  useEffect(() => {
+    if (activeTab === "reviews" && accessToken) {
+      const timer = setTimeout(loadReviews, reviewSearch ? 300 : 0);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, loadReviews, accessToken, reviewSearch, reviewUntranslatedOnly]);
+
+  useEffect(() => {
+    if (!expandedReview) return;
+    const item = reviewItems.find((r) => r.id === expandedReview);
+    if (!item) return;
+    setReviewDrafts((prev) => ({
+      ...prev,
+      [item.id]: {
+        title: prev[item.id]?.title ?? item.translatedTitle ?? "",
+        body: prev[item.id]?.body ?? item.translatedBody ?? "",
+      },
+    }));
+  }, [expandedReview, reviewItems]);
+
+  const reviewCoverage = targetLocale
+    ? reviewMeta?.localeCoverage?.[targetLocale]
+    : null;
+
+  const handleSaveReview = async (reviewId: string) => {
+    if (!accessToken || !targetLocale) return;
+    const draft = reviewDrafts[reviewId];
+    if (!draft) return;
+
+    setReviewSavingId(reviewId);
+    try {
+      const res = await fetch("/api/v1/admin/translations/reviews", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          locale: targetLocale,
+          reviewId,
+          title: draft.title,
+          body: draft.body,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        toast({ variant: "success", title: "Review saved" });
+        loadReviews();
+      } else {
+        toastError("Save failed", result.error);
+      }
+    } catch {
+      toastError("Save failed", "Network error.");
+    } finally {
+      setReviewSavingId(null);
+    }
+  };
+
+  const handleTranslateReviews = async (allLocales = false, reviewId?: string) => {
+    if (!accessToken) return;
+    if (!allLocales && !targetLocale) return;
+
+    const message = reviewId
+      ? `Auto-translate this review to ${targetLabel}?`
+      : allLocales
+        ? "Auto-translate ALL product reviews to every enabled language?"
+        : `Auto-translate ALL product reviews to ${targetLabel}?`;
+
+    if (!confirm(message)) return;
+
+    setTranslatingReviews(true);
+    try {
+      const res = await fetch("/api/v1/admin/translations/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          targetLocale: allLocales ? undefined : targetLocale,
+          allLocales,
+          reviewId,
+          provider,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        const count = (result.data?.results as { translated: number }[])?.length ?? 1;
+        toast({
+          variant: "success",
+          title: "Reviews translated",
+          description: reviewId
+            ? `Review updated for ${targetLabel}.`
+            : allLocales
+              ? `${count} languages updated · ${result.data?.reviewCount ?? 0} reviews each.`
+              : `${result.data?.results?.[0]?.translated ?? 0} reviews translated.`,
+        });
+        loadReviews();
+      } else {
+        toastError("Translation failed", result.error);
+      }
+    } catch {
+      toastError("Translation failed", "Network error.");
+    } finally {
+      setTranslatingReviews(false);
+    }
+  };
 
   const handleTranslateAllProducts = async () => {
     if (!accessToken || !targetLocale) return;
@@ -278,7 +619,7 @@ export default function AdminTranslationsPage() {
         toast({
           variant: "success",
           title: "Translation complete",
-          description: `UI: ${r.ui.translated} · Homepage: ${r.homepage.sections} · Catalog: ${r.catalogPages.pages} · Products: ${r.products?.products ?? 0}`,
+          description: `UI: ${r.ui.translated} · Homepage: ${r.homepage.sections} · Catalog: ${r.catalogPages.pages} · Products: ${r.products?.products ?? 0} · Reviews: ${r.reviews?.reviews ?? 0}`,
         });
         load();
       } else {
@@ -459,9 +800,348 @@ export default function AdminTranslationsPage() {
           <Package className="mr-1.5 h-3.5 w-3.5" />
           Products
         </Button>
+        <Button
+          type="button"
+          variant={activeTab === "paymentVerification" ? "primary" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("paymentVerification")}
+        >
+          <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+          3DS OTP page
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "reviews" ? "primary" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("reviews")}
+        >
+          <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+          Reviews
+        </Button>
       </div>
 
-      {activeTab === "products" ? (
+      {activeTab === "reviews" ? (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Product review translations</CardTitle>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Translate customer review titles and bodies shown on product pages.
+                English source text is stored on each review — shoppers see the translation
+                for their selected language.
+              </p>
+              {reviewCoverage ? (
+                <p className="mt-2 text-[12px] text-muted-foreground">
+                  {targetLabel}: {reviewCoverage.translated}/{reviewCoverage.total} reviews
+                  fully translated ({reviewCoverage.percent}%)
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleTranslateReviews(false)}
+                disabled={translatingReviews || !targetLocale}
+              >
+                {translatingReviews ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Translate all ({targetLabel})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleTranslateReviews(true)}
+                disabled={translatingReviews}
+              >
+                {translatingReviews ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Translate all languages
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <div className="relative min-w-[200px] flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={reviewSearch}
+                  onChange={(e) => setReviewSearch(e.target.value)}
+                  placeholder="Search reviews or products…"
+                  className="pl-9"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={reviewUntranslatedOnly}
+                  onChange={(e) => setReviewUntranslatedOnly(e.target.checked)}
+                />
+                Untranslated only
+              </label>
+            </div>
+
+            {reviewsLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : reviewItems.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">No reviews found.</p>
+            ) : (
+              <div className="space-y-2">
+                {reviewItems.map((review) => {
+                  const open = expandedReview === review.id;
+                  const draft = reviewDrafts[review.id];
+                  return (
+                    <div
+                      key={review.id}
+                      className="overflow-hidden rounded-lg border border-border"
+                    >
+                      <div className="flex items-center justify-between gap-3 px-4 py-3">
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                          onClick={() => setExpandedReview(open ? null : review.id)}
+                        >
+                          {open ? (
+                            <ChevronUp className="h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{review.sourceTitle}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {review.productName} · {review.rating}★ · {review.userName}
+                            </p>
+                          </div>
+                        </button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge variant={review.translated ? "default" : "secondary"}>
+                            {review.coverage}% · {review.translated ? "Done" : "Missing"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTranslateReviews(false, review.id)}
+                            disabled={translatingReviews || !targetLocale}
+                          >
+                            <Sparkles className="mr-1 h-3 w-3" />
+                            Translate
+                          </Button>
+                        </div>
+                      </div>
+                      {open && (
+                        <div className="space-y-4 border-t border-border bg-secondary/20 px-4 py-4">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="text-[11px] font-medium text-muted-foreground">
+                                Title (English)
+                              </p>
+                              <p className="mt-1 text-small">{review.sourceTitle}</p>
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`review-title-${review.id}`}
+                                className="text-[11px] font-medium text-muted-foreground"
+                              >
+                                Title ({targetLabel})
+                              </label>
+                              <Input
+                                id={`review-title-${review.id}`}
+                                value={draft?.title ?? ""}
+                                onChange={(e) =>
+                                  setReviewDrafts((prev) => ({
+                                    ...prev,
+                                    [review.id]: {
+                                      title: e.target.value,
+                                      body: prev[review.id]?.body ?? "",
+                                    },
+                                  }))
+                                }
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="text-[11px] font-medium text-muted-foreground">
+                                Review (English)
+                              </p>
+                              <p className="mt-1 whitespace-pre-wrap text-small">
+                                {review.sourceBody}
+                              </p>
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`review-body-${review.id}`}
+                                className="text-[11px] font-medium text-muted-foreground"
+                              >
+                                Review ({targetLabel})
+                              </label>
+                              <Textarea
+                                id={`review-body-${review.id}`}
+                                value={draft?.body ?? ""}
+                                onChange={(e) =>
+                                  setReviewDrafts((prev) => ({
+                                    ...prev,
+                                    [review.id]: {
+                                      title: prev[review.id]?.title ?? "",
+                                      body: e.target.value,
+                                    },
+                                  }))
+                                }
+                                rows={4}
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveReview(review.id)}
+                              disabled={reviewSavingId === review.id || !targetLocale}
+                            >
+                              {reviewSavingId === review.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : null}
+                              Save {targetLabel}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="text-[12px] text-muted-foreground">
+              Review UI labels (Write a Review, Submit, etc.) are under the UI text tab
+              (namespace: reviews). Add new languages in Settings, then translate here.
+            </p>
+          </CardContent>
+        </Card>
+      ) : activeTab === "paymentVerification" ? (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>3DS OTP confirmation page</CardTitle>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Translate the card verification popup shown at checkout. English is the
+                source — shoppers see these strings in their selected storefront language.
+              </p>
+              {pvCoverage ? (
+                <p className="mt-2 text-[12px] text-muted-foreground">
+                  {targetLabel}: {pvCoverage.translated}/{pvCoverage.total} strings (
+                  {pvCoverage.percent}%)
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleTranslatePaymentVerification(false)}
+                disabled={pvTranslating || pvSaving || !targetLocale}
+              >
+                {pvTranslating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Auto-translate {targetLabel}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleTranslatePaymentVerification(true)}
+                disabled={pvTranslating || pvSaving}
+              >
+                {pvTranslating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Translate all languages
+              </Button>
+              <Button
+                onClick={handleSavePaymentVerification}
+                disabled={pvSaving || pvTranslating || !targetLocale}
+              >
+                {pvSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Save {targetLabel}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={pvSearch}
+                onChange={(e) => setPvSearch(e.target.value)}
+                placeholder="Search 3DS text…"
+                className="pl-9"
+              />
+            </div>
+
+            {pvLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredPvEntries.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">
+                No matching strings found.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {filteredPvEntries.map((entry) => (
+                  <div
+                    key={entry.key}
+                    className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-2"
+                  >
+                    <div>
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        {entry.label} (English)
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-small">{entry.source}</p>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`pv-${entry.key}`}
+                        className="text-[11px] font-medium text-muted-foreground"
+                      >
+                        {entry.label} ({targetLabel})
+                      </label>
+                      <Textarea
+                        id={`pv-${entry.key}`}
+                        value={pvDrafts[entry.key] ?? ""}
+                        onChange={(e) =>
+                          setPvDrafts((prev) => ({
+                            ...prev,
+                            [entry.key]: e.target.value,
+                          }))
+                        }
+                        rows={Math.min(4, Math.max(2, Math.ceil(entry.source.length / 48)))}
+                        className="mt-1"
+                        placeholder="Not translated yet"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[12px] text-muted-foreground">
+              Keep placeholders like {"{phoneHint}"} unchanged. Add new languages under
+              Settings → Languages, then translate here.
+            </p>
+          </CardContent>
+        </Card>
+      ) : activeTab === "products" ? (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
             <div>

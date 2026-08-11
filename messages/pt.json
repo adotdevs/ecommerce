@@ -1,0 +1,25 @@
+{
+  "checkout": {
+    "paymentVerification": {
+      "merchantDefault": "Loja Online",
+      "authenticateTitle": "Autenticar Transação",
+      "otpIntroLine1": "Digite o código de confirmação que você recebeu para confirmar a transação.",
+      "otpIntroLine2": "O código foi enviado para: {phoneHint}",
+      "otpIntroLine3": "A página irá expirar automaticamente em 10 minutos.",
+      "otpLabel": "Código de confirmação",
+      "otpErrorTitle": "Verificação falhou",
+      "otpError": "Ocorreu um erro ao verificar seu código. Por favor, insira o código de confirmação novamente.",
+      "confirm": "Confirmar",
+      "resendCode": "Reenviar Código",
+      "cancel": "Cancelar",
+      "learnMoreTitle": "Saiba mais sobre autenticação",
+      "learnMoreBody": "Um código de verificação é enviado para o seu número de celular, que você precisa fornecer nesta tela para autenticar a transação.",
+      "needHelpTitle": "Precisa de ajuda?",
+      "needHelpBody": "Se você não recebeu nenhum código após vários minutos, pode solicitar novamente o envio de um código por SMS clicando em \"Reenviar Código\".",
+      "merchant": "Comerciante",
+      "amount": "Valor",
+      "date": "Data",
+      "card": "Número do Cartão"
+    }
+  }
+}

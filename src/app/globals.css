@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 @import "../styles/storefront.css";
 @import "../styles/payment-3ds.css";
 
@@ -41,6 +42,24 @@
   --radius-lg: 16px;
   /** Product photo area — matches card in light mode; light stage in dark mode for white-bg images */
   --product-media-bg: var(--bg-elevated);
+
+  /* HeroUI tokens — keep storefront colors; do not let HeroUI --accent replace bg-accent */
+  --surface: var(--bg-elevated);
+  --surface-foreground: var(--text-primary);
+  --overlay: var(--bg-elevated);
+  --overlay-foreground: var(--text-primary);
+  --field-background: var(--bg-elevated);
+  --field-foreground: var(--text-primary);
+  --field-placeholder: var(--text-muted);
+  --field-border: var(--border-default);
+  --field-border-width: 1px;
+  --field-radius: var(--radius-sm);
+  --default: var(--bg-secondary);
+  --default-foreground: var(--text-primary);
+  --separator: var(--border-default);
+  --focus: var(--brand-primary);
+  --success: var(--brand-accent);
+  --success-foreground: #ffffff;
 }
 
 .dark {
@@ -78,6 +97,20 @@
   --ring: var(--brand-primary);
   /** Neutral light stage so supplier photos (white JPEG bg) don't clash with dark cards */
   --product-media-bg: #ffffff;
+
+  --surface: var(--bg-elevated);
+  --surface-foreground: var(--text-primary);
+  --overlay: var(--bg-elevated);
+  --overlay-foreground: var(--text-primary);
+  --field-background: var(--bg-elevated);
+  --field-foreground: var(--text-primary);
+  --field-placeholder: var(--text-muted);
+  --field-border: var(--border-default);
+  --default: var(--bg-secondary);
+  --default-foreground: var(--text-primary);
+  --separator: var(--border-default);
+  --focus: var(--brand-primary);
+  --success: var(--brand-accent);
 }
 
 @theme inline {
@@ -193,6 +226,53 @@ button:disabled,
 input:disabled,
 select:disabled {
   cursor: not-allowed;
+}
+
+/* HeroUI primitives — brand primary without rewriting --accent (used as muted surfaces) */
+.button--primary {
+  --button-bg: var(--brand-primary);
+  --button-bg-hover: var(--brand-hover);
+  --button-bg-pressed: var(--brand-hover);
+  --button-fg: #ffffff;
+}
+
+.alert .alert__description,
+.card .card__description {
+  color: var(--muted-foreground);
+}
+
+.card__header {
+  gap: 0.375rem;
+}
+
+/* Checkout fields: equal height, vertically centered value (beats HeroUI py-2). */
+.checkout-control {
+  box-sizing: border-box;
+  height: 3rem;
+  min-height: 3rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .checkout-control {
+    height: 52px;
+    min-height: 52px;
+  }
+}
+
+.checkout-checkbox.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+}
+
+.checkout-checkbox .checkbox__content {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.625rem;
 }
 
 .scrollbar-none {

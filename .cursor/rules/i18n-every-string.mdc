@@ -1,0 +1,32 @@
+---
+description: Every user-facing string must be translated (next-intl)
+alwaysApply: true
+---
+
+# i18n — translate every word
+
+## Rule
+- **No hardcoded user-facing English** in storefront or customer UI (buttons, labels, placeholders, empty states, errors, toasts, aria-labels that users hear/see).
+- Use `next-intl`: `useTranslations` / `getTranslations`.
+- Add keys to **`messages/en.json` first**, then mirror into **all** locale files under `messages/` (`ar`, `de`, `es`, `fr`, `nl`, `pl`, `pt`, `ru`, `tr`, `ur`, …).
+- Keep key structure namespaced (`common`, `header`, `cart`, `checkout`, `catalog`, `products`, `account`, …).
+
+## Examples
+
+```tsx
+// BAD
+<button>Add to Cart</button>
+
+// GOOD
+const t = useTranslations("common");
+<button>{t("addToCart")}</button>
+```
+
+## Admin UI
+- Prefer translation keys for admin chrome too when adding new screens; at minimum never leave storefront strings untranslated.
+- Dynamic CMS/admin-managed content (product names, section titles from DB) is data — not message-file copy — but **UI chrome** around it must be translated.
+
+## Checklist before finishing a UI task
+- [ ] No new literal user-facing strings in TSX
+- [ ] Keys added to `en.json`
+- [ ] Same keys added to every other `messages/*.json`

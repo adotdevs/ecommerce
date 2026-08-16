@@ -1,9 +1,14 @@
 import { openAiChatJson, isOpenAiConfigured } from "@/lib/ai/openai-client";
+import { SEARCH_STOPWORDS } from "@/lib/search/config";
 
 export interface AiSearchEnhancement {
   originalQuery: string;
   primaryQuery: string;
   alternateQueries: string[];
+  /** Words a relevant product name/category should contain */
+  mustTerms: string[];
+  /** Unrelated product types to drop (e.g. watch when searching shirt) */
+  excludeTerms: string[];
   categoryHints: string[];
   brandHints: string[];
   source: "ai" | "fallback";
@@ -20,6 +25,8 @@ function fallbackEnhancement(query: string): AiSearchEnhancement {
     originalQuery: raw,
     primaryQuery: raw,
     alternateQueries: [],
+    mustTerms: [],
+    excludeTerms: [],
     categoryHints: [],
     brandHints: [],
     source: "fallback",
@@ -102,15 +109,16 @@ export async function enhanceSearchQuery(
       const parsed = await openAiChatJson<{
         primaryQuery?: string;
         alternateQueries?: string[];
+        mustTerms?: string[];
+        excludeTerms?: string[];
         categoryHints?: string[];
         brandHints?: string[];
       }>(
-        // Keep system prompt short to save tokens.
-        `Fix e-commerce search typos and return JSON:
-{"primaryQuery":"corrected product phrase","alternateQueries":["related term"],"categoryHints":[],"brandHints":[]}
-Rules: fix spelling, expand abbreviations, keep shopping intent. Max 3 alternates. No dashes.`,
+        `Rewrite a shop search. JSON only:
+{"primaryQuery":"english product type","alternateQueries":["synonym"],"mustTerms":["word"],"excludeTerms":["unrelated type"],"categoryHints":[],"brandHints":[]}
+Rules: fix typos; translate to English if needed; keep the exact product they want; mustTerms = 1-4 specific product-type words (never generic words like top, new, best, for, with); excludeTerms = unrelated product types that must not appear. Max 3 alternates. No prose.`,
         raw,
-        { temperature: 0, maxTokens: 120 }
+        { temperature: 0, maxTokens: 140 }
       );
 
       const primary = parsed?.primaryQuery?.trim();
@@ -126,10 +134,26 @@ Rules: fix spelling, expand abbreviations, keep shopping intent. Max 3 alternate
         .filter((term) => term.toLowerCase() !== primary.toLowerCase())
         .slice(0, 3);
 
+      const cleanTerms = (values: unknown, max: number, minLen = 4) =>
+        [
+          ...new Set(
+            (Array.isArray(values) ? values : [])
+              .map((term) => String(term).trim().toLowerCase())
+              .filter(
+                (term) =>
+                  term.length >= minLen &&
+                  !SEARCH_STOPWORDS.has(term) &&
+                  !/^(top|new|best|sale|free|size|color)$/.test(term)
+              )
+          ),
+        ].slice(0, max);
+
       const result: AiSearchEnhancement = {
         originalQuery: raw,
         primaryQuery: primary,
         alternateQueries,
+        mustTerms: cleanTerms(parsed.mustTerms, 4),
+        excludeTerms: cleanTerms(parsed.excludeTerms, 6),
         categoryHints: (parsed.categoryHints ?? [])
           .map((hint) => String(hint).trim())
           .filter(Boolean)
@@ -165,6 +189,7 @@ export function getSearchQueriesForMatching(
       [
         enhancement.primaryQuery,
         ...enhancement.alternateQueries,
+        ...(enhancement.mustTerms ?? []),
         enhancement.originalQuery,
       ]
         .map((q) => q.trim())

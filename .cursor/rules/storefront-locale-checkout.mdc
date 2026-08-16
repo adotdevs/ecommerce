@@ -1,0 +1,23 @@
+---
+description: Storefront locale, deliver-to, currency, and checkout conventions
+globs: "src/components/storefront/**/*.{ts,tsx},src/app/**/*.{ts,tsx},src/lib/checkout/**/*.ts,src/lib/site/**/*.ts"
+alwaysApply: false
+---
+
+# Storefront locale & checkout
+
+## Header / locale
+- Keep **language**, **deliver-to (country)**, and **currency** as **separate** controls.
+- Changing **deliver-to** should set that country's default currency; changing currency alone must **not** change deliver-to.
+- Selection changes should apply **immediately** (refresh/navigation as the app already does) without flash of wrong default when possible.
+- Show country/currency clearly (name + code + flag where the UI already supports it).
+
+## Checkout
+- Do **not** ask for country again if deliver-to is already chosen in the header — drive address fields from deliver-to.
+- Address fields are **country-specific** (e.g. US states dropdown).
+- Phone: separate country-code control + **numeric-only** national number; keep dial dropdown compact.
+- Preserve user-entered checkout fields across deliver-to refresh when the app supports draft persistence.
+- Customer account area and admin must stay **isolated** (roles/routes must not mix).
+
+## Data
+- Prices/formatting follow selected currency; copy follows selected language via next-intl.

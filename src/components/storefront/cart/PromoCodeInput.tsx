@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ds/button";
-import { Input } from "@/components/ds/input";
+import {
+  Button,
+  Chip,
+  Disclosure,
+  Input,
+  Label,
+  Spinner,
+  TextField,
+} from "@heroui/react";
 import { cn } from "@/components/ds/utils";
 import { useCartStore } from "@/stores/cart-store";
 import { toastError } from "@/hooks/use-toast";
@@ -65,66 +71,63 @@ export function PromoCodeInput({
   };
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-[var(--radius-md)] border border-border",
-        className
-      )}
+    <Disclosure
+      isExpanded={open}
+      onExpandedChange={setOpen}
+      className={cn("overflow-hidden rounded-[var(--radius-md)] border border-border", className)}
     >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left text-small font-medium text-foreground transition-colors hover:bg-secondary/60"
-      >
-        <span>{t("promoCode")}</span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-200",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-
-      {open && (
-        <div className="border-t border-border px-4 py-4">
+      <Disclosure.Heading>
+        <Disclosure.Trigger className="flex w-full items-center justify-between px-4 py-3 text-left text-small font-medium text-foreground">
+          {t("promoCode")}
+          <Disclosure.Indicator />
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
+      <Disclosure.Content>
+        <Disclosure.Body className="border-t border-border px-4 py-4">
           {appliedPromo ? (
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-brand-accent/10 px-3 py-2">
-              <p className="text-sm font-medium text-brand-accent">
-                {t("promoApplied", { code: appliedPromo.code })}{" "}
-                <span className="text-muted-foreground">
-                  ({appliedPromo.percentOff}% off)
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={remove}
-                className="text-xs font-medium text-primary hover:underline"
-              >
+            <div className="flex items-center justify-between gap-2">
+              <Chip color="success" variant="soft">
+                <Chip.Label>
+                  {t("promoApplied", { code: appliedPromo.code })} ({appliedPromo.percentOff}% off)
+                </Chip.Label>
+              </Chip>
+              <Button type="button" variant="ghost" size="sm" onPress={remove}>
                 {t("removePromo")}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <Input
+              <TextField
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder={t("promoPlaceholder")}
-                className="h-10 uppercase"
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), apply())}
-              />
+                onChange={(value) => setCode(value.toUpperCase())}
+                className="min-w-0 flex-1"
+                aria-label={t("promoCode")}
+              >
+                <Label className="sr-only">{t("promoCode")}</Label>
+                <Input
+                  placeholder={t("promoPlaceholder")}
+                  className="h-10 uppercase"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void apply();
+                    }
+                  }}
+                />
+              </TextField>
               <Button
                 type="button"
-                variant="primary"
                 className="shrink-0"
-                onClick={apply}
-                disabled={loading || !code.trim()}
+                onPress={() => void apply()}
+                isDisabled={!code.trim()}
+                isPending={loading}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("applyPromo")}
+                {loading ? <Spinner color="current" size="sm" /> : t("applyPromo")}
               </Button>
             </div>
           )}
-        </div>
-      )}
-    </div>
+        </Disclosure.Body>
+      </Disclosure.Content>
+    </Disclosure>
   );
 }

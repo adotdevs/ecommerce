@@ -82,7 +82,10 @@
   "products": {
     "title": "Alle Produkte",
     "resultsFor": "Ergebnisse für „{query}“",
+    "showingFor": "Treffer für „{query}“",
     "found": "{{count}} Produkte gefunden",
+    "noMatchesFor": "Keine Produkte für „{query}“ gefunden.",
+    "noMatchesHint": "Im Katalog gibt es keine ausreichend passende Treffer. Versuchen Sie eine andere Schreibweise oder durchsuchen Sie die Kategorien.",
     "related": "Verwandte Produkte",
     "specifications": "Technische Daten",
     "sku": "Artikelnummer",
@@ -113,6 +116,8 @@
     "items": "{count} Artikel",
     "each": "pro Stück",
     "removeItem": "Artikel entfernen",
+    "decreaseQuantity": "Menge verringern",
+    "increaseQuantity": "Menge erhöhen",
     "promoCode": "Aktionscode / Geschenkkarte",
     "promoPlaceholder": "Code eingeben",
     "applyPromo": "Anwenden",
@@ -129,6 +134,7 @@
   "checkout": {
     "title": "Kasse",
     "contact": "Kontakt",
+    "phoneCountryAria": "Ländervorwahl",
     "shipping": "Versandanschrift",
     "payment": "Zahlungsmethode",
     "orderSummary": "Bestellübersicht",

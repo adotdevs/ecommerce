@@ -16,3 +16,4 @@ export { CompareList } from "./CompareList";
 export { ProductReview } from "./ProductReview";
 export { VisitorLog } from "./VisitorLog";
 export { PromoCode } from "./PromoCode";
+export { getLeadModel } from "./Lead";

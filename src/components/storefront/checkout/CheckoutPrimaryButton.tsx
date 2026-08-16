@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ArrowRight, Lock, Loader2 } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
+import { Button } from "@heroui/react";
 import { cn } from "@/components/ds/utils";
 
 interface CheckoutPrimaryButtonProps {
@@ -25,28 +26,28 @@ export function CheckoutPrimaryButton({
   const Icon = icon === "lock" ? Lock : ArrowRight;
 
   return (
-    <button
+    <Button
       type={type}
-      onClick={onClick}
-      disabled={disabled || loading}
+      onPress={onClick}
+      isDisabled={disabled}
+      isPending={loading}
+      size="lg"
+      fullWidth
       className={cn(
-        "flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px]",
-        "bg-gradient-to-r from-[#5b4df5] to-primary text-base font-semibold text-white",
-        "shadow-[0_8px_24px_rgba(79,70,229,0.28)] transition-all duration-200",
-        "hover:from-primary hover:to-[#4338ca] hover:shadow-[0_10px_28px_rgba(79,70,229,0.35)]",
-        "disabled:cursor-not-allowed disabled:opacity-60",
+        "h-[52px] rounded-[14px] bg-gradient-to-r from-[#5b4df5] to-primary font-semibold text-white",
+        "shadow-[0_8px_24px_rgba(79,70,229,0.28)]",
         className
       )}
     >
       {loading ? (
-        <Loader2 className="h-5 w-5 animate-spin" />
+        children
       ) : (
         <>
           <span>{children}</span>
-          <Icon className="h-4 w-4" />
+          <Icon />
         </>
       )}
-    </button>
+    </Button>
   );
 }
 

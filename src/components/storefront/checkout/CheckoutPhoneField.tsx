@@ -1,6 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Check, ChevronDown } from "lucide-react";
+import { Input } from "@heroui/react";
 import { CountryFlag } from "@/components/ui/CountryFlag";
 import {
   DropdownMenu,
@@ -39,6 +41,7 @@ export function CheckoutPhoneField({
   error,
   className,
 }: CheckoutPhoneFieldProps) {
+  const t = useTranslations("checkout");
   const config = getPhoneFieldConfig(phoneCountryCode);
   const options = getPhoneCountryOptions();
   const valid = isValidPhoneForCountry(phoneCountryCode, value);
@@ -55,15 +58,15 @@ export function CheckoutPhoneField({
         {label}
         {required && <span className="text-destructive"> *</span>}
       </label>
-      <div className="relative grid grid-cols-[auto_minmax(0,1fr)]">
+      <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-stretch">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               id={`${id}-country`}
-              aria-label="Country code"
+              aria-label={t("phoneCountryAria")}
               className={cn(
-                "relative flex h-12 shrink-0 items-center gap-1.5 rounded-l-xl border border-r-0 bg-secondary/50 pl-2.5 pr-7 md:h-[52px]",
+                "checkout-control relative flex shrink-0 items-center gap-1.5 rounded-l-xl border border-r-0 bg-secondary/50 pl-2.5 pr-7",
                 "text-foreground transition-colors hover:bg-secondary/80",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
                 error ? "border-destructive" : "border-border"
@@ -110,7 +113,7 @@ export function CheckoutPhoneField({
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-        <input
+        <Input
           id={id}
           type="tel"
           inputMode="numeric"
@@ -122,13 +125,10 @@ export function CheckoutPhoneField({
           placeholder={config.placeholder}
           required={required}
           maxLength={config.maxDigits}
-          pattern="[0-9]*"
           className={cn(
-            "h-12 min-w-0 rounded-r-xl border bg-background px-4 text-sm tabular-nums text-foreground transition-colors md:h-[52px]",
-            "placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
-            showValid ? "pr-10" : "",
-            error ? "border-destructive" : "border-border"
+            "checkout-control min-w-0 rounded-l-none rounded-r-xl tabular-nums",
+            showValid ? "pr-10" : "pr-4",
+            error ? "border-destructive" : ""
           )}
         />
         {showValid && (

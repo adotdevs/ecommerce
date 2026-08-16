@@ -1,0 +1,27 @@
+---
+description: Core ecommerce product standards the user repeats every session
+alwaysApply: true
+---
+
+# Ecommerce core standards
+
+Follow these without being asked again.
+
+## Dynamic everything
+- Prefer **admin/CMS/site-settings driven** values over hardcoding.
+- Brand name, logo, tagline, support phone/email, currencies, languages, countries, shipping, SEO, nav, announcement — read from `SiteSettings` / `getSiteSettings()` / branding helpers.
+- Do not hardcode store name as "YourStore", fake phones, or fixed currency lists when settings exist.
+
+## Safe changes
+- **Do not run `npm run build`** unless the user explicitly asks. Prefer targeted typecheck/lint or fix-only.
+- **Do not break** existing APIs, cart, wishlist, compare, search, filters, sorting, pagination, auth, or admin flows unless the task requires it.
+- When the user says UI-only: change UI/UX only — no backend/API contract changes.
+- Match existing patterns in the repo before inventing new ones.
+
+## Next.js in this repo
+- This Next.js version differs from training data. Read `node_modules/next/dist/docs/` and `AGENTS.md` before using unfamiliar APIs.
+
+## Quality bar
+- Production-minded, mobile-first, polished UI — not generic template look.
+- Long/async work (imports, bulk jobs): show **progress** (done / left / total); prefer **chunked** processing for reliability.
+- Filters and lists: normalize messy data (case, aliases, duplicates); show real counts, not zeros from missing fields.

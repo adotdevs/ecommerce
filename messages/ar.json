@@ -73,7 +73,10 @@
   "products": {
     "title": "جميع المنتجات",
     "resultsFor": "نتائج \"{query}\"",
+    "showingFor": "عرض النتائج لـ \"{query}\"",
     "found": "{count} منتج",
+    "noMatchesFor": "لم يتم العثور على منتجات لـ \"{query}\".",
+    "noMatchesHint": "لا يوجد في الكتالوج تطابق قريب بما يكفي. جرّب إملاءً آخر أو تصفح الفئات.",
     "related": "منتجات ذات صلة",
     "specifications": "المواصفات",
     "sku": "رمز المنتج",
@@ -104,6 +107,8 @@
     "items": "{count} منتج",
     "each": "للواحد",
     "removeItem": "إزالة المنتج",
+    "decreaseQuantity": "تقليل الكمية",
+    "increaseQuantity": "زيادة الكمية",
     "promoCode": "رمز ترويجي / بطاقة هدية",
     "promoPlaceholder": "أدخل الرمز",
     "applyPromo": "تطبيق",
@@ -120,6 +125,7 @@
   "checkout": {
     "title": "إتمام الشراء",
     "contact": "التواصل",
+    "phoneCountryAria": "رمز اتصال الدولة",
     "shipping": "عنوان الشحن",
     "payment": "طريقة الدفع",
     "orderSummary": "ملخص الطلب",

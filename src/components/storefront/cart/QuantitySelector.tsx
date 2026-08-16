@@ -1,7 +1,8 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ds/button";
+import { Button } from "@heroui/react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/components/ds/utils";
 
 interface QuantitySelectorProps {
@@ -21,6 +22,7 @@ export function QuantitySelector({
   max,
   className,
 }: QuantitySelectorProps) {
+  const t = useTranslations("cart");
   const atMax = max != null && quantity >= max;
 
   return (
@@ -33,13 +35,13 @@ export function QuantitySelector({
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        className="h-8 w-8 rounded-[6px] hover:bg-secondary"
-        onClick={onDecrease}
-        disabled={quantity <= min}
-        aria-label="Decrease quantity"
+        size="sm"
+        isIconOnly
+        onPress={onDecrease}
+        isDisabled={quantity <= min}
+        aria-label={t("decreaseQuantity")}
       >
-        <Minus className="h-3.5 w-3.5" />
+        <Minus />
       </Button>
       <span className="min-w-10 text-center text-sm font-semibold tabular-nums text-foreground">
         {quantity}
@@ -47,13 +49,13 @@ export function QuantitySelector({
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
-        className="h-8 w-8 rounded-[6px] hover:bg-secondary"
-        onClick={onIncrease}
-        disabled={atMax}
-        aria-label="Increase quantity"
+        size="sm"
+        isIconOnly
+        onPress={onIncrease}
+        isDisabled={atMax}
+        aria-label={t("increaseQuantity")}
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus />
       </Button>
     </div>
   );

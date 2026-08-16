@@ -2,11 +2,12 @@
 
 import { ShoppingBag } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ds/button";
+import { Button } from "@heroui/react";
+import { useRouter } from "@/i18n/navigation";
 
 export function EmptyCart() {
   const t = useTranslations("cart");
+  const router = useRouter();
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center md:py-24">
@@ -15,11 +16,11 @@ export function EmptyCart() {
       </div>
       <h1 className="mt-8 text-display-h3 text-foreground">{t("empty")}</h1>
       <p className="mt-3 max-w-sm text-body text-muted-foreground">{t("emptyDesc")}</p>
-      <Button className="mt-8" size="lg" asChild>
-        <Link href="/products">{t("startShopping")}</Link>
+      <Button className="mt-8" size="lg" onPress={() => router.push("/products")}>
+        {t("startShopping")}
       </Button>
-      <Button className="mt-3" variant="ghost" asChild>
-        <Link href="/products">{t("continueShopping")}</Link>
+      <Button className="mt-3" variant="ghost" onPress={() => router.push("/products")}>
+        {t("continueShopping")}
       </Button>
     </div>
   );

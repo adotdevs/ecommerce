@@ -1,5 +1,13 @@
 {
+  "products": {
+    "resultsFor": "Resultaten voor \"{query}\"",
+    "showingFor": "Overeenkomsten voor \"{query}\"",
+    "found": "{count} producten gevonden",
+    "noMatchesFor": "Geen producten gevonden voor \"{query}\".",
+    "noMatchesHint": "Niets in de catalogus komt voldoende overeen. Probeer een andere spelling of bekijk de categorieën."
+  },
   "checkout": {
+    "phoneCountryAria": "Landnummer",
     "paymentVerification": {
       "merchantDefault": "Online Winkel",
       "authenticateTitle": "Authenticeer Transactie",

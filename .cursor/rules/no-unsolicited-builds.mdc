@@ -1,0 +1,10 @@
+---
+description: Prefer fix-only verification; avoid full production builds unless asked
+alwaysApply: true
+---
+
+# Builds & verification
+
+- If the user says **do not make build** / **only fix**: fix the issue and verify with `tsc`/lint or a focused check — **never** run a full `npm run build` unless they ask.
+- After type errors: fix types properly; avoid sprawling `as any` unless matching an established local pattern.
+- Don't commit or push unless explicitly requested.

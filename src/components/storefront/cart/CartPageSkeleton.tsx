@@ -1,4 +1,6 @@
-import { Skeleton } from "@/components/ds/skeleton";
+"use client";
+
+import { Skeleton } from "@heroui/react";
 
 export function CartPageSkeleton() {
   return (

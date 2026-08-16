@@ -36,6 +36,7 @@ interface CatalogListingProps {
   total: number;
   facets: CatalogFacets;
   searchQuery?: string;
+  enhancedQuery?: string;
   page: number;
   pages: number;
   basePath: string;
@@ -50,6 +51,7 @@ export function CatalogListing({
   total,
   facets,
   searchQuery,
+  enhancedQuery,
   page,
   pages,
   pageSize = slug === "bestsellers" ? 9 : 12,
@@ -106,6 +108,14 @@ export function CatalogListing({
           <p className="catalog-heading__count">
             {tProducts("found", { count: total })}
           </p>
+          {isSearch &&
+            enhancedQuery &&
+            searchQuery &&
+            enhancedQuery.toLowerCase() !== searchQuery.toLowerCase() && (
+              <p className="catalog-heading__subtitle">
+                {tProducts("showingFor", { query: enhancedQuery })}
+              </p>
+            )}
           {content.subtitle && !isSearch && (
             <p className="catalog-heading__subtitle">{content.subtitle}</p>
           )}
@@ -114,8 +124,14 @@ export function CatalogListing({
         <CatalogFilters facets={facets} total={total}>
           {products.length === 0 ? (
             <EmptyProductsState
-              title={content.emptyTitle}
-              subtitle={content.emptySubtitle}
+              title={
+                isSearch && searchQuery
+                  ? tProducts("noMatchesFor", { query: searchQuery })
+                  : content.emptyTitle
+              }
+              subtitle={
+                isSearch ? tProducts("noMatchesHint") : content.emptySubtitle
+              }
               onClear={clearFilters}
             />
           ) : (

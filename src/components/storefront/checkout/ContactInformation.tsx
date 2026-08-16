@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Mail } from "lucide-react";
+import { Checkbox } from "@heroui/react";
 import { Link } from "@/i18n/navigation";
 import { useCustomerSession } from "@/hooks/use-customer-session";
 import { CheckoutCard } from "@/components/storefront/checkout/CheckoutCard";
@@ -39,7 +40,7 @@ export function ContactInformation({
       />
 
       {isCustomer && customerEmail ? (
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {t("signedInAs", { email: customerEmail })}{" "}
           <Link href="/account" className="font-medium text-primary hover:underline">
             {t("manageAccount")}
@@ -48,7 +49,7 @@ export function ContactInformation({
       ) : (
         resolved &&
         isGuest && (
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {t("alreadyHaveAccount")}{" "}
             <Link
               href="/login?redirect=/checkout"
@@ -60,15 +61,20 @@ export function ContactInformation({
         )
       )}
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2.5">
-        <input
-          type="checkbox"
-          checked={form.emailOffers}
-          onChange={(e) => onChange({ emailOffers: e.target.checked })}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-        />
-        <span className="text-sm text-muted-foreground">{t("emailOffers")}</span>
-      </label>
+      <Checkbox
+        className="checkout-checkbox"
+        isSelected={form.emailOffers}
+        onChange={(emailOffers) => onChange({ emailOffers })}
+      >
+        <Checkbox.Content className="flex flex-row flex-nowrap items-center gap-2.5">
+          <Checkbox.Control>
+            <Checkbox.Indicator />
+          </Checkbox.Control>
+          <span className="text-sm font-normal text-muted-foreground">
+            {t("emailOffers")}
+          </span>
+        </Checkbox.Content>
+      </Checkbox>
     </CheckoutCard>
   );
 }

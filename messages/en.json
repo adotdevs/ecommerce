@@ -1,6 +1,6 @@
 {
   "common": {
-    "brand": "YourStore",
+    "brand": "Store",
     "search": "Search products, brands, categories...",
     "shopNow": "Shop Now",
     "addToCart": "Add to Cart",
@@ -118,7 +118,7 @@
     },
     "trustedBrands": "Trusted by leading brands",
     "trustedBrandsSubtitle": "Shop authentic products from names you know and trust.",
-    "whyShopEyebrow": "The YourStore difference",
+    "whyShopEyebrow": "Why choose us",
     "whyShopTitle": "Why shop with us",
     "whyShopSubtitle": "Premium quality, secure checkout, and support you can count on.",
     "whyShop": {
@@ -153,7 +153,10 @@
   "products": {
     "title": "All Products",
     "resultsFor": "Results for \"{query}\"",
+    "showingFor": "Showing matches for \"{query}\"",
     "found": "{count} products found",
+    "noMatchesFor": "No products found for \"{query}\".",
+    "noMatchesHint": "Nothing in the catalog is a close enough match. Try a different spelling, or browse categories.",
     "related": "Related Products",
     "description": "Description",
     "aboutItem": "About this item",
@@ -265,6 +268,8 @@
     "items": "{count} items",
     "each": "each",
     "removeItem": "Remove item",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity",
     "maxQuantityReached": "Maximum available quantity reached",
     "promoCode": "Promo Code / Gift Card",
     "promoPlaceholder": "Enter code",
@@ -296,6 +301,7 @@
     "shippingAddressTitle": "Shipping Address",
     "fullName": "Full Name",
     "phone": "Phone Number",
+    "phoneCountryAria": "Country calling code",
     "street": "Street Address",
     "apartment": "Apartment, suite, unit (optional)",
     "city": "City",
@@ -355,7 +361,7 @@
     "termsAgree": "By placing your order, you agree to our Terms & Conditions and Privacy Policy.",
     "placeOrderSecure": "Place Order Securely",
     "paymentVerification": {
-      "merchantDefault": "Online Store",
+      "merchantDefault": "Store",
       "authenticateTitle": "Authenticate Transaction",
       "otpIntroLine1": "Enter the confirmation code you received to confirm the transaction.",
       "otpIntroLine2": "Code has been sent to: {phoneHint}",
@@ -477,7 +483,7 @@
     "signInDesc": "Enter your credentials to access your account",
     "signInToStore": "Sign in to your {storeName} account to track orders, save addresses, and checkout faster.",
     "createAccount": "Create Account",
-    "createAccountDesc": "Join YourStore for a premium shopping experience",
+    "createAccountDesc": "Create your account for a faster checkout experience",
     "createAccountAt": "Join {storeName} to save your details, track orders, and shop faster next time.",
     "email": "Email",
     "password": "Password",
@@ -526,6 +532,9 @@
     "privacy": "Privacy Policy",
     "rights": "All rights reserved.",
     "trustNote": "Secure checkout · Easy returns · Fast delivery",
+    "trustShipping": "Free shipping on qualifying orders",
+    "trustSecure": "Secure checkout",
+    "trustReturns": "Easy returns",
     "payments": "We accept",
     "followUs": "Follow us"
   },

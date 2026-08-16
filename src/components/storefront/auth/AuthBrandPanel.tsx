@@ -10,9 +10,8 @@ interface AuthBrandPanelProps {
 
 export async function AuthBrandPanel({ settings }: AuthBrandPanelProps) {
   const t = await getTranslations("auth");
-  const storeName = settings?.storeName?.trim() || t("fallbackStoreName");
-  const storeTagline =
-    settings?.storeTagline?.trim() || t("fallbackStoreTagline");
+  const storeName = settings?.storeName?.trim() ?? "";
+  const storeTagline = settings?.storeTagline?.trim() ?? "";
 
   const perks = [
     { icon: Package, label: t("perkOrders") },

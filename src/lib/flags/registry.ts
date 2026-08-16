@@ -20,6 +20,7 @@ import {
   TR,
   US,
   ZA,
+  EU,
 } from "country-flag-icons/react/3x2";
 
 export const FLAG_COMPONENTS = {
@@ -44,6 +45,7 @@ export const FLAG_COMPONENTS = {
   TR,
   US,
   ZA,
+  EU,
 } as const;
 
 export type SupportedFlagCode = keyof typeof FLAG_COMPONENTS;

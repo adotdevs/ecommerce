@@ -83,7 +83,7 @@ export const DEFAULT_CMS_PAGES: Record<CmsPageSlug, CmsPageContent> = {
       "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1200",
     introTitle: "Who we are",
     introBody:
-      "YourStore was founded with a simple mission: to deliver world-class products with an unmatched shopping experience. We curate every item in our collection to meet the highest standards of quality and design.",
+      "{storeName} was founded with a simple mission: to deliver world-class products with an unmatched shopping experience. We curate every item in our collection to meet the highest standards of quality and design.",
     missionTitle: "Our mission",
     missionBody:
       "We believe shopping should feel effortless, trustworthy, and inspiring. From product discovery to delivery, every detail is designed around you.",
@@ -105,9 +105,9 @@ export const DEFAULT_CMS_PAGES: Record<CmsPageSlug, CmsPageContent> = {
     intro:
       "We'd love to hear from you. Whether you have a question about an order, a product, or anything else — our team is ready to help.",
     emailLabel: "Email",
-    email: "support@yourstore.com",
+    email: "{supportEmail}",
     phoneLabel: "Phone",
-    phone: "+1 (800) 555-0199",
+    phone: "{supportPhone}",
     addressLabel: "Address",
     address: "123 Commerce Street\nNew York, NY 10001\nUnited States",
     hoursLabel: "Business hours",
@@ -149,7 +149,7 @@ export const DEFAULT_CMS_PAGES: Record<CmsPageSlug, CmsPageContent> = {
       },
       {
         title: "Contact us",
-        body: "If you have questions about this privacy policy, please contact us at support@yourstore.com.",
+        body: "If you have questions about this privacy policy, please contact us at {supportEmail}.",
       },
     ],
     seoTitle: "Privacy Policy",

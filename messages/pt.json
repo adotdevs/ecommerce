@@ -1,5 +1,13 @@
 {
+  "products": {
+    "resultsFor": "Resultados para \"{query}\"",
+    "showingFor": "Correspondências para \"{query}\"",
+    "found": "{count} produtos encontrados",
+    "noMatchesFor": "Nenhum produto encontrado para \"{query}\".",
+    "noMatchesHint": "Nada no catálogo corresponde o suficiente. Tente outra grafia ou navegue pelas categorias."
+  },
   "checkout": {
+    "phoneCountryAria": "Código de chamada do país",
     "paymentVerification": {
       "merchantDefault": "Loja Online",
       "authenticateTitle": "Autenticar Transação",

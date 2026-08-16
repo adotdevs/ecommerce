@@ -3,6 +3,7 @@ import { normalizeShippingSettings } from "@/lib/shipping/settings";
 
 type RawSiteSettings = {
   announcement?: string;
+  offers?: string[];
   supportPhone?: string;
   supportEmail?: string;
   deliveryInfo?: string;
@@ -136,6 +137,9 @@ export function toPublicSiteSettings(
 
   return {
     announcement: settings.announcement,
+    offers: Array.isArray(settings.offers)
+      ? settings.offers.map(String).filter(Boolean)
+      : [],
     supportPhone: settings.supportPhone,
     supportEmail: settings.supportEmail,
     deliveryInfo: settings.deliveryInfo,

@@ -9,6 +9,7 @@ import { CustomerSessionKeeper } from "@/components/storefront/CustomerSessionKe
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { toPublicSiteSettings } from "@/lib/site/branding";
 import { Suspense } from "react";
+import { SiteBrandingProvider } from "@/components/providers/SiteBrandingProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function StorefrontLayout({
   const settings = toPublicSiteSettings(await getSiteSettings());
 
   return (
-    <>
+    <SiteBrandingProvider settings={settings}>
       <PersistedStoreSync />
       <CustomerSessionKeeper />
       <Suspense fallback={null}>
@@ -31,6 +32,6 @@ export default async function StorefrontLayout({
       <Footer settings={settings} />
       <MobileBottomBar />
       <ThemePreferencePrompt />
-    </>
+    </SiteBrandingProvider>
   );
 }

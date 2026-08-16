@@ -82,7 +82,10 @@
   "products": {
     "title": "Todos los productos",
     "resultsFor": "Resultados para \"{query}\"",
+    "showingFor": "Mostrando coincidencias de \"{query}\"",
     "found": "{count} productos encontrados",
+    "noMatchesFor": "No se encontraron productos para \"{query}\".",
+    "noMatchesHint": "Nada del catálogo coincide lo suficiente. Prueba otra ortografía o explora las categorías.",
     "related": "Productos relacionados",
     "description": "Descripción",
     "aboutItem": "Acerca de este artículo",
@@ -143,6 +146,8 @@
     "items": "{count} artículos",
     "each": "c/u",
     "removeItem": "Eliminar artículo",
+    "decreaseQuantity": "Disminuir cantidad",
+    "increaseQuantity": "Aumentar cantidad",
     "promoCode": "Código promocional / Tarjeta regalo",
     "promoPlaceholder": "Introduce el código",
     "applyPromo": "Aplicar",
@@ -159,6 +164,7 @@
   "checkout": {
     "title": "Pagar",
     "contact": "Contacto",
+    "phoneCountryAria": "Código de llamada del país",
     "shipping": "Dirección de envío",
     "payment": "Método de pago",
     "orderSummary": "Resumen del pedido",

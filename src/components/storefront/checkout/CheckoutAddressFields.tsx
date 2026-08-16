@@ -1,9 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   CheckoutField,
   CheckoutSelect,
 } from "@/components/storefront/checkout/CheckoutField";
+import { cn } from "@/components/ds/utils";
 import { getAddressFieldConfig } from "@/lib/checkout/address-fields";
 
 export interface AddressFieldsValues {
@@ -31,17 +33,24 @@ export function CheckoutAddressFields({
   onChange,
   idPrefix = "",
 }: CheckoutAddressFieldsProps) {
+  const t = useTranslations("checkout");
   const config = getAddressFieldConfig(countryCode);
   const region = config.region;
+  const hasRegion = region.type === "select" || region.type === "text";
 
   return (
-    <>
+    <div
+      className={cn(
+        "grid gap-4 md:col-span-2",
+        hasRegion ? "md:grid-cols-3" : "md:grid-cols-2"
+      )}
+    >
       <CheckoutField
         id={`${idPrefix}city`}
-        label="City"
+        label={t("city")}
         value={values.city}
         onChange={(city) => onChange({ city })}
-        placeholder="City"
+        placeholder={t("placeholders.city")}
         required
         error={errors.city}
       />
@@ -53,7 +62,7 @@ export function CheckoutAddressFields({
           value={values.state}
           onChange={(state) => onChange({ state })}
           options={[
-            { value: "", label: `Select ${region.label.toLowerCase()}` },
+            { value: "", label: region.label },
             ...region.options,
           ]}
           required={region.required}
@@ -81,8 +90,7 @@ export function CheckoutAddressFields({
         placeholder={config.postalCode.placeholder}
         required={config.postalCode.required}
         error={errors.postalCode}
-        className={region.type === "none" ? "md:col-span-2" : undefined}
       />
-    </>
+    </div>
   );
 }

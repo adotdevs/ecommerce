@@ -15,6 +15,12 @@ import {
   type CmsPageSlug,
 } from "@/lib/cms/cms-pages";
 import { defaultLocale, type Locale } from "@/config/locales";
+import { getSiteSettings } from "@/lib/data/site-settings";
+import { toPublicSiteSettings } from "@/lib/site/branding";
+import {
+  applyBrandingTokensDeep,
+  brandingTokensFromSettings,
+} from "@/lib/site/branding-tokens";
 
 export async function ensureCmsPages() {
   await connectDB();
@@ -91,6 +97,10 @@ export async function getLocalizedCmsPage(slug: string, locale: Locale) {
       page.translations[locale] as Record<string, unknown>
     ) as CmsPageContent;
   }
+
+  const settings = toPublicSiteSettings(await getSiteSettings());
+  const tokens = brandingTokensFromSettings(settings);
+  content = applyBrandingTokensDeep(content, tokens);
 
   return {
     slug,

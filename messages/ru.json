@@ -1,5 +1,13 @@
 {
+  "products": {
+    "resultsFor": "Результаты по запросу «{query}»",
+    "showingFor": "Показаны совпадения для «{query}»",
+    "found": "Найдено товаров: {count}",
+    "noMatchesFor": "Товары по запросу «{query}» не найдены.",
+    "noMatchesHint": "В каталоге нет достаточно близких совпадений. Попробуйте другое написание или просмотрите категории."
+  },
   "checkout": {
+    "phoneCountryAria": "Телефонный код страны",
     "paymentVerification": {
       "merchantDefault": "Интернет-магазин",
       "authenticateTitle": "Аутентификация транзакции",

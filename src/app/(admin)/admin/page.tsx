@@ -8,6 +8,7 @@ import { Package, ShoppingCart, FolderTree, Tag, TrendingUp, DollarSign } from "
 
 export default function AdminDashboardPage() {
   const { accessToken } = useAuthStore();
+  const [storeName, setStoreName] = useState("");
   const [stats, setStats] = useState({
     products: 0,
     orders: 0,
@@ -16,6 +17,15 @@ export default function AdminDashboardPage() {
     revenue: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/settings/site")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data?.storeName) setStoreName(String(d.data.storeName));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -58,7 +68,9 @@ export default function AdminDashboardPage() {
       <div>
         <h1 className="text-display-h2 text-foreground">Dashboard</h1>
         <p className="mt-1 text-body text-muted-foreground">
-          Overview of your store performance
+          {storeName
+            ? `Overview of ${storeName} performance`
+            : "Overview of your store performance"}
         </p>
       </div>
 

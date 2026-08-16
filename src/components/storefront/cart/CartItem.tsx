@@ -3,8 +3,8 @@
 import Image from "next/image";
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Button, Card } from "@heroui/react";
 import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { QuantitySelector } from "@/components/storefront/cart/QuantitySelector";
 import { splitCartItemName } from "@/lib/cart/display";
@@ -22,7 +22,7 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
   const { title, variant } = splitCartItemName(item.name);
 
   return (
-    <article className="group rounded-[var(--radius-lg)] border border-border bg-card p-4 shadow-[var(--shadow-subtle)] transition-all duration-200 hover:border-primary/20 hover:shadow-[var(--shadow-card)] md:p-5">
+    <Card className="group p-4 transition-all duration-200 hover:border-primary/20 md:p-5">
       <div className="flex gap-4 md:gap-5">
         <Link
           href={`/products/${item.slug}`}
@@ -83,16 +83,17 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
             <Button
               type="button"
               variant="outline"
-              size="icon-sm"
-              className="h-9 w-9 border-border text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
-              onClick={() => onRemove(item.productId, item.variantId)}
+              size="sm"
+              isIconOnly
+              className="border-border text-muted-foreground hover:border-destructive/30 hover:text-destructive"
+              onPress={() => onRemove(item.productId, item.variantId)}
               aria-label={t("removeItem")}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 />
             </Button>
           </div>
         </div>
       </div>
-    </article>
+    </Card>
   );
 }

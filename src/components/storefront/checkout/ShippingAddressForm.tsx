@@ -145,12 +145,12 @@ export function ShippingAddressForm({
       </div>
 
       {canSaveAddress && (
-        <label className="mt-4 flex cursor-pointer items-center gap-2.5">
+        <label className="flex cursor-pointer items-center gap-2.5">
           <input
             type="checkbox"
             checked={form.saveAddress}
             onChange={(e) => onChange({ saveAddress: e.target.checked })}
-            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+            className="h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary"
           />
           <span className="text-sm text-muted-foreground">{t("saveAddress")}</span>
         </label>

@@ -1,3 +1,6 @@
+"use client";
+
+import { Card } from "@heroui/react";
 import { cn } from "@/components/ds/utils";
 
 interface CheckoutCardProps {
@@ -14,21 +17,18 @@ export function CheckoutCard({
   className,
 }: CheckoutCardProps) {
   return (
-    <section
-      className={cn(
-        "rounded-[20px] border border-border bg-card p-5 shadow-[var(--shadow-subtle)] md:p-6 lg:rounded-[22px]",
-        className
-      )}
-    >
-      <header className="mb-5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
+    <Card className={cn("gap-4 p-5 md:p-6", className)}>
+      <Card.Header className="mb-0 gap-1.5 p-0">
+        <Card.Title className="text-lg font-bold tracking-tight text-foreground md:text-xl">
           {title}
-        </h2>
-        {subtitle && (
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-        )}
-      </header>
-      {children}
-    </section>
+        </Card.Title>
+        {subtitle ? (
+          <Card.Description className="text-sm leading-5 !text-muted-foreground">
+            {subtitle}
+          </Card.Description>
+        ) : null}
+      </Card.Header>
+      <div className="flex flex-col gap-4">{children}</div>
+    </Card>
   );
 }

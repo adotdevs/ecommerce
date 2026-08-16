@@ -65,7 +65,10 @@
   "products": {
     "title": "تمام مصنوعات",
     "resultsFor": "\"{query}\" کے نتائج",
+    "showingFor": "\"{query}\" کے مطابق نتائج",
     "found": "{count} مصنوعات",
+    "noMatchesFor": "\"{query}\" کے لیے کوئی مصنوعہ نہیں ملا۔",
+    "noMatchesHint": "کیٹلاگ میں کوئی قریبی مماثلت نہیں۔ دوسجی ہجے آزمائیں یا زمرے دیکھیں۔",
     "related": "متعلقہ مصنوعات",
     "specifications": "تفصیلات",
     "sku": "SKU",
@@ -96,6 +99,8 @@
     "items": "{count} اشیاء",
     "each": "فی عدد",
     "removeItem": "آئٹم ہٹائیں",
+    "decreaseQuantity": "مقدار کم کریں",
+    "increaseQuantity": "مقدار بڑھائیں",
     "promoCode": "پرومو کوڈ / گفٹ کارڈ",
     "promoPlaceholder": "کوڈ درج کریں",
     "applyPromo": "لاگو کریں",
@@ -112,6 +117,7 @@
   "checkout": {
     "title": "چیک آؤٹ",
     "contact": "رابطہ",
+    "phoneCountryAria": "ملک کا کالنگ کوڈ",
     "shipping": "شipping پتہ",
     "payment": "ادائیگی کا طریقہ",
     "orderSummary": "آرڈر خلاصہ",

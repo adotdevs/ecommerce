@@ -139,6 +139,7 @@ export function getCountriesByCurrency(currency: string): CountryConfig[] {
 
 /** ISO country code for a currency's representative flag image. */
 export function getCurrencyCountryCode(code: string): string {
+  if (code === "EUR") return "EU";
   const matches = getCountriesByCurrency(code);
   if (matches.length === 0) return "US";
   const preferred =
@@ -147,8 +148,15 @@ export function getCurrencyCountryCode(code: string): string {
   return preferred.code;
 }
 
+/** Accessible label for a currency flag (EU for EUR, otherwise country name). */
+export function getCurrencyFlagLabel(currencyCode: string): string {
+  if (currencyCode === "EUR") return "Euro";
+  return getCountryByCode(getCurrencyCountryCode(currencyCode))?.name ?? currencyCode;
+}
+
 /** Representative flag for a currency (primary country that uses it). */
 export function getCurrencyFlag(code: string): string {
+  if (code === "EUR") return "🇪🇺";
   return getCountryByCode(getCurrencyCountryCode(code))?.flag ?? "💱";
 }
 

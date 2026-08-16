@@ -1,0 +1,22 @@
+---
+description: Admin panel conventions for this ecommerce project
+globs: "src/app/(admin)/**/*.{ts,tsx},src/app/api/v1/admin/**/*.ts,src/components/admin/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Admin conventions
+
+## Patterns
+- Pages under `src/app/(admin)/admin/…`; APIs under `/api/v1/admin/…`.
+- Auth: `withAuth` + `PERMISSIONS.*` (e.g. `MARKETING_WRITE`).
+- Responses: `apiSuccess` / `apiError`; validate with Zod.
+- Wire new sections into `AdminSidebar`.
+
+## UX
+- Filters should be practical: search + dropdowns, normalized values, real facet counts.
+- Bulk/import jobs: progress bar, chunked writes, clear success/error toasts.
+- Prefer appealing, scannable layouts (cards/tables) over bare dense tables when listing people/entities.
+
+## Data
+- Store DB (`MONGODB_URI`) vs leads CRM DB (`MONGODB_LEADS_URI`) stay separate — do not mix models across connections.
+- Optional fields OK; skip duplicate emails/phones on lead import.

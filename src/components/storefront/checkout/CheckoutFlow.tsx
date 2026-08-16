@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
-import { Button } from "@/components/ds/button";
+import { Button } from "@heroui/react";
 import { CheckoutSteps } from "@/components/storefront/checkout/CheckoutSteps";
 import { ContactInformation } from "@/components/storefront/checkout/ContactInformation";
 import { ShippingAddressForm } from "@/components/storefront/checkout/ShippingAddressForm";
@@ -34,6 +34,7 @@ import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { toastError } from "@/hooks/use-toast";
 import { calculateCheckoutTotals, buildShippingOptions } from "@/lib/checkout/shipping";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { useSiteBranding } from "@/components/providers/SiteBrandingProvider";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import {
   clearCheckoutDraft,
@@ -129,6 +130,7 @@ function buildInitialCheckoutState(
 }
 
 export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
+  const { storeName: brandedStoreName } = useSiteBranding();
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -423,7 +425,8 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
     () => detectCardBrand(cardDigits(form.cardNumber)),
     [form.cardNumber]
   );
-  const paymentMerchantName = merchantName.trim() || t("paymentVerification.merchantDefault");
+  const paymentMerchantName =
+    merchantName.trim() || brandedStoreName.trim() || t("paymentVerification.merchantDefault");
 
   if (!hydrated) {
     return (
@@ -439,7 +442,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
         <h1 className="text-2xl font-semibold">{t("empty")}</h1>
         <Button
           className="mt-4 rounded-full"
-          onClick={() => router.push("/products")}
+          onPress={() => router.push("/products")}
         >
           {tc("shopNow")}
         </Button>

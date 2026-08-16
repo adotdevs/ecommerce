@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Card, ProgressBar } from "@heroui/react";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
@@ -31,27 +32,25 @@ export function FreeShippingProgress({
   const unlocked = thresholdUsd <= 0 || subtotalUsd >= thresholdUsd;
 
   return (
-    <div
-      className={cn(
-        "rounded-[var(--radius-lg)] border border-border bg-card px-4 py-4 shadow-[var(--shadow-subtle)] md:px-5",
-        className
-      )}
-    >
+    <Card className={cn("px-4 py-4 md:px-5", className)}>
       <p className="text-small font-medium text-foreground">
         {unlocked
           ? t("freeShippingUnlocked")
           : t("freeShippingAway", { amount: formattedRemaining })}
       </p>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <ProgressBar
+        aria-label={t("freeShippingUnlocked")}
+        value={progress}
+        className="mt-3"
+      >
+        <ProgressBar.Track>
+          <ProgressBar.Fill />
+        </ProgressBar.Track>
+      </ProgressBar>
       <div className="mt-2 flex justify-between text-[12px] text-muted-foreground">
         <span>{formattedCurrent}</span>
         <span>{formattedGoal}</span>
       </div>
-    </div>
+    </Card>
   );
 }

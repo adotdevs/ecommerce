@@ -42,6 +42,10 @@ export default function AdminSettingsPage() {
     seoTitle: "",
     seoDescription: "",
   });
+  const [offers, setOffers] = useState<string[]>(["", "", ""]);
+  const [navigation, setNavigation] = useState<
+    { label: string; href: string }[]
+  >([]);
   const [languages, setLanguages] = useState<LanguageEntry[]>([]);
   const [newLang, setNewLang] = useState({ code: "", label: "", nativeLabel: "" });
   const [shipping, setShipping] = useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
@@ -79,6 +83,18 @@ export default function AdminSettingsPage() {
           if (d.data.shipping) {
             setShipping(normalizeShippingSettings(d.data.shipping));
           }
+          if (Array.isArray(d.data.offers) && d.data.offers.length) {
+            const lines = d.data.offers.map(String);
+            setOffers([lines[0] ?? "", lines[1] ?? "", lines[2] ?? ""]);
+          }
+          if (Array.isArray(d.data.navigation) && d.data.navigation.length) {
+            setNavigation(
+              d.data.navigation.map((item: { label?: string; href?: string }) => ({
+                label: item.label ?? "",
+                href: item.href ?? "",
+              }))
+            );
+          }
         }
       });
   }, []);
@@ -104,6 +120,13 @@ export default function AdminSettingsPage() {
         seo: { title: form.seoTitle, description: form.seoDescription },
         languages,
         shipping,
+        offers: offers.map((line) => line.trim()).filter(Boolean),
+        navigation: navigation
+          .map((item) => ({
+            label: item.label.trim(),
+            href: item.href.trim(),
+          }))
+          .filter((item) => item.label && item.href),
       }),
     });
     const data = await res.json();
@@ -725,12 +748,111 @@ export default function AdminSettingsPage() {
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Footer highlights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-4">
+            <p className="text-[13px] text-muted-foreground">
+              Three short lines shown above the footer. Use {"{storeName}"} or{" "}
+              {"{amount}"} where needed — amount is filled on the storefront for shipping promos.
+            </p>
+            {offers.map((line, index) => (
+              <div key={index}>
+                <Label>Highlight {index + 1}</Label>
+                <Input
+                  value={line}
+                  onChange={(e) => {
+                    const next = [...offers];
+                    next[index] = e.target.value;
+                    setOffers(next);
+                  }}
+                  placeholder={
+                    index === 0
+                      ? "Free shipping on qualifying orders"
+                      : index === 1
+                        ? "Secure checkout"
+                        : "Easy returns"
+                  }
+                />
+              </div>
+            ))}
+            <Button type="submit">{saved ? "Saved!" : "Save footer highlights"}</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Main navigation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-4">
+            <p className="text-[13px] text-muted-foreground">
+              Links in the storefront header. Leave empty to use the default translated menu.
+            </p>
+            {navigation.map((item, index) => (
+              <div key={index} className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[140px] flex-1">
+                  <Label>Label</Label>
+                  <Input
+                    value={item.label}
+                    onChange={(e) => {
+                      const next = [...navigation];
+                      next[index] = { ...next[index], label: e.target.value };
+                      setNavigation(next);
+                    }}
+                  />
+                </div>
+                <div className="min-w-[180px] flex-[2]">
+                  <Label>Link</Label>
+                  <Input
+                    value={item.href}
+                    onChange={(e) => {
+                      const next = [...navigation];
+                      next[index] = { ...next[index], href: e.target.value };
+                      setNavigation(next);
+                    }}
+                    placeholder="/new-arrivals"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    setNavigation((items) => items.filter((_, i) => i !== index))
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setNavigation((items) => [...items, { label: "", href: "" }])
+              }
+            >
+              <Plus className="h-4 w-4" /> Add link
+            </Button>
+            <Button type="submit">{saved ? "Saved!" : "Save navigation"}</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>Header & SEO</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <Label>Announcement Bar</Label>
-              <Input value={form.announcement} onChange={(e) => setForm({ ...form, announcement: e.target.value })} />
+              <Input
+                value={form.announcement}
+                onChange={(e) => setForm({ ...form, announcement: e.target.value })}
+                placeholder="Free shipping over {amount} — use {storeName} for your store name"
+              />
             </div>
             <div>
               <Label>Delivery Info</Label>

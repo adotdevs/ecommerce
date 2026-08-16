@@ -1,7 +1,18 @@
 "use client";
 
 import { Check, type LucideIcon } from "lucide-react";
+import {
+  FieldError,
+  Input,
+  Label,
+  ListBox,
+  Select,
+  TextField,
+} from "@heroui/react";
 import { cn } from "@/components/ds/utils";
+
+const FIELD_CONTROL =
+  "checkout-control w-full items-center rounded-xl text-sm";
 
 interface CheckoutFieldProps {
   id: string;
@@ -17,6 +28,14 @@ interface CheckoutFieldProps {
   valid?: boolean;
   className?: string;
   inputClassName?: string;
+}
+
+function autoCompleteFor(id: string) {
+  if (id === "cardNumber") return "cc-number";
+  if (id === "cardName") return "cc-name";
+  if (id === "cardExpiry") return "cc-exp";
+  if (id === "cardCvv") return "cc-csc";
+  return undefined;
 }
 
 export function CheckoutField({
@@ -38,43 +57,41 @@ export function CheckoutField({
   const hasTrailing = showValid || Boolean(endAdornment);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </label>
+    <TextField
+      id={id}
+      type={type}
+      value={value}
+      onChange={onChange}
+      isRequired={required}
+      isInvalid={Boolean(error)}
+      fullWidth
+      className={cn("w-full min-w-0 gap-1.5", className)}
+    >
+      <Label>{label}</Label>
       <div className="relative">
-        {Icon && (
-          <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        )}
-        <input
-          id={id}
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+        {Icon ? (
+          <Icon className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        ) : null}
+        <Input
           placeholder={placeholder}
-          required={required}
-          autoComplete={id === "cardNumber" ? "cc-number" : id === "cardName" ? "cc-name" : id === "cardExpiry" ? "cc-exp" : id === "cardCvv" ? "cc-csc" : undefined}
+          autoComplete={autoCompleteFor(id)}
           className={cn(
-            "flex h-12 w-full rounded-xl border bg-background text-sm text-foreground transition-colors md:h-[52px]",
-            "placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
-            Icon ? "pl-10" : "pl-4",
-            hasTrailing ? "pr-11" : "pr-4",
-            error ? "border-destructive" : "border-border",
+            FIELD_CONTROL,
+            Icon ? "ps-10" : "ps-4",
+            hasTrailing ? "pe-11" : "pe-4",
             inputClassName
           )}
         />
         {showValid ? (
-          <Check className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-accent" />
+          <Check className="pointer-events-none absolute right-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-brand-accent" />
         ) : endAdornment ? (
-          <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2">
+          <div className="pointer-events-none absolute right-3.5 top-1/2 z-10 -translate-y-1/2">
             {endAdornment}
           </div>
         ) : null}
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </TextField>
   );
 }
 
@@ -99,31 +116,36 @@ export function CheckoutSelect({
   error,
   className,
 }: CheckoutSelectProps) {
+  const placeholder = options.find((opt) => opt.value === "")?.label;
+  const items = options.filter((opt) => opt.value !== "");
+
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className={cn(
-          "flex h-12 w-full appearance-none rounded-xl border bg-background px-4 text-sm text-foreground md:h-[52px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-          error ? "border-destructive" : "border-border"
-        )}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    <Select
+      id={id}
+      selectedKey={value || null}
+      onSelectionChange={(key) => onChange(key == null ? "" : String(key))}
+      isRequired={required}
+      isInvalid={Boolean(error)}
+      placeholder={placeholder}
+      fullWidth
+      className={cn("w-full min-w-0 gap-1.5", className)}
+    >
+      <Label>{label}</Label>
+      <Select.Trigger className={cn(FIELD_CONTROL, "flex justify-start")}>
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover className="max-h-[min(70dvh,16rem)] overflow-auto">
+        <ListBox>
+          {items.map((opt) => (
+            <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
+              {opt.label}
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </Select>
   );
 }
 

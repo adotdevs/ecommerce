@@ -8,6 +8,7 @@ import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
 import { splitCartItemName, getCartItemKey } from "@/lib/cart/display";
 import { PromoCodeInput } from "@/components/storefront/cart/PromoCodeInput";
+import { Card } from "@heroui/react";
 import { cn } from "@/components/ds/utils";
 import type { CartItem } from "@/types";
 
@@ -118,7 +119,7 @@ export function CheckoutOrderSummary({
 
   return (
     <aside className={cn("lg:sticky lg:top-24 lg:self-start", className)}>
-      <div className="rounded-[20px] border border-border bg-card shadow-[var(--shadow-subtle)] lg:rounded-[22px]">
+      <Card className="overflow-hidden p-0">
         <div className="p-5 md:p-6">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-foreground">{t("orderSummary")}</h2>
@@ -205,7 +206,7 @@ export function CheckoutOrderSummary({
             </p>
           </div>
         </div>
-      </div>
+      </Card>
     </aside>
   );
 }

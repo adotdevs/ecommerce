@@ -1,0 +1,23 @@
+---
+description: Mobile-first responsive UI and polished layout rules
+globs: "**/*.{tsx,css}"
+alwaysApply: false
+---
+
+# Responsive & UI polish
+
+## Responsive
+- **Mobile-first**. Layouts must work on small screens and desktop.
+- Dropdowns/modals/sheets must be **scrollable** when content overflows (never clipped off-screen).
+- Touch targets usable on mobile; avoid overcrowding the header — use top bar vs main header thoughtfully.
+- Test mental model: phone + tablet + desktop, not desktop-only.
+
+## Clarity
+- Prefer clear labels over cryptic shorthand (e.g. say "12 digits", not "12d").
+- Counts in filters: show quantity up front when useful, e.g. `(1,204) +44 · United Kingdom`.
+- Empty/loading/error states should be intentional and readable.
+
+## Design system
+- Use existing DS components (`@/components/ds/*`) and storefront CSS variables/patterns.
+- Preserve established visual language; don't invent a second design system.
+- Avoid generic AI-template aesthetics when building marketing/landing surfaces.

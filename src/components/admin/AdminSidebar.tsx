@@ -18,6 +18,7 @@ import {
   Languages,
   Users,
   TicketPercent,
+  ContactRound,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,7 +28,9 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/promos", label: "Promo Codes", icon: TicketPercent },
+  { href: "/admin/leads", label: "Leads", icon: ContactRound },
   { href: "/admin/visitors", label: "Visitors", icon: Users },
+
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/merchandising", label: "Merchandising", icon: Sparkles },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },

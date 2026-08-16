@@ -2,9 +2,8 @@
 
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Button, Card, Separator } from "@heroui/react";
 import { useRouter } from "@/i18n/navigation";
-import { Button } from "@/components/ds/button";
-import { Separator } from "@/components/ds/separator";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
 import { CartSupportCard } from "@/components/storefront/cart/CartSupportCard";
@@ -106,12 +105,7 @@ export function OrderSummary({
   };
 
   return (
-    <aside
-      className={cn(
-        "h-fit rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-card)] md:p-6 lg:sticky lg:top-24",
-        className
-      )}
-    >
+    <Card className={cn("h-fit p-5 md:p-6 lg:sticky lg:top-24", className)}>
       <h2 className="text-body font-bold text-foreground">{t("summary")}</h2>
 
       <div className="mt-5 space-y-3">
@@ -150,11 +144,12 @@ export function OrderSummary({
       </div>
 
       <Button
-        className="mt-5 w-full max-md:h-12 max-md:min-h-[48px] max-md:rounded-full"
+        className="mt-5 max-md:h-12 max-md:min-h-[48px] max-md:rounded-full"
         size="lg"
-        onClick={handleCheckout}
+        fullWidth
+        onPress={handleCheckout}
       >
-        <Lock className="h-4 w-4" />
+        <Lock />
         {t("checkout")}
       </Button>
 
@@ -166,6 +161,6 @@ export function OrderSummary({
       </div>
 
       <CartSupportCard className="mt-4" />
-    </aside>
+    </Card>
   );
 }

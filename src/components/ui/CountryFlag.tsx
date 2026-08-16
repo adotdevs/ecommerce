@@ -3,6 +3,10 @@ import { cn } from "@/components/ds/utils";
 import { getCountryByCode } from "@/config/locales";
 import { getFlagComponent } from "@/lib/flags/registry";
 
+const REGION_FLAG_LABELS: Record<string, string> = {
+  EU: "Euro",
+};
+
 const SIZE_CLASS = {
   xs: "h-3.5 w-auto",
   sm: "h-4 w-auto",
@@ -23,7 +27,7 @@ export function CountryFlag({
 }) {
   const code = countryCode.trim().toUpperCase();
   const isValid = /^[A-Z]{2}$/.test(code);
-  const label = title ?? getCountryByCode(code)?.name ?? code;
+  const label = title ?? REGION_FLAG_LABELS[code] ?? getCountryByCode(code)?.name ?? code;
   const Flag = isValid ? getFlagComponent(code) : undefined;
 
   if (!Flag) {

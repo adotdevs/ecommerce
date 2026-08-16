@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import {
@@ -28,6 +29,7 @@ import type { SiteSettingsPublic } from "@/types";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { applyBrandingTokens, brandingTokensFromSettings } from "@/lib/site/branding-tokens";
 
 interface Category {
   _id: string;
@@ -41,6 +43,7 @@ interface HeaderProps {
 
 export function Header({ settings }: HeaderProps) {
   const t = useTranslations();
+  const { resolvedTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -90,13 +93,21 @@ export function Header({ settings }: HeaderProps) {
       ];
 
   const storeName = settings?.storeName ?? "";
+  const logoSrc =
+    resolvedTheme === "dark" && settings?.logoDark?.trim()
+      ? settings.logoDark.trim()
+      : settings?.logo?.trim();
   const shippingSettings = useShippingSettings();
   const freeShippingThresholdFmt = useFormattedPrice(
     shippingSettings.freeShippingThresholdUsd
   );
-  const topBarMessage = t("header.freeShippingPromo", {
-    amount: freeShippingThresholdFmt,
-  });
+  const tokens = brandingTokensFromSettings(settings);
+  const announcement = settings?.announcement?.trim();
+  const topBarMessage = announcement
+    ? applyBrandingTokens(announcement, tokens, { amount: freeShippingThresholdFmt })
+    : t("header.freeShippingPromo", {
+        amount: freeShippingThresholdFmt,
+      });
 
   return (
     <>
@@ -135,13 +146,13 @@ export function Header({ settings }: HeaderProps) {
               </Button>
 
               <Link href="/" className="flex shrink-0 items-center">
-                {settings?.logo ? (
+                {logoSrc ? (
                   <Image
-                    src={settings.logo}
+                    src={logoSrc}
                     alt={storeName || "Logo"}
                     width={120}
                     height={32}
-                    className="h-7 w-auto md:h-8"
+                    className="h-10 w-auto md:h-12"
                     priority
                   />
                 ) : storeName ? (

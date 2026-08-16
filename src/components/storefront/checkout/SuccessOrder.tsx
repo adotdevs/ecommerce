@@ -3,8 +3,8 @@
 import { Check, Package, Truck, Home, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ds/button";
+import { Button } from "@heroui/react";
+import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/components/ds/utils";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { getPaymentLabelKey } from "@/lib/checkout/utils";
@@ -17,6 +17,7 @@ interface SuccessOrderProps {
 export function SuccessOrder({ order }: SuccessOrderProps) {
   const t = useTranslations("checkout");
   const to = useTranslations("order");
+  const router = useRouter();
   const totalFmt = useFormattedPrice(order.total);
   const orderDate = new Date(order.createdAt).toLocaleDateString(undefined, {
     year: "numeric",
@@ -144,20 +145,18 @@ export function SuccessOrder({ order }: SuccessOrderProps) {
         <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
           <Button
             size="lg"
-            className="h-12 flex-1 rounded-[14px] bg-gradient-to-r from-[#5b4df5] to-primary font-semibold text-white shadow-[0_8px_20px_rgba(79,70,229,0.25)] hover:text-white sm:max-w-[220px]"
-            asChild
+            className="h-12 flex-1 rounded-[14px] bg-gradient-to-r from-[#5b4df5] to-primary font-semibold text-white shadow-[0_8px_20px_rgba(79,70,229,0.25)] sm:max-w-[220px]"
+            onPress={() => router.push("/account")}
           >
-            <Link href="/account" className="text-white hover:text-white">
-              {t("viewMyOrder")}
-            </Link>
+            {t("viewMyOrder")}
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="h-12 flex-1 rounded-[14px] border-border bg-card sm:max-w-[220px]"
-            asChild
+            className="h-12 flex-1 rounded-[14px] sm:max-w-[220px]"
+            onPress={() => router.push("/products")}
           >
-            <Link href="/products">{to("continueShopping")}</Link>
+            {to("continueShopping")}
           </Button>
         </div>
       </div>

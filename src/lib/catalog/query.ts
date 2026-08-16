@@ -155,6 +155,7 @@ export async function queryCatalogProducts(input: CatalogQueryInput) {
       limit: deep.limit,
       pages: deep.pages,
       sort,
+      enhancedQuery: deep.enhancedQuery,
       facets: {
         categories: categories.map((c) => ({
           name: String(c.name),

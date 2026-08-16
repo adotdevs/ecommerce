@@ -98,6 +98,7 @@ export async function renderCatalogPage({
         total={result.total}
         facets={result.facets}
         searchQuery={searchParams.q}
+        enhancedQuery={result.enhancedQuery}
         page={result.page}
         pages={result.pages}
         basePath={basePath}

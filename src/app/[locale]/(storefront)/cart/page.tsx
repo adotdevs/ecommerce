@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Button } from "@heroui/react";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useCartStore } from "@/stores/cart-store";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
@@ -12,7 +13,6 @@ import { buildShippingOptions } from "@/lib/checkout/shipping";
 import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
-import { Button } from "@/components/ds/button";
 import { CartItem } from "@/components/storefront/cart/CartItem";
 import { CartPageSkeleton } from "@/components/storefront/cart/CartPageSkeleton";
 import { EmptyCart } from "@/components/storefront/cart/EmptyCart";
@@ -22,6 +22,7 @@ import { getCartItemKey } from "@/lib/cart/display";
 
 export default function CartPage() {
   const t = useTranslations("cart");
+  const router = useRouter();
   const hydrated = useCartHydrated();
   useCartStockLimits(hydrated);
 
@@ -99,11 +100,13 @@ export default function CartPage() {
             </nav>
           </div>
 
-          <Button variant="outline" className="rounded-full" asChild>
-            <Link href="/products">
-              <ArrowLeft className="h-4 w-4" />
-              {t("continueShopping")}
-            </Link>
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onPress={() => router.push("/products")}
+          >
+            <ArrowLeft />
+            {t("continueShopping")}
           </Button>
         </div>
 

@@ -1,8 +1,8 @@
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft, MapPin, Package, ShieldCheck } from "lucide-react";
 import type { SiteSettingsPublic } from "@/types";
+import { BrandLogo } from "@/components/storefront/layout/BrandLogo";
 
 interface AuthBrandPanelProps {
   settings: SiteSettingsPublic | null;
@@ -35,20 +35,16 @@ export async function AuthBrandPanel({ settings }: AuthBrandPanelProps) {
 
         <div className="mt-10">
           <Link href="/" className="inline-flex items-center">
-            {settings?.logo ? (
-              <Image
-                src={settings.logo}
-                alt={storeName}
-                width={160}
-                height={44}
-                className="h-9 w-auto md:h-10"
-                priority
-              />
-            ) : (
-              <span className="text-2xl font-bold tracking-tight text-foreground">
-                {storeName}
-              </span>
-            )}
+            <BrandLogo
+              logo={settings?.logo}
+              logoDark={settings?.logoDark}
+              storeName={storeName}
+              className="h-9 w-auto md:h-10"
+              fallbackClassName="text-2xl text-foreground"
+              width={160}
+              height={44}
+              priority
+            />
           </Link>
           <p className="mt-4 max-w-sm text-lg font-semibold leading-snug text-foreground">
             {storeTagline}

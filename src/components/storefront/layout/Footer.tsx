@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { Truck, Shield, RefreshCw } from "lucide-react";
 import type { SiteSettingsPublic } from "@/types";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
+import { BrandLogo } from "@/components/storefront/layout/BrandLogo";
 import {
   applyBrandingTokens,
   brandingTokensFromSettings,
@@ -20,8 +20,6 @@ export async function Footer({ settings }: FooterProps) {
   const tn = await getTranslations("nav");
   const storeName = settings?.storeName ?? "";
   const storeTagline = settings?.storeTagline ?? "";
-  const logoSrc = settings?.logo?.trim();
-  const logoDarkSrc = settings?.logoDark?.trim();
   const tokens = brandingTokensFromSettings(settings);
   const trustLines =
     settings?.offers?.filter(Boolean).slice(0, 3) ??
@@ -52,36 +50,17 @@ export async function Footer({ settings }: FooterProps) {
       <div className="container-store py-14 md:py-16">
         <div className="store-footer__grid">
           <div>
-            {logoSrc || storeName ? (
+            {settings?.logo?.trim() || storeName ? (
               <Link href="/" className="mb-3 inline-flex items-center">
-                {logoSrc ? (
-                  <>
-                    <Image
-                      src={logoSrc}
-                      alt={storeName}
-                      width={140}
-                      height={40}
-                      className={
-                        logoDarkSrc
-                          ? "h-10 w-auto dark:hidden md:h-12"
-                          : "h-10 w-auto md:h-12"
-                      }
-                    />
-                    {logoDarkSrc ? (
-                      <Image
-                        src={logoDarkSrc}
-                        alt={storeName}
-                        width={140}
-                        height={40}
-                        className="hidden h-10 w-auto dark:block md:h-12"
-                      />
-                    ) : null}
-                  </>
-                ) : (
-                  <h3 className="text-lg font-bold tracking-tight text-foreground">
-                    {storeName}
-                  </h3>
-                )}
+                <BrandLogo
+                  logo={settings?.logo}
+                  logoDark={settings?.logoDark}
+                  storeName={storeName}
+                  className="h-10 w-auto md:h-12"
+                  fallbackClassName="text-lg text-foreground"
+                  width={140}
+                  height={40}
+                />
               </Link>
             ) : null}
             {storeTagline && (

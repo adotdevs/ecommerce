@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import {
   Search,
   ShoppingCart,
@@ -23,6 +21,7 @@ import { Button } from "@/components/ds/button";
 import { SearchAutocomplete } from "@/components/storefront/search/SearchAutocomplete";
 import { RegionSelector, DeliverToSelector, TopBarPreferences } from "@/components/storefront/layout/RegionSelector";
 import { ThemeToggle } from "@/components/storefront/layout/ThemeToggle";
+import { BrandLogo } from "@/components/storefront/layout/BrandLogo";
 import { cn } from "@/components/ds/utils";
 import { formatCategoryName } from "@/lib/utils";
 import type { SiteSettingsPublic } from "@/types";
@@ -43,7 +42,6 @@ interface HeaderProps {
 
 export function Header({ settings }: HeaderProps) {
   const t = useTranslations();
-  const { resolvedTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -93,10 +91,6 @@ export function Header({ settings }: HeaderProps) {
       ];
 
   const storeName = settings?.storeName ?? "";
-  const logoSrc =
-    resolvedTheme === "dark" && settings?.logoDark?.trim()
-      ? settings.logoDark.trim()
-      : settings?.logo?.trim();
   const shippingSettings = useShippingSettings();
   const freeShippingThresholdFmt = useFormattedPrice(
     shippingSettings.freeShippingThresholdUsd
@@ -146,18 +140,14 @@ export function Header({ settings }: HeaderProps) {
               </Button>
 
               <Link href="/" className="flex shrink-0 items-center">
-                {logoSrc ? (
-                  <Image
-                    src={logoSrc}
-                    alt={storeName || "Logo"}
-                    width={120}
-                    height={32}
-                    className="h-10 w-auto md:h-12"
-                    priority
-                  />
-                ) : storeName ? (
-                  <span className="text-body font-bold tracking-tight">{storeName}</span>
-                ) : null}
+                <BrandLogo
+                  logo={settings?.logo}
+                  logoDark={settings?.logoDark}
+                  storeName={storeName}
+                  className="h-10 w-auto md:h-12"
+                  fallbackClassName="text-body"
+                  priority
+                />
               </Link>
 
               <DeliverToSelector className="hidden shrink-0 sm:flex" />

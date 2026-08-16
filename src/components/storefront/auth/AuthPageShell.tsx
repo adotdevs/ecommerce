@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { AuthBrandPanel } from "@/components/storefront/auth/AuthBrandPanel";
+import { BrandLogo } from "@/components/storefront/layout/BrandLogo";
 import type { SiteSettingsPublic } from "@/types";
 
 interface AuthPageShellProps {
@@ -19,18 +19,14 @@ export function AuthPageShell({ settings, children }: AuthPageShellProps) {
         <div className="flex flex-col">
           <div className="border-b border-border/60 px-4 py-4 lg:hidden">
             <Link href="/" className="inline-flex items-center gap-3">
-              {settings?.logo ? (
-                <Image
-                  src={settings.logo}
-                  alt={storeName || "Store"}
-                  width={120}
-                  height={32}
-                  className="h-7 w-auto"
-                  priority
-                />
-              ) : storeName ? (
-                <span className="text-lg font-bold tracking-tight">{storeName}</span>
-              ) : null}
+              <BrandLogo
+                logo={settings?.logo}
+                logoDark={settings?.logoDark}
+                storeName={storeName}
+                className="h-7 w-auto"
+                fallbackClassName="text-lg text-foreground"
+                priority
+              />
             </Link>
           </div>
 

@@ -24,6 +24,17 @@ function isHttpUrl(value: string) {
   }
 }
 
+/** Public-folder path, e.g. `/brand/hero.png` (same pattern as logo URL). */
+function isLocalPublicPath(value: string) {
+  const path = value.trim();
+  return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
+}
+
+function isUsableImageSrc(value: string) {
+  const path = value.trim();
+  return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
+}
+
 export function ImageUpload({
   label = "Image",
   value,
@@ -97,7 +108,7 @@ export function ImageUpload({
     e.target.value = "";
   };
 
-  const showPreview = Boolean(value) && isHttpUrl(value);
+  const showPreview = isUsableImageSrc(value);
 
   return (
     <div className="space-y-2">
@@ -176,7 +187,7 @@ export function ImageUpload({
             <>
               <Upload className="h-8 w-8 text-muted-foreground" />
               <span className="text-small text-muted-foreground">
-                Click to upload (JPEG, PNG, WebP — max 5MB)
+                Click to upload (JPEG, PNG, WebP — max 5MB), or enter a local path below
               </span>
             </>
           )}
@@ -199,8 +210,10 @@ export function ImageUpload({
       )}
 
       {error && <p className="text-[12px] text-destructive">{error}</p>}
-      {value && !isHttpUrl(value) && (
-        <p className="text-[12px] text-destructive">Enter a valid http(s) image URL.</p>
+      {value.trim() && !isUsableImageSrc(value) && (
+        <p className="text-[12px] text-destructive">
+          Enter a valid http(s) URL or a local path like /brand/hero.png
+        </p>
       )}
 
       <input
@@ -212,16 +225,18 @@ export function ImageUpload({
       />
 
       <div className="space-y-1">
-        <Label className="text-[12px] text-muted-foreground">Or paste URL</Label>
+        <Label className="text-[12px] text-muted-foreground">
+          Or paste URL / local path
+        </Label>
         <input
-          type="url"
+          type="text"
           value={value}
           onChange={(e) => {
             setBroken(false);
             onChange(e.target.value);
           }}
           className="flex h-9 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-small"
-          placeholder="https://..."
+          placeholder="https://... or /brand/hero.png"
         />
       </div>
     </div>

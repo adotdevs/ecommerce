@@ -62,6 +62,7 @@ const ProductReviewSchema = new Schema<IProductReview>(
 );
 
 ProductReviewSchema.index({ productId: 1, createdAt: -1 });
+ProductReviewSchema.index({ status: 1, rating: 1, createdAt: -1 });
 ProductReviewSchema.index(
   { productId: 1, userId: 1 },
   { unique: true, partialFilterExpression: { source: "customer" } }

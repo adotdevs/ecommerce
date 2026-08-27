@@ -180,7 +180,7 @@ export function HeroSliderSection({ config }: SectionProps) {
                         <span className="store-hero-banner__trust-icon">
                           <Icon className="h-3.5 w-3.5" strokeWidth={2} />
                         </span>
-                        <span>{point.label}</span>
+                        <span className="store-hero-banner__trust-label">{point.label}</span>
                       </div>
                     );
                   })}
@@ -435,15 +435,9 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
           <CmsSectionHeader title={title} viewAllLabel={viewAllLabel} viewAllHref={viewAllHref} />
         </motion.div>
 
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewportOnce}
-          className="store-category-row"
-        >
-          {categories.slice(0, 11).map((cat) => (
-            <motion.div key={cat._id} variants={staggerItem} className="shrink-0 sm:shrink">
+        <ProductCarousel className="store-category-carousel">
+          {categories.map((cat) => (
+            <div key={cat._id} className="store-category-carousel__item">
               <Link href={`/categories/${cat.slug}`} className="store-category-orbit group">
                 <div className="store-category-orbit__ring">
                   {cat.image ? (
@@ -451,7 +445,7 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
                       src={cat.image}
                       alt={formatCategoryName(cat.name)}
                       fill
-                      className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="120px"
                     />
                   ) : (
@@ -464,9 +458,9 @@ export function CategoryShowcaseSection({ config }: SectionProps) {
                   {formatCategoryName(cat.name)}
                 </span>
               </Link>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </ProductCarousel>
       </div>
     </section>
   );

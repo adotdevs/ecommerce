@@ -1,15 +1,24 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 
 interface ProductCarouselProps {
   children: React.ReactNode;
   className?: string;
+  previousLabel?: string;
+  nextLabel?: string;
 }
 
-export function ProductCarousel({ children, className }: ProductCarouselProps) {
+export function ProductCarousel({
+  children,
+  className,
+  previousLabel,
+  nextLabel,
+}: ProductCarouselProps) {
+  const t = useTranslations("catalog");
   const trackRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -45,7 +54,7 @@ export function ProductCarousel({ children, className }: ProductCarouselProps) {
       {canPrev && (
         <button
           type="button"
-          aria-label="Previous products"
+          aria-label={previousLabel ?? t("previous")}
           onClick={() => scroll(-1)}
           className="store-carousel__arrow store-carousel__arrow--left"
         >
@@ -55,7 +64,7 @@ export function ProductCarousel({ children, className }: ProductCarouselProps) {
       {canNext && (
         <button
           type="button"
-          aria-label="Next products"
+          aria-label={nextLabel ?? t("next")}
           onClick={() => scroll(1)}
           className="store-carousel__arrow store-carousel__arrow--right"
         >

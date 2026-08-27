@@ -226,8 +226,22 @@ export const REFERENCE_HOMEPAGE_SECTIONS = [
     },
   },
   {
-    type: "newsletter",
+    type: "reviews_strip",
     order: 10,
+    enabled: true,
+    config: {
+      eyebrow: "Loved by shoppers",
+      title: "What customers are saying",
+      subtitle: "Recent five-star reviews from real orders.",
+      emptyMessage:
+        "Customer reviews will appear here once shoppers share their experience.",
+      limit: 6,
+      minRating: 5,
+    },
+  },
+  {
+    type: "newsletter",
+    order: 11,
     enabled: true,
     config: {
       title: "Stay in the loop",
@@ -240,7 +254,7 @@ export const REFERENCE_HOMEPAGE_SECTIONS = [
   },
   {
     type: "trust_badges",
-    order: 11,
+    order: 12,
     enabled: true,
     config: {
       badges: [

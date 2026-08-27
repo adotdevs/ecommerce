@@ -17,7 +17,7 @@ import {
   type ImportResult,
 } from "@/lib/leads/import";
 import { LEAD_TARGET_FIELDS } from "@/lib/leads/fields";
-import { MAX_LEADS_UPLOAD_BYTES } from "@/lib/leads/limits";
+import { MAX_LEADS_UPLOAD_BYTES, formatBytes } from "@/lib/leads/limits";
 
 const filtersSchema = z.object({
   country: z.string().optional(),
@@ -85,7 +85,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (mode === "analyze") {
       const text = z.string().min(1).parse(body.text);
       if (new TextEncoder().encode(text).length > MAX_LEADS_UPLOAD_BYTES) {
-        return apiError("File too large (max 50MB)");
+        return apiError(`File too large (max ${formatBytes(MAX_LEADS_UPLOAD_BYTES)})`);
       }
       const filename = z.string().default("leads.json").parse(body.filename);
       const rows = parseLeadFile(text, filename);
@@ -131,7 +131,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (mode === "import") {
       const text = z.string().min(1).parse(body.text);
       if (new TextEncoder().encode(text).length > MAX_LEADS_UPLOAD_BYTES) {
-        return apiError("File too large (max 50MB)");
+        return apiError(`File too large (max ${formatBytes(MAX_LEADS_UPLOAD_BYTES)})`);
       }
       const filename = z.string().default("leads.json").parse(body.filename);
       const mapping = z.record(z.string(), mappingValue).parse(body.mapping) as FieldMapping;
@@ -176,7 +176,7 @@ async function handleMultipart(request: NextRequest) {
 
   if (!(file instanceof File)) return apiError("file is required");
   if (file.size > MAX_LEADS_UPLOAD_BYTES) {
-    return apiError("File too large (max 50MB)");
+    return apiError(`File too large (max ${formatBytes(MAX_LEADS_UPLOAD_BYTES)})`);
   }
 
   const text = await file.text();

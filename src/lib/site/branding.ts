@@ -1,11 +1,19 @@
 import type { SiteSettingsPublic } from "@/types";
 import { normalizeShippingSettings } from "@/lib/shipping/settings";
+import { normalizeContactLocations } from "@/lib/site/contact-locations";
 
 type RawSiteSettings = {
   announcement?: string;
   offers?: string[];
   supportPhone?: string;
   supportEmail?: string;
+  contactLocations?: {
+    countryCode: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    hours?: string;
+  }[];
   deliveryInfo?: string;
   logo?: string;
   logoDark?: string;
@@ -142,6 +150,7 @@ export function toPublicSiteSettings(
       : [],
     supportPhone: settings.supportPhone,
     supportEmail: settings.supportEmail,
+    contactLocations: normalizeContactLocations(settings.contactLocations),
     deliveryInfo: settings.deliveryInfo,
     logo: settings.logo,
     logoDark: settings.logoDark,

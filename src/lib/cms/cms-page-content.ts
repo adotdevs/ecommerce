@@ -21,6 +21,11 @@ import {
   applyBrandingTokensDeep,
   brandingTokensFromSettings,
 } from "@/lib/site/branding-tokens";
+import {
+  applyResolvedContact,
+  normalizeContactLocations,
+  resolveContactForCountry,
+} from "@/lib/site/contact-locations";
 
 export async function ensureCmsPages() {
   await connectDB();
@@ -76,7 +81,11 @@ function stringOr(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
-export async function getLocalizedCmsPage(slug: string, locale: Locale) {
+export async function getLocalizedCmsPage(
+  slug: string,
+  locale: Locale,
+  countryCode?: string
+) {
   if (!isCmsPageSlug(slug)) return null;
 
   await ensureCmsPages();
@@ -101,6 +110,18 @@ export async function getLocalizedCmsPage(slug: string, locale: Locale) {
   const settings = toPublicSiteSettings(await getSiteSettings());
   const tokens = brandingTokensFromSettings(settings);
   content = applyBrandingTokensDeep(content, tokens);
+
+  if (slug === "contact" && settings) {
+    const resolved = resolveContactForCountry(
+      normalizeContactLocations(settings.contactLocations),
+      countryCode,
+      {
+        email: settings.supportEmail,
+        phone: settings.supportPhone,
+      }
+    );
+    content = applyResolvedContact(content, resolved) as CmsPageContent;
+  }
 
   return {
     slug,

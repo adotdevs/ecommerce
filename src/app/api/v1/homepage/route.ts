@@ -1,8 +1,7 @@
 import { connectDB } from "@/lib/db/mongoose";
-import { HomepageSection, Product, Category } from "@/models";
-import { isSectionVisible, resolveFeaturedProducts, resolveFlashSaleProducts } from "@/lib/cms/homepage";
+import { HomepageSection, Product } from "@/models";
+import { isSectionVisible, resolveFeaturedProducts, resolveFlashSaleProducts, resolveReviewsStrip, resolveHomepageCategories } from "@/lib/cms/homepage";
 import { resolveFlashSaleEndsAtIso } from "@/lib/cms/flash-sale-countdown";
-import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
 import { apiSuccess } from "@/lib/api/response";
 
 export async function GET() {
@@ -25,9 +24,12 @@ export async function GET() {
         config.endsAt = resolveFlashSaleEndsAtIso(config.endsAt as string | undefined);
       }
 
+      if (section.type === "reviews_strip") {
+        config.reviews = await resolveReviewsStrip(config);
+      }
+
       if (section.type === "category_showcase") {
-        const categories = await Category.find().sort({ sortOrder: 1 }).limit(8).lean();
-        config.categories = toCategoryShowcaseList(categories);
+        config.categories = await resolveHomepageCategories(config);
       }
 
       if (section.type === "hero_slider" && config.productIds) {

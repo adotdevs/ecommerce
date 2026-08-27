@@ -33,3 +33,38 @@ export function resolveFlashSaleEndsAtIso(
 ): string {
   return resolveFlashSaleEndsAt(anchorEndsAt, now).toISOString();
 }
+
+/** Hours between auto-picked flash-sale batches. 168 = follow the 7-day countdown. */
+export const FLASH_SALE_ROTATION_HOURS = [6, 12, 24, 168] as const;
+
+export function resolveFlashSaleRotationHours(value: unknown): number {
+  const hours = Number(value);
+  if (Number.isFinite(hours) && hours > 0) return hours;
+  return 24;
+}
+
+/** Stable window index so the same visitors see the same batch until it rotates. */
+export function flashSaleRotationWindow(
+  rotationHours: number,
+  anchorEndsAt?: string | Date | null,
+  now = Date.now()
+): number {
+  const hours = resolveFlashSaleRotationHours(rotationHours);
+  if (hours >= 168) {
+    const end = resolveFlashSaleEndsAt(anchorEndsAt, now).getTime();
+    return Math.floor(end / FLASH_SALE_DURATION_MS);
+  }
+  return Math.floor(now / (hours * 60 * 60 * 1000));
+}
+
+export function rotateSlice<T>(items: T[], limit: number, window: number): T[] {
+  if (items.length === 0 || limit <= 0) return [];
+  if (items.length <= limit) return items.slice(0, limit);
+  const offset = ((window % items.length) + items.length) % items.length;
+  const start = (offset * limit) % items.length;
+  const out: T[] = [];
+  for (let i = 0; i < limit; i++) {
+    out.push(items[(start + i) % items.length]);
+  }
+  return out;
+}

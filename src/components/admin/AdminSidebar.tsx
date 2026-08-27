@@ -9,6 +9,7 @@ import {
   Tag,
   FileText,
   Settings,
+  Mail,
   Home,
   ShoppingCart,
   LogOut,
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/admin/catalog-pages", label: "Catalog Pages", icon: LayoutGrid },
   { href: "/admin/translations", label: "Translations", icon: Languages },
   { href: "/admin/cms", label: "CMS Pages", icon: FileText },
+  { href: "/admin/contact", label: "Contact", icon: Mail },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

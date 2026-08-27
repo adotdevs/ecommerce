@@ -1,10 +1,24 @@
 {
+  "auth": {
+    "showPassword": "Mostrar palavra-passe",
+    "hidePassword": "Ocultar palavra-passe"
+  },
   "products": {
     "resultsFor": "Resultados para \"{query}\"",
     "showingFor": "Correspondências para \"{query}\"",
     "found": "{count} produtos encontrados",
     "noMatchesFor": "Nenhum produto encontrado para \"{query}\".",
     "noMatchesHint": "Nada no catálogo corresponde o suficiente. Tente outra grafia ou navegue pelas categorias."
+  },
+  "catalog": {
+    "previous": "Anterior",
+    "next": "Seguinte"
+  },
+  "reviews": {
+    "shopProduct": "Comprar {name}",
+    "viewProduct": "Ver produto",
+    "reviewPhoto": "Foto da avaliação",
+    "productPhoto": "{name}"
   },
   "checkout": {
     "phoneCountryAria": "Código de chamada do país",

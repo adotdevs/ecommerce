@@ -349,6 +349,15 @@ export default function AdminCmsPage() {
 
               {isOpen && (
                 <CardContent className="space-y-6 border-t border-border pt-6">
+                  {page.slug === "contact" && (
+                    <p className="rounded-md border border-border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
+                      Email, phone, and per-country addresses are edited in{" "}
+                      <a href="/admin/contact" className="font-medium text-primary hover:underline">
+                        Admin → Contact
+                      </a>
+                      . This screen is for intro, labels, and SEO.
+                    </p>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     {fields
                       .filter((f) => !f.skip)

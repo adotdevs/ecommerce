@@ -40,6 +40,12 @@ export function normalizeSectionConfig(
       }
       if (!Array.isArray(next.productLinks)) next.productLinks = [];
       if (next.limit == null) next.limit = 4;
+      if (next.rotationHours == null) next.rotationHours = 24;
+      break;
+    }
+    case "reviews_strip": {
+      if (next.limit == null) next.limit = 6;
+      if (next.minRating == null) next.minRating = 5;
       break;
     }
     case "product_slider": {

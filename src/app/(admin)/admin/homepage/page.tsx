@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { Badge } from "@/components/ds/badge";
 import { renderSectionEditor } from "@/components/admin/homepage/SectionEditor";
-import { Loader2, Save, Languages, ChevronDown, ChevronUp, Plus, Zap } from "lucide-react";
+import { Loader2, Save, Languages, ChevronDown, ChevronUp, Plus, Zap, Trash2, MessageSquare } from "lucide-react";
 import { defaultLocale, localeConfig, type LanguageEntry } from "@/config/locales";
 import { toastSaveSuccess, toastError, toast } from "@/hooks/use-toast";
 import { AiAssistButton, postAiSuggest } from "@/components/admin/AiAssistButton";
@@ -58,6 +58,7 @@ export default function AdminHomepagePage() {
   const [activeLocale, setActiveLocale] = useState<Record<string, Locale>>({});
   const [siteLanguages, setSiteLanguages] = useState<LanguageEntry[]>([]);
   const [addingFlash, setAddingFlash] = useState(false);
+  const [addingReviews, setAddingReviews] = useState(false);
   const [aiPrompts, setAiPrompts] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
@@ -239,7 +240,36 @@ export default function AdminHomepagePage() {
     }
   };
 
+  const deleteSection = async (id: string) => {
+    const section = sections.find((s) => s._id === id);
+    const label = sectionLabel(section?.type ?? "section");
+    if (!window.confirm(`Remove “${label}” from the homepage? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/admin/homepage/sections/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          variant: "success",
+          title: "Section removed",
+          description: `${label} is no longer on the homepage.`,
+        });
+        if (expandedId === id) setExpandedId(null);
+        load();
+      } else {
+        toastError("Could not remove section", data.error);
+      }
+    } catch {
+      toastError("Could not remove section", "Network error. Please try again.");
+    }
+  };
+
   const hasFlashSale = sections.some((s) => s.type === "flash_sale");
+  const hasReviewsStrip = sections.some((s) => s.type === "reviews_strip");
 
   const generateSectionFromAi = async (section: Section) => {
     if (!accessToken) return;
@@ -300,6 +330,7 @@ export default function AdminHomepagePage() {
             ctaHref: "/deals",
             selectionMode: "auto",
             limit: 4,
+            rotationHours: 24,
             productLinks: [],
           },
         }),
@@ -319,6 +350,51 @@ export default function AdminHomepagePage() {
       toastError("Could not add section", "Network error");
     } finally {
       setAddingFlash(false);
+    }
+  };
+
+  const addReviewsStripSection = async () => {
+    if (!accessToken || hasReviewsStrip) return;
+    setAddingReviews(true);
+    try {
+      const valueProp = sections.find((s) => s.type === "value_proposition");
+      const order = valueProp ? valueProp.order + 1 : sections.length;
+      const res = await fetch("/api/v1/admin/homepage/sections", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "reviews_strip",
+          order,
+          enabled: true,
+          config: {
+            eyebrow: "Loved by shoppers",
+            title: "What customers are saying",
+            subtitle: "Recent five-star reviews from real orders.",
+            emptyMessage:
+              "Customer reviews will appear here once shoppers share their experience.",
+            limit: 6,
+            minRating: 5,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: "Reviews strip added",
+          description: "Edit the heading below. Cards load from published reviews.",
+          variant: "success",
+        });
+        load();
+      } else {
+        toastError("Could not add section", data.error ?? "Try again");
+      }
+    } catch {
+      toastError("Could not add section", "Network error");
+    } finally {
+      setAddingReviews(false);
     }
   };
 
@@ -355,23 +431,42 @@ export default function AdminHomepagePage() {
             then Save &amp; Auto-translate for all languages.
           </p>
         </div>
-        {!hasFlashSale && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addFlashSaleSection}
-            disabled={addingFlash}
-            className="shrink-0"
-          >
-            {addingFlash ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4 text-amber-500" />
-            )}
-            <Plus className="h-3.5 w-3.5" />
-            Add Flash Sale
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {!hasFlashSale && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addFlashSaleSection}
+              disabled={addingFlash}
+              className="shrink-0"
+            >
+              {addingFlash ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 text-amber-500" />
+              )}
+              <Plus className="h-3.5 w-3.5" />
+              Add Flash Sale
+            </Button>
+          )}
+          {!hasReviewsStrip && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addReviewsStripSection}
+              disabled={addingReviews}
+              className="shrink-0"
+            >
+              {addingReviews ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 text-primary" />
+              )}
+              <Plus className="h-3.5 w-3.5" />
+              Add Reviews Strip
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -409,6 +504,16 @@ export default function AdminHomepagePage() {
                       onCheckedChange={(checked) => toggleEnabled(section._id, checked)}
                     />
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => deleteSection(section._id)}
+                    aria-label={`Remove ${sectionLabel(section.type)}`}
+                    title="Remove section"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"

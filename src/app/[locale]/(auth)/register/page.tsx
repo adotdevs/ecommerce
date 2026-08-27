@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { AuthFormCard } from "@/components/storefront/auth/AuthFormCard";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
+import { PasswordInput } from "@/components/ds/password-input";
 import { Label } from "@/components/ds/label";
 import { useAuthBranding } from "@/components/storefront/auth/AuthBrandingProvider";
 
@@ -101,15 +102,16 @@ export default function RegisterPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">{t("password")}</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={8}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             className="h-11 rounded-xl"
+            showLabel={t("showPassword")}
+            hideLabel={t("hidePassword")}
           />
         </div>
         <Button type="submit" className="h-11 w-full rounded-full" disabled={loading}>

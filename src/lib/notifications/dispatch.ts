@@ -15,9 +15,9 @@ export async function sendAlert(
   html: string
 ): Promise<AlertDeliveryResult> {
   const [telegram, email, discord] = await Promise.all([
-    sendTelegramMessage(html),
-    sendEmailAlert(subject, html),
-    sendDiscordAlert(subject, html),
+    sendTelegramMessage(html).catch(() => false),
+    sendEmailAlert(subject, html).catch(() => false),
+    sendDiscordAlert(subject, html).catch(() => false),
   ]);
 
   const channels: string[] = [];

@@ -55,6 +55,7 @@ export type HomepageSectionType =
   | "newsletter"
   | "trust_badges"
   | "flash_sale"
+  | "reviews_strip"
   | "custom_html";
 
 export interface HomepageSection {
@@ -76,6 +77,13 @@ export interface SiteSettingsPublic {
   announcement?: string;
   supportPhone?: string;
   supportEmail?: string;
+  contactLocations?: {
+    countryCode: string;
+    email: string;
+    phone: string;
+    address: string;
+    hours: string;
+  }[];
   deliveryInfo?: string;
   logo?: string;
   logoDark?: string;

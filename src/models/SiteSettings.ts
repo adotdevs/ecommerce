@@ -7,6 +7,13 @@ export interface ISiteSettings extends Document {
   deliveryInfo?: string;
   supportPhone?: string;
   supportEmail?: string;
+  contactLocations?: {
+    countryCode: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    hours?: string;
+  }[];
   logo?: string;
   logoDark?: string;
   storeName?: string;
@@ -60,6 +67,15 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
     deliveryInfo: String,
     supportPhone: String,
     supportEmail: String,
+    contactLocations: [
+      {
+        countryCode: String,
+        email: String,
+        phone: String,
+        address: String,
+        hours: String,
+      },
+    ],
     logo: String,
     logoDark: String,
     storeName: String,

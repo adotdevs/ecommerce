@@ -62,6 +62,12 @@
     "flashSaleCta": "تمام ڈیلز دیکھیں",
     "endsIn": "ختم ہونے میں"
   },
+  "reviews": {
+    "shopProduct": "{name} خریدیں",
+    "viewProduct": "پروڈکٹ دیکھیں",
+    "reviewPhoto": "کسٹمر ریویو کی تصویر",
+    "productPhoto": "{name}"
+  },
   "products": {
     "title": "تمام مصنوعات",
     "resultsFor": "\"{query}\" کے نتائج",
@@ -139,6 +145,8 @@
     "createAccountDesc": "پریمیم شاپنگ کے لیے YourStore میں شامل ہوں",
     "email": "ای میل",
     "password": "پاس ورڈ",
+    "showPassword": "پاس ورڈ دکھائیں",
+    "hidePassword": "پاس ورڈ چھپائیں",
     "firstName": "پہلا نام",
     "lastName": "آخری نام",
     "rememberMe": "مجھے یاد رکھیں",
@@ -223,6 +231,8 @@
     "brandsInCategory": "اس زمرے کے برانڈز",
     "collection": "کلیکشن",
     "allCategoriesCta": "تمام زمرے",
-    "breadcrumbNav": "ہوم"
+    "breadcrumbNav": "ہوم",
+    "previous": "پچھلا",
+    "next": "اگلا"
   }
 }

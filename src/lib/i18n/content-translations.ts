@@ -35,6 +35,8 @@ const SKIP_KEYS = new Set([
   "preset",
   "variant",
   "showNewBadge",
+  "minRating",
+  "rotationHours",
 ]);
 
 /** Collect dot-paths of all string leaves in an object (skips URLs and image paths) */

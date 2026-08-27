@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/api/authMiddleware";
 import { PERMISSIONS } from "@/config/permissions";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { normalizeShippingSettings } from "@/lib/shipping/settings";
+import { normalizeContactLocations } from "@/lib/site/contact-locations";
 
 export const PATCH = withAuth(async (request) => {
   try {
@@ -13,6 +14,9 @@ export const PATCH = withAuth(async (request) => {
 
     if (body.shipping != null) {
       body.shipping = normalizeShippingSettings(body.shipping);
+    }
+    if (body.contactLocations != null) {
+      body.contactLocations = normalizeContactLocations(body.contactLocations);
     }
 
     const settings = await SiteSettings.findOneAndUpdate(

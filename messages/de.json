@@ -79,6 +79,12 @@
     "flashSaleCta": "Alle Angebote",
     "endsIn": "Endet in"
   },
+  "reviews": {
+    "shopProduct": "{name} shoppen",
+    "viewProduct": "Produkt ansehen",
+    "reviewPhoto": "Kundenbewertungsfoto",
+    "productPhoto": "{name}"
+  },
   "products": {
     "title": "Alle Produkte",
     "resultsFor": "Ergebnisse für „{query}“",
@@ -177,6 +183,8 @@
     "createAccountDesc": "Registrieren Sie sich bei YourStore für ein erstklassiges Einkaufserlebnis",
     "email": "Email",
     "password": "Kennwort",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort verbergen",
     "firstName": "Vorname",
     "lastName": "Nachname",
     "rememberMe": "Angemeldet bleiben",
@@ -261,6 +269,8 @@
     "brandsInCategory": "Marken in dieser Kategorie",
     "collection": "Kollektion",
     "allCategoriesCta": "Alle Kategorien",
-    "breadcrumbNav": "Startseite"
+    "breadcrumbNav": "Startseite",
+    "previous": "Zurück",
+    "next": "Weiter"
   }
 }

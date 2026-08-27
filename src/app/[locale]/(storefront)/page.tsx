@@ -1,6 +1,6 @@
 import { connectDB } from "@/lib/db/mongoose";
 import { HomepageSection, Brand } from "@/models";
-import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, resolveFlashSaleProducts, resolveProductSliderProducts, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
+import { isSectionVisible, resolveHomepageProducts, resolveHomepageCategories, resolveFlashSaleProducts, resolveReviewsStrip, resolveProductSliderProducts, enrichHeroSlidesFromLinks, enrichConfigFromProductLink } from "@/lib/cms/homepage";
 import { resolveFlashSaleEndsAtIso } from "@/lib/cms/flash-sale-countdown";
 import { localizeHomepageSection } from "@/lib/cms/localize-homepage";
 import { HomepageRenderer } from "@/components/storefront/homepage/HomepageRenderer";
@@ -65,6 +65,9 @@ async function getHomepageSections(locale: Locale) {
         localizedConfig.endsAt = resolveFlashSaleEndsAtIso(
           localizedConfig.endsAt as string | undefined
         );
+      }
+      if (section.type === "reviews_strip") {
+        localizedConfig.reviews = await resolveReviewsStrip(localizedConfig, locale);
       }
       if (section.type === "category_showcase") {
         localizedConfig.categories = await resolveHomepageCategories(localizedConfig);

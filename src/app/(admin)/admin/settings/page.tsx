@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
+import { PasswordInput } from "@/components/ds/password-input";
 import { Label } from "@/components/ds/label";
 import { Textarea } from "@/components/ds/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
@@ -338,9 +339,8 @@ export default function AdminSettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email-current-password">Current password</Label>
-              <Input
+              <PasswordInput
                 id="email-current-password"
-                type="password"
                 required
                 autoComplete="current-password"
                 value={emailForm.currentPassword}
@@ -365,9 +365,8 @@ export default function AdminSettingsPage() {
             <h3 className="text-sm font-semibold text-foreground">Change password</h3>
             <div className="space-y-1.5">
               <Label htmlFor="password-current">Current password</Label>
-              <Input
+              <PasswordInput
                 id="password-current"
-                type="password"
                 required
                 autoComplete="current-password"
                 value={passwordForm.currentPassword}
@@ -381,9 +380,8 @@ export default function AdminSettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password-new">New password</Label>
-              <Input
+              <PasswordInput
                 id="password-new"
-                type="password"
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -398,9 +396,8 @@ export default function AdminSettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password-confirm">Confirm new password</Label>
-              <Input
+              <PasswordInput
                 id="password-confirm"
-                type="password"
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -851,7 +848,7 @@ export default function AdminSettingsPage() {
               <Input
                 value={form.announcement}
                 onChange={(e) => setForm({ ...form, announcement: e.target.value })}
-                placeholder="Free shipping over {amount} — use {storeName} for your store name"
+                placeholder="Free shipping over {amount} — {amount} is filled from the free shipping threshold"
               />
             </div>
             <div>
@@ -866,6 +863,13 @@ export default function AdminSettingsPage() {
               <div>
                 <Label>Support Email</Label>
                 <Input value={form.supportEmail} onChange={(e) => setForm({ ...form, supportEmail: e.target.value })} />
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Also used on the contact page. Edit per-country addresses in{" "}
+                  <a href="/admin/contact" className="font-medium text-primary hover:underline">
+                    Contact
+                  </a>
+                  .
+                </p>
               </div>
             </div>
             <div>

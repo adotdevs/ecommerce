@@ -1,10 +1,24 @@
 {
+  "auth": {
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль"
+  },
   "products": {
     "resultsFor": "Результаты по запросу «{query}»",
     "showingFor": "Показаны совпадения для «{query}»",
     "found": "Найдено товаров: {count}",
     "noMatchesFor": "Товары по запросу «{query}» не найдены.",
     "noMatchesHint": "В каталоге нет достаточно близких совпадений. Попробуйте другое написание или просмотрите категории."
+  },
+  "catalog": {
+    "previous": "Назад",
+    "next": "Далее"
+  },
+  "reviews": {
+    "shopProduct": "Купить {name}",
+    "viewProduct": "Смотреть товар",
+    "reviewPhoto": "Фото отзыва",
+    "productPhoto": "{name}"
   },
   "checkout": {
     "phoneCountryAria": "Телефонный код страны",

@@ -131,7 +131,11 @@
     "submitFailed": "Nie można było złożyć recenzji. Spróbuj ponownie.",
     "cancel": "Anuluj",
     "previous": "Poprzedni",
-    "next": "Następny"
+    "next": "Następny",
+    "shopProduct": "Kup {name}",
+    "viewProduct": "Zobacz produkt",
+    "reviewPhoto": "Zdjęcie recenzji",
+    "productPhoto": "{name}"
   },
   "cart": {
     "title": "Koszyk",
@@ -325,6 +329,8 @@
     "createAccountDesc": "Dołącz do YourStore, aby uzyskać premium doświadczenie zakupowe",
     "email": "Email",
     "password": "Hasło",
+    "showPassword": "Pokaż hasło",
+    "hidePassword": "Ukryj hasło",
     "firstName": "Imię",
     "lastName": "Nazwisko",
     "rememberMe": "Zapamiętaj mnie",
@@ -410,6 +416,8 @@
     "brandsInCategory": "Marki w tej kategorii",
     "collection": "Kolekcja",
     "allCategoriesCta": "Wszystkie kategorie",
-    "breadcrumbNav": "Strona główna"
+    "breadcrumbNav": "Strona główna",
+    "previous": "Poprzednie",
+    "next": "Następne"
   }
 }

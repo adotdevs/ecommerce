@@ -2,8 +2,8 @@
 
 import { Truck, Shield, RotateCcw, Headphones } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
-import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { useFreeShippingThresholdUsd } from "@/hooks/use-free-shipping-threshold";
+import { useFormattedPromoPrice } from "@/hooks/use-formatted-price";
 import { cn } from "@/components/ds/utils";
 
 const TRUST_ITEMS = [
@@ -15,8 +15,8 @@ const TRUST_ITEMS = [
 
 export function TrustBar({ className }: { className?: string }) {
   const t = useTranslations("checkout");
-  const shippingSettings = useShippingSettings();
-  const thresholdFmt = useFormattedPrice(shippingSettings.freeShippingThresholdUsd);
+  const thresholdUsd = useFreeShippingThresholdUsd();
+  const thresholdFmt = useFormattedPromoPrice(thresholdUsd);
 
   return (
     <section

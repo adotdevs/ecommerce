@@ -131,6 +131,7 @@ const HOMEPAGE_SECTION_PROMPTS: Record<string, string> = {
   featured_products: `Return JSON: { title, subtitle, ctaLabel, ctaHref, limit: number }`,
   promo_banner: `Return JSON: { title, subtitle, ctaLabel, ctaHref, badge }`,
   flash_sale: `Return JSON: { eyebrow, title, subtitle, ctaLabel, ctaHref }`,
+  reviews_strip: `Return JSON: { eyebrow, title, subtitle, emptyMessage }`,
   newsletter: `Return JSON: { title, subtitle, buttonLabel, privacyNote }`,
   category_showcase: `Return JSON: { title, subtitle }`,
   trust_badges: `Return JSON: { badges: [{ title, description }] } — 3-4 badges`,

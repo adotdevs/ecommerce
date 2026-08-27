@@ -12,6 +12,7 @@ import {
   GitCompareArrows,
   ChevronDown,
   X,
+  Truck,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -26,9 +27,13 @@ import { cn } from "@/components/ds/utils";
 import { formatCategoryName } from "@/lib/utils";
 import type { SiteSettingsPublic } from "@/types";
 import { useClientMounted } from "@/hooks/use-client-mounted";
-import { useFormattedPrice } from "@/hooks/use-formatted-price";
-import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
-import { applyBrandingTokens, brandingTokensFromSettings } from "@/lib/site/branding-tokens";
+import { useFormattedPromoPrice } from "@/hooks/use-formatted-price";
+import { useFreeShippingThresholdUsd } from "@/hooks/use-free-shipping-threshold";
+import {
+  applyAnnouncementAmount,
+  applyBrandingTokens,
+  brandingTokensFromSettings,
+} from "@/lib/site/branding-tokens";
 
 interface Category {
   _id: string;
@@ -91,14 +96,17 @@ export function Header({ settings }: HeaderProps) {
       ];
 
   const storeName = settings?.storeName ?? "";
-  const shippingSettings = useShippingSettings();
-  const freeShippingThresholdFmt = useFormattedPrice(
-    shippingSettings.freeShippingThresholdUsd
-  );
+  const thresholdUsd = useFreeShippingThresholdUsd();
+  const freeShippingThresholdFmt = useFormattedPromoPrice(thresholdUsd);
   const tokens = brandingTokensFromSettings(settings);
   const announcement = settings?.announcement?.trim();
   const topBarMessage = announcement
-    ? applyBrandingTokens(announcement, tokens, { amount: freeShippingThresholdFmt })
+    ? applyAnnouncementAmount(
+        applyBrandingTokens(announcement, tokens, {
+          amount: freeShippingThresholdFmt,
+        }),
+        freeShippingThresholdFmt
+      )
     : t("header.freeShippingPromo", {
         amount: freeShippingThresholdFmt,
       });
@@ -109,9 +117,16 @@ export function Header({ settings }: HeaderProps) {
         {/* Top bar — locale, theme, secondary actions */}
         <div className="hidden border-b border-border bg-foreground sm:block">
           <div className="container-store flex h-10 items-center justify-between gap-4">
-            <p className="truncate text-[12px] text-background/90">
-              {topBarMessage}
-            </p>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Truck
+                className="h-3.5 w-3.5 shrink-0 text-background"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+              <p className="truncate text-[12px] text-background/90">
+                {topBarMessage}
+              </p>
+            </div>
             <div className="flex shrink-0 items-center gap-1.5 text-background/85 [&_button]:text-background/85 [&_button:hover]:bg-background/10 [&_a]:text-background/85 [&_a:hover]:bg-background/10">
               <TopBarPreferences />
               <div className="mx-0.5 h-5 w-px bg-background/20" />
@@ -246,8 +261,11 @@ export function Header({ settings }: HeaderProps) {
 
         {/* Mobile announcement strip */}
         {topBarMessage && (
-          <div className="border-b border-border bg-secondary px-4 py-2 text-center sm:hidden">
-            <p className="truncate text-[11px] text-muted-foreground">{topBarMessage}</p>
+          <div className="border-b border-border bg-secondary px-4 py-2 sm:hidden">
+            <p className="flex items-center justify-center gap-1.5 truncate text-[11px] text-muted-foreground">
+              <Truck className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} aria-hidden />
+              <span className="truncate">{topBarMessage}</span>
+            </p>
           </div>
         )}
       </header>

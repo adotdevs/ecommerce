@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Card, ProgressBar } from "@heroui/react";
-import { useFormattedPrice } from "@/hooks/use-formatted-price";
+import { useFormattedPrice, useFormattedPromoPrice } from "@/hooks/use-formatted-price";
 import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { buildShippingOptions } from "@/lib/checkout/shipping";
@@ -24,7 +24,7 @@ export function FreeShippingProgress({
   const shippingOptions = buildShippingOptions(country, shippingSettings);
   const thresholdUsd = resolveFreeShippingThresholdUsd(shippingOptions);
   const formattedCurrent = useFormattedPrice(subtotalUsd);
-  const formattedGoal = useFormattedPrice(thresholdUsd);
+  const formattedGoal = useFormattedPromoPrice(thresholdUsd);
   const remainingUsd = Math.max(0, thresholdUsd - subtotalUsd);
   const formattedRemaining = useFormattedPrice(remainingUsd);
   const progress =

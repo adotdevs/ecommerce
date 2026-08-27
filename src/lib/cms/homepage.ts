@@ -1,5 +1,6 @@
 import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
+import { ProductReview } from "@/models/ProductReview";
 import type { IHomepageSection } from "@/models/HomepageSection";
 import {
   resolveProductsByLinks,
@@ -8,7 +9,15 @@ import {
 } from "@/lib/cms/resolve-links";
 import { toProductCardData } from "@/lib/catalog/product-card";
 import { toCategoryShowcaseList } from "@/lib/catalog/category-showcase";
+import { localizeProductDoc } from "@/lib/i18n/product";
+import { resolveReviewDisplay } from "@/lib/i18n/review-translate";
+import { maskReviewerName, reviewerInitial } from "@/lib/reviews/mask-reviewer";
 import type { Locale } from "@/config/locales";
+import {
+  flashSaleRotationWindow,
+  resolveFlashSaleRotationHours,
+  rotateSlice,
+} from "@/lib/cms/flash-sale-countdown";
 
 export function isSectionVisible(section: IHomepageSection): boolean {
   if (!section.enabled) return false;
@@ -64,27 +73,119 @@ export async function resolveFlashSaleProducts(
   config: Record<string, unknown>,
   locale?: Locale
 ) {
-  const limit = (config.limit as number) ?? 4;
-
-  // Admin "Flash sale on homepage" flag is the primary source
-  const flagged = await Product.find({ status: "published", flashSale: true })
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
-
-  if (flagged.length > 0) {
-    return flagged.map((p) =>
-      toProductCardData(p as unknown as Record<string, unknown>, locale)
-    );
-  }
-
+  const limit = Math.max(1, Number(config.limit) || 4);
   const mode = (config.selectionMode as string) ?? "auto";
   const links = (config.productLinks as string[]) ?? [];
+
   if (mode === "manual" && links.length > 0) {
     return resolveManualProductCards(links, limit, locale);
   }
 
-  return [];
+  let pool = await Product.find({ status: "published", flashSale: true })
+    .sort({ createdAt: -1, _id: 1 })
+    .limit(100)
+    .lean();
+
+  if (pool.length === 0) {
+    pool = await Product.find({ status: "published", onSale: true })
+      .sort({ createdAt: -1, _id: 1 })
+      .limit(100)
+      .lean();
+  }
+
+  if (pool.length === 0) return [];
+
+  const window = flashSaleRotationWindow(
+    resolveFlashSaleRotationHours(config.rotationHours),
+    config.endsAt as string | undefined
+  );
+
+  return rotateSlice(pool, limit, window).map((p) =>
+    toProductCardData(p as unknown as Record<string, unknown>, locale)
+  );
+}
+
+export interface ReviewsStripItem {
+  id: string;
+  userName: string;
+  initial: string;
+  rating: number;
+  title: string;
+  body: string;
+  photoUrl?: string;
+  photoAlt?: string;
+  productName: string;
+  productSlug: string;
+}
+
+export async function resolveReviewsStrip(
+  config: Record<string, unknown>,
+  locale?: Locale
+): Promise<ReviewsStripItem[]> {
+  const limit = Math.min(8, Math.max(3, Number(config.limit) || 6));
+  const minRating = Math.min(5, Math.max(4, Number(config.minRating) || 5));
+
+  const reviews = await ProductReview.find({
+    status: "published",
+    rating: { $gte: minRating },
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit * 4)
+    .lean();
+
+  if (reviews.length === 0) return [];
+
+  const productIds = [
+    ...new Set(reviews.map((review) => String(review.productId))),
+  ];
+  const products = await Product.find({
+    _id: { $in: productIds },
+    status: "published",
+  }).lean();
+
+  const productById = new Map(
+    products.map((product) => [String(product._id), product])
+  );
+
+  const items: ReviewsStripItem[] = [];
+  for (const review of reviews) {
+    if (items.length >= limit) break;
+    const product = productById.get(String(review.productId));
+    if (!product) continue;
+
+    const localized = locale
+      ? localizeProductDoc(product as unknown as Record<string, unknown>, locale)
+      : product;
+    const display = resolveReviewDisplay(
+      {
+        title: review.title,
+        body: review.body,
+        translations: review.translations,
+      },
+      locale ?? "en",
+      review.sourceLocale ?? "en"
+    );
+    const userName = maskReviewerName(review.userName);
+    const reviewPhoto = review.images?.[0];
+    const productMedia = Array.isArray(product.media) ? product.media[0] : undefined;
+    const photoUrl = reviewPhoto?.url || productMedia?.url;
+    const productName = String(localized.name ?? product.name ?? "");
+
+    items.push({
+      id: String(review._id),
+      userName,
+      initial: reviewerInitial(userName),
+      rating: review.rating,
+      title: display.title,
+      body: display.body,
+      photoUrl,
+      photoAlt: reviewPhoto?.alt || productMedia?.alt || productName,
+      productName,
+      productSlug: String(product.slug ?? ""),
+    });
+  }
+
+  return items;
 }
 
 export async function resolveHomepageProducts(
@@ -177,7 +278,10 @@ export async function resolveHomepageCategories(config: Record<string, unknown>)
     }
   }
 
-  const categories = await Category.find().sort({ sortOrder: 1 }).limit(8).lean();
+  const categories = await Category.find()
+    .sort({ sortOrder: 1, name: 1 })
+    .limit(100)
+    .lean();
   return toCategoryShowcaseList(categories);
 }
 

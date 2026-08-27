@@ -1,10 +1,24 @@
 {
+  "auth": {
+    "showPassword": "Wachtwoord tonen",
+    "hidePassword": "Wachtwoord verbergen"
+  },
   "products": {
     "resultsFor": "Resultaten voor \"{query}\"",
     "showingFor": "Overeenkomsten voor \"{query}\"",
     "found": "{count} producten gevonden",
     "noMatchesFor": "Geen producten gevonden voor \"{query}\".",
     "noMatchesHint": "Niets in de catalogus komt voldoende overeen. Probeer een andere spelling of bekijk de categorieën."
+  },
+  "catalog": {
+    "previous": "Vorige",
+    "next": "Volgende"
+  },
+  "reviews": {
+    "shopProduct": "{name} shoppen",
+    "viewProduct": "Bekijk product",
+    "reviewPhoto": "Foto van de review",
+    "productPhoto": "{name}"
   },
   "checkout": {
     "phoneCountryAria": "Landnummer",

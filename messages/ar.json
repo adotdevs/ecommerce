@@ -70,6 +70,12 @@
     "flashSaleCta": "تسوق كل العروض",
     "endsIn": "ينتهي خلال"
   },
+  "reviews": {
+    "shopProduct": "تسوق {name}",
+    "viewProduct": "عرض المنتج",
+    "reviewPhoto": "صورة تقييم العميل",
+    "productPhoto": "{name}"
+  },
   "products": {
     "title": "جميع المنتجات",
     "resultsFor": "نتائج \"{query}\"",
@@ -147,6 +153,8 @@
     "createAccountDesc": "انضم إلى YourStore لتجربة تسوق مميزة",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
     "firstName": "الاسم الأول",
     "lastName": "اسم العائلة",
     "rememberMe": "تذكرني",
@@ -231,6 +239,8 @@
     "brandsInCategory": "علامات في هذه الفئة",
     "collection": "مجموعة",
     "allCategoriesCta": "كل الفئات",
-    "breadcrumbNav": "الرئيسية"
+    "breadcrumbNav": "الرئيسية",
+    "previous": "السابق",
+    "next": "التالي"
   }
 }

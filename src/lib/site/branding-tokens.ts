@@ -43,6 +43,19 @@ export function applyBrandingTokens(
   });
 }
 
+/**
+ * Fill `{amount}` and replace leftover hardcoded prices (e.g. `$100`)
+ * so announcement copy stays in sync with the free-shipping threshold.
+ */
+export function applyAnnouncementAmount(text: string, formattedAmount: string): string {
+  if (!text) return text;
+  const withToken = text.replace(/\{amount\}/gi, formattedAmount);
+  return withToken
+    .replace(/(?:USD|US\$)\s*\d+(?:[.,]\d+)?/gi, formattedAmount)
+    .replace(/\$\s*\d+(?:[.,]\d+)?/g, formattedAmount)
+    .replace(/\d+(?:[.,]\d+)?\s*\$/g, formattedAmount);
+}
+
 export function applyBrandingTokensDeep<T>(
   value: T,
   tokens: BrandingTokens,

@@ -7,6 +7,7 @@ import { Button } from "@/components/ds/button";
 import { ImageUpload } from "@/components/admin/homepage/ImageUpload";
 import { ProductLinkPicker, LinkListPicker } from "@/components/admin/homepage/ProductLinkPicker";
 import { Plus, Trash2 } from "lucide-react";
+import { FLASH_SALE_ROTATION_HOURS } from "@/lib/cms/flash-sale-countdown";
 
 interface EditorProps {
   config: Record<string, unknown>;
@@ -401,7 +402,7 @@ export function CategoryShowcaseEditor({ config, onChange, accessToken }: Editor
             variant={mode === "auto" ? "primary" : "outline"}
             onClick={() => onChange({ ...config, selectionMode: "auto" })}
           >
-            Auto (top categories)
+            Auto (all categories)
           </Button>
           <Button
             type="button"
@@ -618,11 +619,38 @@ export function FlashSaleEditor({ config, onChange, accessToken }: EditorProps) 
       </div>
 
       {mode === "auto" ? (
-        <Field
-          label="Product limit"
-          value={String((config.limit as number) ?? 4)}
-          onChange={(v) => onChange({ ...config, limit: parseInt(v) || 4 })}
-        />
+        <div className="space-y-4">
+          <Field
+            label="Product limit"
+            value={String((config.limit as number) ?? 4)}
+            onChange={(v) => onChange({ ...config, limit: parseInt(v) || 4 })}
+          />
+          <div className="space-y-2">
+            <Label>Rotate products every</Label>
+            <div className="flex flex-wrap gap-2">
+              {FLASH_SALE_ROTATION_HOURS.map((hours) => {
+                const current = Number(config.rotationHours) || 24;
+                const label =
+                  hours >= 168 ? "7 days (with countdown)" : `${hours} hours`;
+                return (
+                  <Button
+                    key={hours}
+                    type="button"
+                    size="sm"
+                    variant={current === hours ? "primary" : "outline"}
+                    onClick={() => onChange({ ...config, rotationHours: hours })}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="text-[12px] text-muted-foreground">
+              Auto mode picks a new batch after this interval. Mark more products
+              as Flash Sale than the limit so the grid can change.
+            </p>
+          </div>
+        </div>
       ) : (
         <LinkListPicker
           label="Flash sale products"
@@ -798,6 +826,13 @@ export function ValuePropositionEditor({ config, onChange }: Omit<EditorProps, "
     });
   };
 
+  const removeItem = (index: number) => {
+    onChange({
+      ...config,
+      items: items.filter((_, i) => i !== index),
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Field label="Eyebrow" value={(config.eyebrow as string) ?? ""} onChange={(v) => onChange({ ...config, eyebrow: v })} />
@@ -805,9 +840,20 @@ export function ValuePropositionEditor({ config, onChange }: Omit<EditorProps, "
       <Field label="Subtitle" value={(config.subtitle as string) ?? ""} onChange={(v) => onChange({ ...config, subtitle: v })} multiline />
       {items.map((item, i) => (
         <div key={i} className="space-y-3 rounded-[var(--radius-md)] border border-border p-4">
-          <Label>Item {i + 1}</Label>
-          <Field label="Title" value={item.title} onChange={(v) => updateItem(i, { title: v })} />
-          <Field label="Description" value={item.description} onChange={(v) => updateItem(i, { description: v })} multiline />
+          <div className="flex items-center justify-between gap-3">
+            <Label>Item {i + 1}</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeItem(i)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove
+            </Button>
+          </div>
+          <Field label="Title" value={item.title ?? ""} onChange={(v) => updateItem(i, { title: v })} />
+          <Field label="Description" value={item.description ?? ""} onChange={(v) => updateItem(i, { description: v })} multiline />
         </div>
       ))}
       <Button
@@ -817,12 +863,66 @@ export function ValuePropositionEditor({ config, onChange }: Omit<EditorProps, "
         onClick={() =>
           onChange({
             ...config,
-            items: [...items, { title: "Curated quality", description: "Handpicked products you can trust." }],
+            items: [...items, { title: "", description: "" }],
           })
         }
       >
         <Plus className="h-4 w-4" /> Add item
       </Button>
+    </div>
+  );
+}
+
+export function ReviewsStripEditor({ config, onChange }: Omit<EditorProps, "accessToken">) {
+  return (
+    <div className="space-y-4">
+      <Field
+        label="Eyebrow"
+        value={(config.eyebrow as string) ?? ""}
+        onChange={(v) => onChange({ ...config, eyebrow: v })}
+      />
+      <Field
+        label="Title"
+        value={(config.title as string) ?? ""}
+        onChange={(v) => onChange({ ...config, title: v })}
+      />
+      <Field
+        label="Subtitle"
+        value={(config.subtitle as string) ?? ""}
+        onChange={(v) => onChange({ ...config, subtitle: v })}
+        multiline
+      />
+      <Field
+        label="Empty state message (when no reviews)"
+        value={(config.emptyMessage as string) ?? ""}
+        onChange={(v) => onChange({ ...config, emptyMessage: v })}
+        multiline
+      />
+      <Field
+        label="Review limit (3–8)"
+        value={String((config.limit as number) ?? 6)}
+        onChange={(v) => onChange({ ...config, limit: Math.min(8, Math.max(3, parseInt(v) || 6)) })}
+      />
+      <div className="space-y-2">
+        <Label>Minimum rating</Label>
+        <div className="flex flex-wrap gap-2">
+          {([5, 4] as const).map((rating) => (
+            <Button
+              key={rating}
+              type="button"
+              size="sm"
+              variant={Number(config.minRating || 5) === rating ? "primary" : "outline"}
+              onClick={() => onChange({ ...config, minRating: rating })}
+            >
+              {rating === 5 ? "5 stars only" : "4 stars and up"}
+            </Button>
+          ))}
+        </div>
+        <p className="text-[12px] text-muted-foreground">
+          Auto-picks the latest published reviews that meet the rating. Each card links
+          to the product.
+        </p>
+      </div>
     </div>
   );
 }
@@ -854,6 +954,8 @@ export function renderSectionEditor(
       return <NewsletterEditor config={props.config} onChange={props.onChange} />;
     case "flash_sale":
       return <FlashSaleEditor {...props} />;
+    case "reviews_strip":
+      return <ReviewsStripEditor config={props.config} onChange={props.onChange} />;
     default:
       return (
         <p className="text-small text-muted-foreground">

@@ -14,6 +14,7 @@ import {
   NewsletterSection,
   FlashSaleSection,
 } from "./sections";
+import { ReviewsStripSection } from "./ReviewsStripSection";
 
 interface Section {
   _id: string;
@@ -36,6 +37,7 @@ const SECTION_MAP: Record<
   trust_badges: TrustBadgesSection,
   newsletter: NewsletterSection,
   flash_sale: FlashSaleSection,
+  reviews_strip: ReviewsStripSection,
 };
 
 export function HomepageRenderer({ sections }: { sections: Section[] }) {

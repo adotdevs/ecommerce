@@ -77,6 +77,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const inventory = p.inventory as Record<string, unknown>;
   const variants = ((p.variants as unknown[]) ?? []).map((v) => {
     const variant = v as Record<string, unknown>;
+    const media = Array.isArray(variant.media)
+      ? (variant.media as unknown[])
+          .map((m, i) => {
+            const item = m as Record<string, unknown>;
+            if (!item?.url) return null;
+            return {
+              url: String(item.url),
+              alt: item.alt ? String(item.alt) : undefined,
+              sortOrder:
+                item.sortOrder != null ? Number(item.sortOrder) : i,
+            };
+          })
+          .filter(Boolean)
+      : [];
     return {
       id: String(variant.id),
       name: String(variant.name),
@@ -92,6 +106,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           (variant.attributes as Record<string, unknown>) ?? {}
         ).map(([k, val]) => [k, String(val)])
       ),
+      media: media as { url: string; alt?: string; sortOrder?: number }[],
     };
   });
   const resolvedPricing = resolveCatalogPricing(

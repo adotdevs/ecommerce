@@ -33,6 +33,12 @@ export interface ProductVariantInput {
   compareAtPrice?: number;
   stock: number;
   attributes: Record<string, string>;
+  media?: {
+    url: string;
+    alt?: string;
+    type?: "image" | "video";
+    sortOrder?: number;
+  }[];
 }
 
 export const VARIANT_OPTION_PRESETS: Record<
@@ -443,6 +449,7 @@ export function generateVariantsFromOptions(
       compareAtPrice,
       stock: prev?.stock ?? base.stock,
       attributes,
+      media: prev?.media?.length ? prev.media : undefined,
     };
   });
 }

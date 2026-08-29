@@ -141,6 +141,7 @@ export function productToFormData(product: Record<string, any>): ProductFormData
         compareAtPrice?: number;
         stock: number;
         attributes: Record<string, string>;
+        media?: ProductMediaItem[];
       }) => ({
         id: String(v.id),
         name: String(v.name),
@@ -150,6 +151,12 @@ export function productToFormData(product: Record<string, any>): ProductFormData
           v.compareAtPrice != null ? String(v.compareAtPrice) : "",
         stock: String(v.stock),
         attributes: v.attributes ?? {},
+        media: (v.media ?? []).map((m, i) => ({
+          url: m.url,
+          alt: m.alt ?? "",
+          type: m.type ?? "image",
+          sortOrder: m.sortOrder ?? i,
+        })),
       })
     ),
     pricing: (() => {
@@ -263,6 +270,14 @@ export function formToPayload(form: ProductFormData) {
           : undefined,
       stock: parseInt(v.stock) || 0,
       attributes: v.attributes,
+      media: (v.media ?? [])
+        .filter((m) => m.url?.trim())
+        .map((m, i) => ({
+          url: m.url.trim(),
+          alt: m.alt?.trim() || undefined,
+          type: m.type ?? "image",
+          sortOrder: m.sortOrder ?? i,
+        })),
     };
   });
 

@@ -8,6 +8,7 @@ import { apiSuccess, apiError } from "@/lib/api/response";
 import { resolveCatalogPricing } from "@/lib/catalog/product-pricing";
 import {
   normalizeMedia,
+  normalizeVariants,
   resolveBrandFields,
   resolveCategoryFields,
   resolveProductSlug,
@@ -96,6 +97,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       weight: weight ?? undefined,
       dimensions: dimensions ?? undefined,
       media: normalizeMedia(media),
+      variants: normalizeVariants(rest.variants),
       ...categoryFields,
       ...brandFields,
       pricing: {

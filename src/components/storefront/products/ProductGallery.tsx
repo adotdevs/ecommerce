@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/components/ds/utils";
@@ -23,6 +23,12 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [hovering, setHovering] = useState(false);
   const [lens, setLens] = useState({ x: 50, y: 50 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setActive(0);
+    setLens({ x: 50, y: 50 });
+    setHovering(false);
+  }, [images]);
 
   const current = images[active];
   const hasMultiple = images.length > 1;

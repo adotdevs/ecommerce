@@ -79,6 +79,7 @@ const productVariantSchema = z.object({
   compareAtPrice: z.number().optional(),
   stock: z.number().min(0).default(0),
   attributes: z.record(z.string(), z.string()).default({}),
+  media: z.array(productMediaSchema).optional(),
 });
 
 const keyValueSchema = z.object({

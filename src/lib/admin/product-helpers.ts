@@ -75,6 +75,28 @@ export function normalizeMedia(
     .map((m, i) => ({ ...m, sortOrder: i }));
 }
 
+export function normalizeVariants(
+  variants:
+    | Array<{
+        id: string;
+        name: string;
+        sku: string;
+        price: number;
+        compareAtPrice?: number;
+        stock: number;
+        attributes?: Record<string, string>;
+        media?: ProductMediaInput[];
+      }>
+    | undefined
+) {
+  if (!variants?.length) return [];
+  return variants.map((v) => ({
+    ...v,
+    attributes: v.attributes ?? {},
+    media: normalizeMedia(v.media),
+  }));
+}
+
 export function isOnSale(pricing: {
   price: number;
   compareAtPrice?: number;

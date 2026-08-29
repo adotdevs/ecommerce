@@ -98,6 +98,24 @@ export function toProductCardData(
     variants: variants.length
       ? variants.map((v) => {
           const variant = v as Record<string, unknown>;
+          const media = Array.isArray(variant.media)
+            ? (variant.media as unknown[])
+                .map((m, i) => {
+                  const item = m as Record<string, unknown>;
+                  if (!item?.url) return null;
+                  return {
+                    url: String(item.url),
+                    alt: item.alt != null ? String(item.alt) : undefined,
+                    type:
+                      item.type === "video"
+                        ? ("video" as const)
+                        : ("image" as const),
+                    sortOrder:
+                      item.sortOrder != null ? Number(item.sortOrder) : i,
+                  };
+                })
+                .filter(Boolean)
+            : undefined;
           return {
             id: String(variant.id),
             name: String(variant.name),
@@ -113,6 +131,9 @@ export function toProductCardData(
                 (variant.attributes as Record<string, unknown>) ?? {}
               ).map(([k, val]) => [k, String(val)])
             ),
+            media: media?.length
+              ? (media as NonNullable<ProductVariantInput["media"]>)
+              : undefined,
           };
         })
       : undefined,

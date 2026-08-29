@@ -48,6 +48,7 @@ interface ProductData {
     compareAtPrice?: number;
     stock: number;
     attributes: Record<string, string>;
+    media?: { url: string; alt?: string; sortOrder?: number }[];
   }[];
   pricing: { price: number; compareAtPrice?: number; currency?: string };
   inventory: { stock: number };
@@ -105,7 +106,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const isWishlisted = useWishlistStore((s) => s.hasItem(product._id));
 
-  const sortedMedia = useMemo(
+  const productMedia = useMemo(
     () => [...product.media].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     [product.media]
   );
@@ -114,6 +115,18 @@ export function ProductDetailView({ product }: { product: ProductData }) {
     ProductData["variants"][number] | null
   >(() => product.variants[0] ?? null);
   const [quantity, setQuantity] = useState(1);
+
+  const galleryMedia = useMemo(() => {
+    const variantMedia = selectedVariant?.media ?? [];
+    if (variantMedia.length > 0) {
+      return [...variantMedia].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      );
+    }
+    return productMedia;
+  }, [selectedVariant, productMedia]);
+
+  const primaryImage = galleryMedia[0]?.url ?? productMedia[0]?.url;
 
   const handleVariantChange = useCallback(
     (variant: (typeof product.variants)[0] | undefined) => {
@@ -206,7 +219,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
       variantId: selectedVariant?.id ?? undefined,
       name: selectedVariant ? `${product.name} — ${selectedVariant.name}` : product.name,
       slug: product.slug,
-      image: sortedMedia[0]?.url,
+      image: primaryImage,
       price,
       quantity,
       maxQuantity: availableStock,
@@ -224,7 +237,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         ? `${product.name} — ${selectedVariant.name}`
         : product.name,
       slug: product.slug,
-      image: sortedMedia[0]?.url,
+      image: primaryImage,
       price,
       quantity,
       maxQuantity: availableStock,
@@ -253,7 +266,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
       productId: product._id,
       name: product.name,
       slug: product.slug,
-      image: sortedMedia[0]?.url,
+      image: primaryImage,
       price,
     });
     if (added) {
@@ -272,7 +285,8 @@ export function ProductDetailView({ product }: { product: ProductData }) {
         className="grid gap-10 overflow-visible lg:grid-cols-2 lg:gap-14"
       >
         <ProductGallery
-          images={sortedMedia.map((m) => ({ url: m.url, alt: m.alt }))}
+          key={selectedVariant?.id ?? "product"}
+          images={galleryMedia.map((m) => ({ url: m.url, alt: m.alt }))}
           productName={product.name}
         />
 

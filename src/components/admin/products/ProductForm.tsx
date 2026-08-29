@@ -225,6 +225,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                 v.compareAtPrice != null ? String(v.compareAtPrice) : "",
               stock: String(v.stock),
               attributes: v.attributes,
+              media: [],
             })
           ),
           pricing: {
@@ -723,6 +724,8 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
           onBasePriceChange={(price) =>
             update("pricing", { ...form.pricing, price })
           }
+          accessToken={accessToken ?? ""}
+          productName={form.name}
         />
       )}
 

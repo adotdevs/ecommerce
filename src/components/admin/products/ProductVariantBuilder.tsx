@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
-import { Plus, Trash2, RefreshCw, Wand2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Wand2, Upload, Loader2, X, Star, ChevronUp, ChevronDown } from "lucide-react";
 import {
   type VariantOptionGroup,
   type VariantOptionType,
@@ -15,6 +15,7 @@ import {
   generateVariantsFromOptions,
   applySmartVariantPrices,
 } from "@/lib/catalog/variant-options";
+import type { ProductMediaItem } from "./ProductMediaGallery";
 
 export interface AdminVariantRow {
   id: string;
@@ -24,6 +25,7 @@ export interface AdminVariantRow {
   compareAtPrice: string;
   stock: string;
   attributes: Record<string, string>;
+  media: ProductMediaItem[];
 }
 
 interface ProductVariantBuilderProps {
@@ -36,6 +38,8 @@ interface ProductVariantBuilderProps {
   onOptionGroupsChange: (groups: VariantOptionGroup[]) => void;
   onVariantsChange: (variants: AdminVariantRow[]) => void;
   onBasePriceChange?: (price: string) => void;
+  accessToken?: string;
+  productName?: string;
 }
 
 export function ProductVariantBuilder({
@@ -48,6 +52,8 @@ export function ProductVariantBuilder({
   onOptionGroupsChange,
   onVariantsChange,
   onBasePriceChange,
+  accessToken = "",
+  productName = "",
 }: ProductVariantBuilderProps) {
   const [presetType, setPresetType] = useState<VariantOptionType>("color");
   const [smartBasePrice, setSmartBasePrice] = useState(basePrice);
@@ -121,6 +127,7 @@ export function ProductVariantBuilder({
         : compareAt,
       stock: parseInt(v.stock) || 0,
       attributes: v.attributes,
+      media: v.media,
     }));
 
     const generated = generateVariantsFromOptions(
@@ -130,15 +137,26 @@ export function ProductVariantBuilder({
     );
 
     onVariantsChange(
-      generated.map((v) => ({
-        id: v.id,
-        name: v.name,
-        sku: v.sku,
-        price: String(v.price),
-        compareAtPrice: v.compareAtPrice != null ? String(v.compareAtPrice) : "",
-        stock: String(v.stock),
-        attributes: v.attributes,
-      }))
+      generated.map((v) => {
+        const prev = variants.find((row) => row.id === v.id);
+        return {
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          price: String(v.price),
+          compareAtPrice: v.compareAtPrice != null ? String(v.compareAtPrice) : "",
+          stock: String(v.stock),
+          attributes: v.attributes,
+          media: v.media?.length
+            ? v.media.map((m, i) => ({
+                url: m.url,
+                alt: m.alt ?? "",
+                type: (m.type ?? "image") as "image" | "video",
+                sortOrder: m.sortOrder ?? i,
+              }))
+            : prev?.media ?? [],
+        };
+      })
     );
   };
 
@@ -182,6 +200,7 @@ export function ProductVariantBuilder({
           v.compareAtPrice != null ? String(v.compareAtPrice) : "",
         stock: variants[i].stock,
         attributes: variants[i].attributes,
+        media: variants[i].media ?? [],
       }))
     );
     onBasePriceChange?.(basePriceStr);
@@ -343,7 +362,9 @@ export function ProductVariantBuilder({
             <div>
               <CardTitle>Variants ({variants.length})</CardTitle>
               <p className="text-[12px] text-muted-foreground">
-                Enter one base price — others auto-fill with smart adjustments by pack size, count, color, size, material, etc. You can edit any row after.
+                Enter one base price — others auto-fill with smart adjustments. Add
+                images per variant so the product gallery switches when shoppers
+                pick that option. Leave images empty to keep using product photos.
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-2">
@@ -385,10 +406,11 @@ export function ProductVariantBuilder({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-small">
+              <table className="w-full min-w-[900px] text-small">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="pb-2 pr-3">Variant</th>
+                    <th className="pb-2 pr-3">Images</th>
                     <th className="pb-2 pr-3">SKU</th>
                     <th className="pb-2 pr-3">Price</th>
                     <th className="pb-2 pr-3">Compare</th>
@@ -397,8 +419,16 @@ export function ProductVariantBuilder({
                 </thead>
                 <tbody>
                   {variants.map((v, i) => (
-                    <tr key={v.id} className="border-b border-border/60">
+                    <tr key={v.id} className="border-b border-border/60 align-top">
                       <td className="py-2 pr-3 font-medium">{v.name}</td>
+                      <td className="py-2 pr-3">
+                        <VariantMediaCell
+                          media={v.media ?? []}
+                          accessToken={accessToken}
+                          productName={productName}
+                          onChange={(media) => updateVariant(i, { media })}
+                        />
+                      </td>
                       <td className="py-2 pr-3">
                         <Input
                           value={v.sku}
@@ -448,6 +478,258 @@ export function ProductVariantBuilder({
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function VariantMediaCell({
+  media,
+  accessToken,
+  productName,
+  onChange,
+}: {
+  media: ProductMediaItem[];
+  accessToken: string;
+  productName: string;
+  onChange: (media: ProductMediaItem[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pathRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [pathError, setPathError] = useState<string | null>(null);
+
+  const isHttpUrl = (value: string) => {
+    try {
+      const u = new URL(value);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  const isLocalPublicPath = (value: string) => {
+    const path = value.trim();
+    return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
+  };
+
+  const isUsableImageSrc = (value: string) => {
+    const path = value.trim();
+    return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
+  };
+
+  const reindex = (items: ProductMediaItem[]) =>
+    items.map((m, i) => ({ ...m, sortOrder: i }));
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files?.length || !accessToken) return;
+    setUploading(true);
+    setPathError(null);
+    const next = [...media];
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "products");
+        const res = await fetch("/api/v1/admin/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.data?.url) {
+          next.push({
+            url: data.data.url as string,
+            alt: productName ? `${productName} variant` : "",
+            type: "image",
+            sortOrder: next.length,
+          });
+        }
+      }
+      onChange(reindex(next));
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const addPathOrUrl = () => {
+    const raw = pathRef.current?.value?.trim() ?? "";
+    if (!raw) return;
+    if (!isUsableImageSrc(raw)) {
+      setPathError("Use https://… or a local path like /brand/photo.png");
+      return;
+    }
+    if (media.some((m) => m.url === raw)) {
+      setPathError("That image is already on this variant");
+      return;
+    }
+    setPathError(null);
+    onChange(
+      reindex([
+        ...media,
+        {
+          url: raw,
+          alt: productName ? `${productName} variant` : "",
+          type: "image",
+          sortOrder: media.length,
+        },
+      ])
+    );
+    if (pathRef.current) pathRef.current.value = "";
+  };
+
+  const removeAt = (index: number) => {
+    onChange(reindex(media.filter((_, i) => i !== index)));
+  };
+
+  const makePrimary = (index: number) => {
+    if (index === 0) return;
+    const next = [...media];
+    const [item] = next.splice(index, 1);
+    next.unshift(item);
+    onChange(reindex(next));
+  };
+
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= media.length) return;
+    const next = [...media];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(reindex(next));
+  };
+
+  return (
+    <div className="min-w-[220px] max-w-[280px] space-y-2 py-1">
+      {media.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">
+          No variant images — storefront uses product photos.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {media.map((item, index) => (
+            <div
+              key={`${item.url}-${index}`}
+              className="flex items-center gap-2 rounded-md border border-border bg-card p-1.5"
+            >
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded border border-border bg-secondary">
+                {index === 0 && (
+                  <span className="absolute left-0.5 top-0.5 z-10 flex items-center gap-0.5 rounded bg-primary px-1 py-px text-[9px] font-semibold text-white">
+                    <Star className="h-2 w-2" /> Primary
+                  </span>
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] text-muted-foreground" title={item.url}>
+                  {item.url}
+                </p>
+                <div className="mt-0.5 flex flex-wrap gap-1">
+                  {index !== 0 && (
+                    <button
+                      type="button"
+                      className="text-[10px] font-medium text-primary hover:underline"
+                      onClick={() => makePrimary(index)}
+                    >
+                      Set primary
+                    </button>
+                  )}
+                  {index === 0 && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Shown first in gallery
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={index === 0}
+                  onClick={() => moveItem(index, -1)}
+                  title="Move up"
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={index === media.length - 1}
+                  onClick={() => moveItem(index, 1)}
+                  title="Move down"
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => removeAt(index)}
+                aria-label="Remove image"
+              >
+                <X className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          disabled={uploading || !accessToken}
+          onClick={() => inputRef.current?.click()}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-dashed border-border px-2 text-[11px] text-muted-foreground hover:bg-secondary disabled:opacity-50"
+        >
+          {uploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Upload className="h-3.5 w-3.5" />
+          )}
+          Upload
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+          multiple
+          className="hidden"
+          onChange={(e) => void uploadFiles(e.target.files)}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex gap-1">
+          <Input
+            ref={pathRef}
+            className="h-8 text-[11px]"
+            placeholder="/brand/photo.png or https://…"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addPathOrUrl();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" onClick={addPathOrUrl}>
+            Add
+          </Button>
+        </div>
+        {pathError ? (
+          <p className="text-[10px] text-destructive">{pathError}</p>
+        ) : (
+          <p className="text-[10px] text-muted-foreground">
+            Paste URL or local public path — first image is primary.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

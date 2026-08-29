@@ -7,6 +7,7 @@ import { productUpdateSchema } from "@/lib/validators";
 import { apiSuccess, apiError, apiNotFound } from "@/lib/api/response";
 import {
   normalizeMedia,
+  normalizeVariants,
   resolveBrandFields,
   resolveCategoryFields,
   resolveProductSlug,
@@ -93,7 +94,7 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     }
 
     if (rest.variants !== undefined) {
-      update.variants = rest.variants;
+      update.variants = normalizeVariants(rest.variants);
     }
 
     const product = await Product.findByIdAndUpdate(

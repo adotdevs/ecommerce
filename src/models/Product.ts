@@ -27,6 +27,13 @@ export interface IProduct extends Document {
     compareAtPrice?: number;
     stock: number;
     attributes: Record<string, string>;
+    /** Optional gallery for this variant; empty falls back to product.media */
+    media?: {
+      url: string;
+      alt?: string;
+      type: "image" | "video";
+      sortOrder: number;
+    }[];
   }[];
   variantOptions: {
     id: string;
@@ -130,6 +137,14 @@ const ProductSchema = new Schema<IProduct>(
         compareAtPrice: Number,
         stock: Number,
         attributes: Schema.Types.Mixed,
+        media: [
+          {
+            url: String,
+            alt: String,
+            type: { type: String, enum: ["image", "video"], default: "image" },
+            sortOrder: { type: Number, default: 0 },
+          },
+        ],
       },
     ],
     variantOptions: { type: [VariantOptionGroupSchema], default: [] },

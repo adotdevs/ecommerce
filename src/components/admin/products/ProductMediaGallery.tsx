@@ -61,6 +61,17 @@ function isHttpUrl(value: string) {
   }
 }
 
+/** Public-folder path, e.g. `/brand/hero.png` */
+function isLocalPublicPath(value: string) {
+  const path = value.trim();
+  return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
+}
+
+function isUsableImageSrc(value: string) {
+  const path = value.trim();
+  return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
+}
+
 export function ProductMediaGallery({
   value,
   onChange,
@@ -193,15 +204,18 @@ export function ProductMediaGallery({
   };
 
   const addUrl = async (url: string) => {
-    if (!isHttpUrl(url)) return;
+    const trimmed = url.trim();
+    if (!isUsableImageSrc(trimmed)) return;
     const imageIndex = value.length;
     const alt =
-      productName?.trim() && accessToken
+      productName?.trim() && accessToken && isHttpUrl(trimmed)
         ? (await fetchAiAltText(accessToken, productName.trim(), imageIndex)) ?? ""
-        : "";
+        : productName?.trim()
+          ? productName.trim()
+          : "";
     onChange([
       ...value,
-      { url, alt, type: "image", sortOrder: imageIndex },
+      { url: trimmed, alt, type: "image", sortOrder: imageIndex },
     ]);
   };
 
@@ -343,13 +357,13 @@ export function ProductMediaGallery({
 
       <div className="space-y-1.5">
         <Label className="text-[12px] text-muted-foreground">
-          Or paste image URL
+          Or paste image URL / local path
         </Label>
         <div className="flex gap-2">
           <Input
             id="media-url-input"
-            type="url"
-            placeholder="https://..."
+            type="text"
+            placeholder="https://... or /brand/photo.png"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -375,6 +389,10 @@ export function ProductMediaGallery({
             Add
           </Button>
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Local paths must live under <code className="text-[10px]">public/</code>{" "}
+          (e.g. <code className="text-[10px]">/brand/photo.png</code>). First image is primary.
+        </p>
       </div>
 
       <input

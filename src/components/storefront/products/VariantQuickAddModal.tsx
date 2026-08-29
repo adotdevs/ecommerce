@@ -46,7 +46,8 @@ export function VariantQuickAddModal({
     []
   );
 
-  const image = product.media?.[0];
+  const image =
+    selectedVariant?.media?.find((m) => m.url) ?? product.media?.[0];
   const price = selectedVariant?.price ?? product.pricing.price;
   const compareAt =
     selectedVariant?.compareAtPrice ?? product.pricing.compareAtPrice;

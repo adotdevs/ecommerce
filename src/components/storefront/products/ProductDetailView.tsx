@@ -48,6 +48,7 @@ interface ProductData {
     compareAtPrice?: number;
     stock: number;
     attributes: Record<string, string>;
+    isMain?: boolean;
     media?: { url: string; alt?: string; sortOrder?: number }[];
   }[];
   pricing: { price: number; compareAtPrice?: number; currency?: string };
@@ -113,18 +114,27 @@ export function ProductDetailView({ product }: { product: ProductData }) {
 
   const [selectedVariant, setSelectedVariant] = useState<
     ProductData["variants"][number] | null
-  >(() => product.variants[0] ?? null);
+  >(
+    () =>
+      product.variants.find((v) => v.isMain) ?? product.variants[0] ?? null
+  );
   const [quantity, setQuantity] = useState(1);
 
   const galleryMedia = useMemo(() => {
-    const variantMedia = selectedVariant?.media ?? [];
+    const variantMedia = [...(selectedVariant?.media ?? [])].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
     if (variantMedia.length > 0) {
-      return [...variantMedia].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-      );
+      return variantMedia;
     }
+    // Fallback: Main variant media, then product media
+    const main = product.variants.find((v) => v.isMain);
+    const mainMedia = [...(main?.media ?? [])].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
+    if (mainMedia.length > 0) return mainMedia;
     return productMedia;
-  }, [selectedVariant, productMedia]);
+  }, [selectedVariant, product.variants, productMedia]);
 
   const primaryImage = galleryMedia[0]?.url ?? productMedia[0]?.url;
 

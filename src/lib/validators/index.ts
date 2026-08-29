@@ -79,6 +79,7 @@ const productVariantSchema = z.object({
   compareAtPrice: z.number().optional(),
   stock: z.number().min(0).default(0),
   attributes: z.record(z.string(), z.string()).default({}),
+  isMain: z.boolean().optional(),
   media: z.array(productMediaSchema).optional(),
 });
 
@@ -152,17 +153,24 @@ export const productSchema = productFieldsSchema;
 
 export const productUpdateSchema = productFieldsSchema.partial();
 
+/** Treat blank strings as omitted (avoids CastError on parentId ObjectId, etc.). */
+const optionalTrimmedString = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z.string().optional()
+);
+
 export const categorySchema = z.object({
   name: z.string().min(1),
-  slug: z.string().optional(),
-  parentId: z.string().optional(),
-  description: z.string().optional(),
-  image: z.string().optional(),
-  sortOrder: z.number().default(0),
+  slug: optionalTrimmedString,
+  parentId: optionalTrimmedString,
+  description: optionalTrimmedString,
+  /** Upload URL, https link, or local public path e.g. `/brand/cat.png`. */
+  image: optionalTrimmedString,
+  sortOrder: z.coerce.number().default(0),
   seo: z
     .object({
-      title: z.string().optional(),
-      description: z.string().optional(),
+      title: optionalTrimmedString,
+      description: optionalTrimmedString,
       keywords: z.array(z.string()).optional(),
     })
     .optional(),

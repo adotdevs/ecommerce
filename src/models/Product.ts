@@ -27,6 +27,8 @@ export interface IProduct extends Document {
     compareAtPrice?: number;
     stock: number;
     attributes: Record<string, string>;
+    /** Default selected variant; drives product.pricing when set */
+    isMain?: boolean;
     /** Optional gallery for this variant; empty falls back to product.media */
     media?: {
       url: string;
@@ -137,6 +139,7 @@ const ProductSchema = new Schema<IProduct>(
         compareAtPrice: Number,
         stock: Number,
         attributes: Schema.Types.Mixed,
+        isMain: { type: Boolean, default: false },
         media: [
           {
             url: String,

@@ -49,6 +49,7 @@ export interface FullProductSuggestion {
     compareAtPrice?: number;
     stock: number;
     attributes: Record<string, string>;
+    isMain?: boolean;
   }[];
   specifications: ProductSpecification[];
   faqs: { question: string; answer: string }[];
@@ -74,6 +75,7 @@ interface AiFullResponse {
     price: number;
     compareAtPrice?: number;
     stock?: number;
+    isMain?: boolean;
   }[];
   specifications?: { section?: string; key: string; value: string }[];
   faqs?: { question: string; answer: string }[];
@@ -118,7 +120,7 @@ const ELECTRONICS_CAPACITY_RE =
   /phone|laptop|tablet|ssd|storage|usb|drive|iphone|ipad|macbook|galaxy|pixel|earbuds|headphone/i;
 const BAG_LEATHER_RE = /bag|wallet|belt|leather|backpack|purse/i;
 const FLAVOR_PACK_RE =
-  /vitamin|supplement|softgel|capsule|protein|whey|snack|tea|coffee|gummy/i;
+  /vitamin|supplement|softgel|capsule|protein|whey|snack|tea|coffee|gummy|coco|coconut|water|juice|soda|beverage|drink|energy\s*drink/i;
 
 function productHaystack(name: string, categories?: string[]) {
   return `${name} ${(categories ?? []).join(" ")}`.trim();
@@ -438,8 +440,33 @@ function applyAiVariantPrices(
         ? Number(vp.compareAtPrice)
         : v.compareAtPrice,
       stock: vp.stock != null ? Number(vp.stock) : v.stock,
+      isMain: Boolean(vp.isMain) || v.isMain,
     };
   });
+}
+
+function assignMainVariant(
+  variants: FullProductSuggestion["variants"]
+): FullProductSuggestion["variants"] {
+  if (!variants.length) return variants;
+  if (variants.some((v) => v.isMain)) {
+    let seen = false;
+    return variants.map((v) => {
+      if (v.isMain && !seen) {
+        seen = true;
+        return { ...v, isMain: true };
+      }
+      return { ...v, isMain: false };
+    });
+  }
+  // Default: cheapest in-stock (or cheapest) as Main
+  let best = 0;
+  for (let i = 1; i < variants.length; i++) {
+    const a = variants[i];
+    const b = variants[best];
+    if (a.price < b.price) best = i;
+  }
+  return variants.map((v, i) => ({ ...v, isMain: i === best }));
 }
 
 function enforceDistinctVariantPrices(
@@ -469,7 +496,7 @@ Schema:
   "seo": { "title", "description", "keywords": string[] },
   "pricing": { "price": number, "compareAtPrice": number, "currency": "USD" },
   "variantOptions": [] OR [{ "type", "name", "values": [{ "value", "label", "hex?" }] }],
-  "variantPrices": [{ "attributes": { key: value }, "price", "compareAtPrice", "stock" }],
+  "variantPrices": [{ "attributes": { key: value }, "price", "compareAtPrice", "stock", "isMain?" }],
   "specifications": [{ "section", "key", "value" }] — MINIMUM 12 real specs,
   "faqs": [{ "question", "answer" }] — 6-8 helpful Q&As,
   "warranty": string,
@@ -478,22 +505,28 @@ Schema:
 
 VARIANT RULES (critical):
 - Ask: "Would a shopper choose this before buying?" If no → "variantOptions": [].
+- Prefer real shopper choices: pack size, count, flavor, capacity, color, apparel_size, shoe_size.
 - NEVER add Color for vitamins, supplements, softgels, food, drinks, medicine, books, software.
 - Supplements/vitamins: use Pack size (1/2/3 Pack) OR Count (30/60/120 count) — never fake colors.
 - Apparel: color + apparel_size. Footwear: color + shoe_size. Phones/laptops: color + capacity when realistic.
+- Drinks / beverages (coconut water, juice, soda): pack size AND/OR bottle size (330ml, 1L, 6-pack) — not fake colors unless flavors differ.
+- When options help conversion, ALWAYS include them — do not return empty variantOptions for multi-pack or multi-size retail products.
 - Color hex must be accurate when color is used.
+- Mark the default retail SKU as main: set "isMain": true on exactly one variantPrices entry (usually the smallest/cheapest pack). If omitted, the first/cheapest combo is treated as main.
 
 PRICING RULES (critical):
 - Use realistic US retail prices for this exact product category.
-- pricing.price = price of the SMALLEST/cheapest variant (1-pack or lowest count).
-- compareAtPrice = MSRP, typically 20-40% above price.
+- pricing.price = price of the MAIN / default variant (usually smallest pack).
+- compareAtPrice = MSRP for that main variant, typically 20-40% above price.
 - When variantOptions is non-empty, variantPrices is REQUIRED with one entry per variant combo.
+- Each variant MUST have its own price and compareAtPrice (do not copy one compare-at onto all).
 - Each variant MUST have a DIFFERENT price:
   • Pack size: 1-pack = base, 2-pack ≈ base×1.85, 3-pack ≈ base×2.65 (bundle discount).
   • Count: scale sub-linearly (120ct cheaper per unit than 60ct).
   • Color/material/capacity: small realistic deltas.
 - variantPrices attributes keys MUST match option keys: pack_size, count, flavor, color, capacity, shoe_size, apparel_size.
 - variantPrices attribute values MUST match option values exactly (e.g. "1-pack" not "1 Pack").
+- Optional per entry: "isMain": true for the default listing variant.
 
 COPY RULES:
 - Be specific to the product — no generic filler.
@@ -565,11 +598,12 @@ Generate complete catalog-ready JSON. If variants exist, every variant must have
     compareAt,
     variantOptions
   );
+  variants = assignMainVariant(variants);
 
-  // Base price = cheapest variant after smart pricing.
+  // Base / listing price = Main variant (fallback cheapest)
   if (variants.length > 0) {
-    const prices = variants.map((v) => v.price).filter((p) => p > 0);
-    if (prices.length) basePrice = Math.min(...prices);
+    const main = variants.find((v) => v.isMain) ?? variants[0];
+    basePrice = main.price > 0 ? main.price : basePrice;
   }
 
   const aiName = sanitizeAiDashes(

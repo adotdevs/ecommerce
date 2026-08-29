@@ -33,6 +33,8 @@ export interface ProductVariantInput {
   compareAtPrice?: number;
   stock: number;
   attributes: Record<string, string>;
+  /** Listing / default selected variant on the product page */
+  isMain?: boolean;
   media?: {
     url: string;
     alt?: string;
@@ -483,6 +485,77 @@ export function generateVariantsFromOptions(
       media: prev?.media?.length ? prev.media : undefined,
     };
   });
+}
+
+/**
+ * Append only missing option combinations. Existing variants are kept
+ * unchanged (price, SKU, stock, media, name, id) and never removed.
+ */
+export function syncNewVariantsFromOptions(
+  groups: VariantOptionGroup[],
+  base: { sku: string; price: number; compareAtPrice?: number; stock: number },
+  existing: ProductVariantInput[] = [],
+  smartPricing = true
+): { all: ProductVariantInput[]; addedCount: number } {
+  const active = sanitizeOptionGroups(groups);
+  if (!active.length) {
+    return { all: existing, addedCount: 0 };
+  }
+
+  const combos = cartesian(
+    active.map((g) =>
+      g.values.map((v) => ({
+        key: defaultAttributeKey(g),
+        value: v.value,
+        label: v.label,
+      }))
+    )
+  );
+
+  const existingKeys = new Set(
+    existing.map((v) => JSON.stringify(v.attributes ?? {}))
+  );
+
+  const added: ProductVariantInput[] = [];
+  const stamp = Date.now().toString(36).slice(2, 6);
+
+  for (const combo of combos) {
+    const attributes: Record<string, string> = {};
+    const labels: string[] = [];
+    for (const part of combo) {
+      attributes[part.key] = part.value;
+      labels.push(part.label);
+    }
+    const attrKey = JSON.stringify(attributes);
+    if (existingKeys.has(attrKey)) continue;
+
+    const suffix = combo.map((c) => c.value).join("-");
+    let price = base.price;
+    let compareAtPrice = base.compareAtPrice;
+    if (smartPricing && base.price > 0) {
+      price = suggestVariantPrice(base.price, attributes, active);
+      if (base.compareAtPrice != null && base.compareAtPrice > 0) {
+        compareAtPrice = suggestVariantPrice(
+          base.compareAtPrice,
+          attributes,
+          active
+        );
+      }
+    }
+
+    added.push({
+      id: `var-${suffix}-${stamp}-${added.length}`,
+      name: labels.join(" / "),
+      sku: `${base.sku}-${suffix}`.toUpperCase().slice(0, 48),
+      price,
+      compareAtPrice,
+      stock: base.stock,
+      attributes,
+    });
+    existingKeys.add(attrKey);
+  }
+
+  return { all: [...existing, ...added], addedCount: added.length };
 }
 
 export function findVariantByAttributes(

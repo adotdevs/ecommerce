@@ -41,11 +41,39 @@ export function toProductCardData(
         pricing.compareAtPrice != null ? Number(pricing.compareAtPrice) : undefined,
       currency: pricing.currency != null ? String(pricing.currency) : undefined,
     },
-    variants as { price?: number; compareAtPrice?: number }[]
+    variants as { price?: number; compareAtPrice?: number; isMain?: boolean }[]
   );
   const inventory = (p.inventory as Record<string, unknown> | undefined) ?? {};
   const media = Array.isArray(p.media) ? p.media : [];
   const rating = p.rating as Record<string, unknown> | undefined;
+
+  const mainVariant = variants.find(
+    (v) => Boolean((v as Record<string, unknown>).isMain)
+  ) as Record<string, unknown> | undefined;
+  const mainMediaRaw = Array.isArray(mainVariant?.media)
+    ? (mainVariant.media as unknown[])
+    : [];
+  const mainMedia = mainMediaRaw
+    .map((m) => {
+      const item = m as Record<string, unknown>;
+      if (!item?.url) return null;
+      return {
+        url: String(item.url),
+        alt: item.alt != null ? String(item.alt) : undefined,
+      };
+    })
+    .filter(Boolean) as { url: string; alt?: string }[];
+
+  const productMedia = media
+    .map((m) => {
+      const item = m as Record<string, unknown>;
+      if (!item?.url) return null;
+      return {
+        url: String(item.url),
+        alt: item.alt != null ? String(item.alt) : undefined,
+      };
+    })
+    .filter(Boolean) as { url: string; alt?: string }[];
 
   return {
     _id: String(p._id ?? ""),
@@ -56,16 +84,8 @@ export function toProductCardData(
       compareAtPrice: resolvedPricing.compareAtPrice,
       currency: resolvedPricing.currency,
     },
-    media: media
-      .map((m) => {
-        const item = m as Record<string, unknown>;
-        if (!item?.url) return null;
-        return {
-          url: String(item.url),
-          alt: item.alt != null ? String(item.alt) : undefined,
-        };
-      })
-      .filter(Boolean) as { url: string; alt?: string }[],
+    // Cards / listings follow the Main variant photos when present
+    media: mainMedia.length ? mainMedia : productMedia,
     brandName: p.brandName != null ? String(p.brandName) : undefined,
     categoryNames: Array.isArray(p.categoryNames)
       ? (p.categoryNames as unknown[]).map((c) => String(c)).filter(Boolean)
@@ -134,6 +154,7 @@ export function toProductCardData(
             media: media?.length
               ? (media as NonNullable<ProductVariantInput["media"]>)
               : undefined,
+            isMain: Boolean(variant.isMain),
           };
         })
       : undefined,

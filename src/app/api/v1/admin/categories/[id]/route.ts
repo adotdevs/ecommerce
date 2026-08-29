@@ -22,10 +22,22 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     if (data.name && !data.slug) {
       data.slug = slugify(data.name);
     }
+    // Avoid CastError from blank parentId
+    if ("parentId" in data && !data.parentId) {
+      delete data.parentId;
+    }
+
+    const unset: Record<string, 1> = {};
+    if (body && typeof body === "object" && "parentId" in body && !body.parentId) {
+      unset.parentId = 1;
+    }
 
     const category = await Category.findByIdAndUpdate(
       params?.id,
-      { $set: data },
+      {
+        $set: data,
+        ...(Object.keys(unset).length ? { $unset: unset } : {}),
+      },
       { new: true }
     ).lean();
     if (!category) return apiNotFound();

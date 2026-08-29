@@ -61,7 +61,6 @@ export const PRODUCT_FORM_STEPS = [
   { id: "taxonomy", label: "Categories" },
   { id: "media", label: "Images" },
   { id: "variants", label: "Options" },
-  { id: "pricing", label: "Pricing" },
   { id: "details", label: "Specs" },
   { id: "publish", label: "Publish" },
 ] as const;
@@ -132,67 +131,61 @@ export function productToFormData(product: Record<string, any>): ProductFormData
         values: (g.values ?? []).map((v) => ({ ...v })),
       })
     ),
-    variants: (product.variants ?? []).map(
-      (v: {
-        id: string;
-        name: string;
-        sku: string;
-        price: number;
-        compareAtPrice?: number;
-        stock: number;
-        attributes: Record<string, string>;
-        media?: ProductMediaItem[];
-      }) => {
-        const media = (v.media ?? []).map((m, i) => ({
-          url: m.url,
-          alt: m.alt ?? "",
-          type: m.type ?? "image",
-          sortOrder: m.sortOrder ?? i,
-        }));
-        const productUrls = new Set(
-          (product.media ?? []).map((m: ProductMediaItem) => m.url?.trim()).filter(Boolean)
-        );
-        const syncImagesToProduct =
-          media.length > 0 &&
-          media.every((m) => productUrls.has(m.url.trim()));
-        return {
-          id: String(v.id),
-          name: String(v.name),
-          sku: String(v.sku),
-          price: String(v.price),
-          compareAtPrice:
-            v.compareAtPrice != null ? String(v.compareAtPrice) : "",
-          stock: String(v.stock),
-          attributes: v.attributes ?? {},
-          media,
-          syncImagesToProduct,
-        };
+    variants: (() => {
+      const rows = (product.variants ?? []).map(
+        (v: {
+          id: string;
+          name: string;
+          sku: string;
+          price: number;
+          compareAtPrice?: number;
+          stock: number;
+          attributes: Record<string, string>;
+          isMain?: boolean;
+          media?: ProductMediaItem[];
+        }) => {
+          const media = (v.media ?? []).map((m, i) => ({
+            url: m.url,
+            alt: m.alt ?? "",
+            type: m.type ?? "image",
+            sortOrder: m.sortOrder ?? i,
+          }));
+          return {
+            id: String(v.id),
+            name: String(v.name),
+            sku: String(v.sku),
+            price: String(v.price),
+            compareAtPrice:
+              v.compareAtPrice != null ? String(v.compareAtPrice) : "",
+            stock: String(v.stock),
+            attributes: v.attributes ?? {},
+            media,
+            isMain: Boolean(v.isMain),
+          };
+        }
+      );
+      if (rows.length && !rows.some((r) => r.isMain)) {
+        rows[0] = { ...rows[0], isMain: true };
       }
-    ),
+      return rows;
+    })(),
     pricing: (() => {
       const variants = (product.variants ?? []) as {
         price: number;
         compareAtPrice?: number;
+        isMain?: boolean;
       }[];
       const resolved = resolveCatalogPricing(
         {
           price: Number(product.pricing?.price ?? 0),
-          compareAtPrice: product.pricing?.compareAtPrice,
           currency: product.pricing?.currency ?? "USD",
         },
         variants
       );
-      // Prefer the saved product-level compare-at so Pricing step edits stick
-      // after reload (variant max compare must not silently win).
-      const savedCompare = product.pricing?.compareAtPrice;
       return {
         price: String(resolved.price),
         compareAtPrice:
-          savedCompare != null && Number(savedCompare) > 0
-            ? String(savedCompare)
-            : resolved.compareAtPrice != null
-              ? String(resolved.compareAtPrice)
-              : "",
+          resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
         currency: resolved.currency ?? "USD",
       };
     })(),
@@ -244,31 +237,25 @@ export function syncFormPricingFromVariants(
   const resolved = resolveCatalogPricing(
     {
       price: parseFloat(pricing.price) || 0,
-      compareAtPrice: pricing.compareAtPrice.trim()
-        ? parseFloat(pricing.compareAtPrice)
-        : undefined,
       currency: pricing.currency || "USD",
     },
     variants.map((v) => ({
       price: v.price,
       compareAtPrice: v.compareAtPrice,
+      isMain: v.isMain,
     }))
   );
 
   return {
     price: String(resolved.price),
-    // Keep an explicit Pricing-step compare-at; only derive from variants when empty
-    compareAtPrice: pricing.compareAtPrice.trim()
-      ? pricing.compareAtPrice.trim()
-      : resolved.compareAtPrice != null
-        ? String(resolved.compareAtPrice)
-        : "",
+    compareAtPrice:
+      resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
     currency: resolved.currency ?? pricing.currency ?? "USD",
   };
 }
 
 export function formToPayload(form: ProductFormData) {
-  const compareAt = form.pricing.compareAtPrice.trim();
+  const listingCompareAt = form.pricing.compareAtPrice.trim();
   const totalVariantStock = form.variants.reduce(
     (sum, v) => sum + (parseInt(v.stock) || 0),
     0
@@ -279,18 +266,22 @@ export function formToPayload(form: ProductFormData) {
     const fallbackSku = suffix
       ? `${form.sku.trim()}-${suffix}`.toUpperCase().slice(0, 48)
       : form.sku.trim();
+    // Prefer each variant's own compare-at. Listing value is only a fallback
+    // when the variant field is empty (never stomp per-variant edits).
+    const variantCompare = v.compareAtPrice.trim();
     return {
       id: v.id,
       name: v.name,
       sku: v.sku.trim() || fallbackSku,
       price: parseFloat(v.price) || parseFloat(form.pricing.price) || 0,
-      compareAtPrice: compareAt
-        ? parseFloat(compareAt)
-        : v.compareAtPrice.trim()
-          ? parseFloat(v.compareAtPrice)
+      compareAtPrice: variantCompare
+        ? parseFloat(variantCompare)
+        : listingCompareAt
+          ? parseFloat(listingCompareAt)
           : undefined,
       stock: parseInt(v.stock) || 0,
       attributes: v.attributes,
+      isMain: Boolean(v.isMain),
       media: (v.media ?? [])
         .filter((m) => m.url?.trim())
         .map((m, i) => ({
@@ -305,7 +296,11 @@ export function formToPayload(form: ProductFormData) {
   const pricing = resolveCatalogPricing(
     {
       price: parseFloat(form.pricing.price) || 0,
-      compareAtPrice: compareAt ? parseFloat(compareAt) : undefined,
+      compareAtPrice: form.variants.length
+        ? undefined
+        : listingCompareAt
+          ? parseFloat(listingCompareAt)
+          : undefined,
       currency: form.pricing.currency || "USD",
     },
     variants
@@ -340,18 +335,26 @@ export function formToPayload(form: ProductFormData) {
       lowStockThreshold: parseInt(form.inventory.lowStockThreshold) || 5,
       trackInventory: form.inventory.trackInventory,
     },
-    weight: form.weight.trim() ? parseFloat(form.weight) : null,
+    weight: form.weight.trim() ? parseFloat(form.weight) : undefined,
     dimensions:
       form.dimensions.length || form.dimensions.width || form.dimensions.height
         ? {
-            length: parseFloat(form.dimensions.length) || undefined,
-            width: parseFloat(form.dimensions.width) || undefined,
-            height: parseFloat(form.dimensions.height) || undefined,
+            length: form.dimensions.length
+              ? parseFloat(form.dimensions.length)
+              : undefined,
+            width: form.dimensions.width
+              ? parseFloat(form.dimensions.width)
+              : undefined,
+            height: form.dimensions.height
+              ? parseFloat(form.dimensions.height)
+              : undefined,
             unit: form.dimensions.unit || "cm",
           }
-        : null,
-    specifications: form.specifications.filter((s) => s.key && s.value),
-    faqs: form.faqs.filter((f) => f.question && f.answer),
+        : undefined,
+    specifications: form.specifications.filter(
+      (s) => s.key.trim() && s.value.trim()
+    ),
+    faqs: form.faqs.filter((f) => f.question.trim() && f.answer.trim()),
     warranty: form.warranty.trim() || undefined,
     status: form.status,
     featured: form.featured,

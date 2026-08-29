@@ -5,7 +5,7 @@ import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
 import { Label } from "@/components/ds/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
-import { Plus, Trash2, RefreshCw, Wand2, Upload, Loader2, X, Star, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Wand2, Upload, Loader2, X, Star, ChevronUp, ChevronDown } from "lucide-react";
 import {
   type VariantOptionGroup,
   type VariantOptionType,
@@ -17,6 +17,7 @@ import {
   applySmartVariantPrices,
 } from "@/lib/catalog/variant-options";
 import type { ProductMediaItem } from "./ProductMediaGallery";
+import { cn } from "@/components/ds/utils";
 
 export interface AdminVariantRow {
   id: string;
@@ -27,8 +28,8 @@ export interface AdminVariantRow {
   stock: string;
   attributes: Record<string, string>;
   media: ProductMediaItem[];
-  /** When true, this variant's images are merged into product.media */
-  syncImagesToProduct?: boolean;
+  /** Listing price + default storefront selection */
+  isMain?: boolean;
 }
 
 interface ProductVariantBuilderProps {
@@ -38,10 +39,11 @@ interface ProductVariantBuilderProps {
   baseStock: string;
   optionGroups: VariantOptionGroup[];
   variants: AdminVariantRow[];
-  productMedia: ProductMediaItem[];
+  productMedia?: ProductMediaItem[];
   onOptionGroupsChange: (groups: VariantOptionGroup[]) => void;
   onVariantsChange: (variants: AdminVariantRow[]) => void;
-  onProductMediaChange: (media: ProductMediaItem[]) => void;
+  /** When Main changes, push that variant’s images to product.media for storefront defaults */
+  onMainMediaSync?: (media: ProductMediaItem[]) => void;
   onBasePriceChange?: (price: string) => void;
   accessToken?: string;
   productName?: string;
@@ -54,16 +56,26 @@ export function ProductVariantBuilder({
   baseStock,
   optionGroups,
   variants,
-  productMedia,
+  productMedia = [],
   onOptionGroupsChange,
   onVariantsChange,
-  onProductMediaChange,
+  onMainMediaSync,
   onBasePriceChange,
   accessToken = "",
   productName = "",
 }: ProductVariantBuilderProps) {
   const [presetType, setPresetType] = useState<VariantOptionType>("color");
   const [smartBasePrice, setSmartBasePrice] = useState(basePrice);
+
+  useEffect(() => {
+    if (variants.length && !variants.some((v) => v.isMain)) {
+      onVariantsChange(
+        variants.map((v, i) => ({ ...v, isMain: i === 0 }))
+      );
+    }
+    // Only when variant list lacks a Main — avoid depending on callback identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [variants]);
 
   useEffect(() => {
     if (variants.length) {
@@ -79,18 +91,17 @@ export function ProductVariantBuilder({
   }, [variants, basePrice]);
 
   const addOptionGroup = () => {
-    onOptionGroupsChange([...optionGroups, newOptionGroup(presetType)]);
+    commitGroups([...optionGroups, newOptionGroup(presetType)]);
   };
 
   const updateGroup = (index: number, patch: Partial<VariantOptionGroup>) => {
-    const next = optionGroups.map((g, i) =>
-      i === index ? { ...g, ...patch } : g
+    commitGroups(
+      optionGroups.map((g, i) => (i === index ? { ...g, ...patch } : g))
     );
-    onOptionGroupsChange(next);
   };
 
   const removeGroup = (index: number) => {
-    onOptionGroupsChange(optionGroups.filter((_, i) => i !== index));
+    commitGroups(optionGroups.filter((_, i) => i !== index));
   };
 
   const updateValue = (
@@ -123,29 +134,47 @@ export function ProductVariantBuilder({
       }
       return next;
     });
-    updateGroup(groupIndex, { values });
+    commitGroups(
+      optionGroups.map((group, i) =>
+        i === groupIndex ? { ...group, values } : group
+      )
+    );
   };
 
   const addValueToGroup = (groupIndex: number) => {
     const g = optionGroups[groupIndex];
-    updateGroup(groupIndex, {
-      values: [...g.values, { value: "", label: "" }],
-    });
+    commitGroups(
+      optionGroups.map((group, i) =>
+        i === groupIndex
+          ? { ...group, values: [...g.values, { value: "", label: "" }] }
+          : group
+      )
+    );
   };
 
   const removeValue = (groupIndex: number, valueIndex: number) => {
     const g = optionGroups[groupIndex];
-    updateGroup(groupIndex, {
-      values: g.values.filter((_, i) => i !== valueIndex),
-    });
+    commitGroups(
+      optionGroups.map((group, i) =>
+        i === groupIndex
+          ? { ...group, values: g.values.filter((_, j) => j !== valueIndex) }
+          : group
+      )
+    );
   };
 
-  const generateVariants = () => {
+  /** Keep variants in lockstep with option groups; preserve price/SKU/media/main. */
+  const reconcileVariants = (
+    groups: VariantOptionGroup[],
+    existingRows: AdminVariantRow[]
+  ): AdminVariantRow[] => {
     const price = parseFloat(basePrice) || 0;
-    const compareAt = baseCompareAt.trim() ? parseFloat(baseCompareAt) : undefined;
+    const compareAt = baseCompareAt.trim()
+      ? parseFloat(baseCompareAt)
+      : undefined;
     const stock = parseInt(baseStock) || 0;
 
-    const existing = variants.map((v) => ({
+    const existing = existingRows.map((v) => ({
       id: v.id,
       name: v.name,
       sku: v.sku,
@@ -156,120 +185,99 @@ export function ProductVariantBuilder({
       stock: parseInt(v.stock) || 0,
       attributes: v.attributes,
       media: v.media,
+      isMain: v.isMain,
     }));
 
     const generated = generateVariantsFromOptions(
-      optionGroups,
+      groups,
       { sku: baseSku || "SKU", price, compareAtPrice: compareAt, stock },
-      existing
+      existing,
+      true
     );
 
-    onVariantsChange(
-      generated.map((v) => {
-        const prev = variants.find((row) => row.id === v.id);
-        return {
-          id: v.id,
-          name: v.name,
-          sku: v.sku,
-          price: String(v.price),
-          compareAtPrice: v.compareAtPrice != null ? String(v.compareAtPrice) : "",
-          stock: String(v.stock),
-          attributes: v.attributes,
-          media: v.media?.length
-            ? v.media.map((m, i) => ({
-                url: m.url,
-                alt: m.alt ?? "",
-                type: (m.type ?? "image") as "image" | "video",
-                sortOrder: m.sortOrder ?? i,
-              }))
-            : prev?.media ?? [],
-          syncImagesToProduct: prev?.syncImagesToProduct,
-        };
-      })
+    if (!generated.length) return [];
+
+    const byId = new Map(existingRows.map((v) => [v.id, v]));
+    const byAttr = new Map(
+      existingRows.map((v) => [JSON.stringify(v.attributes), v])
     );
+
+    const rows = generated.map((v) => {
+      const prev =
+        byId.get(v.id) ?? byAttr.get(JSON.stringify(v.attributes));
+      return {
+        id: v.id,
+        name: v.name,
+        sku: v.sku,
+        price: String(v.price),
+        compareAtPrice:
+          v.compareAtPrice != null ? String(v.compareAtPrice) : "",
+        stock: String(v.stock),
+        attributes: v.attributes,
+        media: v.media?.length
+          ? v.media.map((m, i) => ({
+              url: m.url,
+              alt: m.alt ?? "",
+              type: (m.type ?? "image") as "image" | "video",
+              sortOrder: m.sortOrder ?? i,
+            }))
+          : prev?.media ?? [],
+        isMain: Boolean(prev?.isMain),
+      };
+    });
+
+    if (!rows.some((r) => r.isMain)) {
+      rows[0] = { ...rows[0], isMain: true };
+    } else {
+      let seen = false;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].isMain) {
+          if (seen) rows[i] = { ...rows[i], isMain: false };
+          else seen = true;
+        }
+      }
+    }
+    return rows;
+  };
+
+  const commitGroups = (next: VariantOptionGroup[]) => {
+    onOptionGroupsChange(next);
+    onVariantsChange(reconcileVariants(next, variants));
+  };
+
+  const setMainVariant = (index: number) => {
+    let next = variants.map((v, i) => ({
+      ...v,
+      isMain: i === index,
+    }));
+    const main = next[index];
+    const mainMedia = (main.media ?? []).filter((m) => m.url?.trim());
+    if (mainMedia.length) {
+      onMainMediaSync?.(
+        mainMedia.map((m, i) => ({ ...m, sortOrder: i }))
+      );
+    } else if (productMedia.length) {
+      const copied = productMedia.map((m, i) => ({
+        ...m,
+        sortOrder: i,
+      }));
+      next = next.map((v, i) =>
+        i === index ? { ...v, media: copied } : v
+      );
+      onMainMediaSync?.(copied);
+    }
+    onVariantsChange(next);
   };
 
   const updateVariant = (index: number, patch: Partial<AdminVariantRow>) => {
-    const prev = variants[index];
     const next = variants.map((v, i) => (i === index ? { ...v, ...patch } : v));
     onVariantsChange(next);
-
-    if (patch.syncImagesToProduct !== undefined || patch.media !== undefined) {
-      applyVariantImageSync(prev, next[index], next);
-    }
-  };
-
-  const urlsFromMedia = (media: ProductMediaItem[] | undefined) =>
-    (media ?? []).map((m) => m.url.trim()).filter(Boolean);
-
-  const applyVariantImageSync = (
-    prev: AdminVariantRow,
-    row: AdminVariantRow,
-    all: AdminVariantRow[]
-  ) => {
-    const stillSyncedByOthers = (url: string) =>
-      all.some(
-        (v) =>
-          v.id !== row.id &&
-          v.syncImagesToProduct &&
-          urlsFromMedia(v.media).includes(url)
-      );
-
-    let media = [...productMedia];
-
-    // Uncheck: drop this variant's images from product (unless another synced variant keeps them)
-    if (prev.syncImagesToProduct && !row.syncImagesToProduct) {
-      const drop = new Set(urlsFromMedia(prev.media));
-      media = media.filter((m) => {
-        const url = m.url.trim();
-        if (!drop.has(url)) return true;
-        return stillSyncedByOthers(url);
-      });
-    }
-
-    // Media changed while synced: remove old URLs that left this variant
-    if (
-      row.syncImagesToProduct &&
-      patchMediaChanged(prev.media, row.media)
-    ) {
-      const nextUrls = new Set(urlsFromMedia(row.media));
-      const oldOnly = urlsFromMedia(prev.media).filter((u) => !nextUrls.has(u));
-      if (oldOnly.length) {
-        const drop = new Set(oldOnly);
-        media = media.filter((m) => {
-          const url = m.url.trim();
-          if (!drop.has(url)) return true;
-          return stillSyncedByOthers(url);
-        });
+    if (patch.media !== undefined && next[index]?.isMain) {
+      const media = (patch.media ?? []).filter((m) => m.url?.trim());
+      if (media.length) {
+        onMainMediaSync?.(media.map((m, i) => ({ ...m, sortOrder: i })));
       }
     }
-
-    // Check / synced media update: append missing images
-    if (row.syncImagesToProduct) {
-      const existing = new Set(media.map((m) => m.url.trim()));
-      for (const source of row.media ?? []) {
-        const url = source.url.trim();
-        if (!url || existing.has(url)) continue;
-        media.push({
-          url: source.url,
-          alt: source.alt ?? "",
-          type: source.type ?? "image",
-          sortOrder: media.length,
-        });
-        existing.add(url);
-      }
-    }
-
-    onProductMediaChange(media.map((m, i) => ({ ...m, sortOrder: i })));
-  };
-
-  const patchMediaChanged = (
-    a: ProductMediaItem[] | undefined,
-    b: ProductMediaItem[] | undefined
-  ) => {
-    const au = urlsFromMedia(a).join("\0");
-    const bu = urlsFromMedia(b).join("\0");
-    return au !== bu;
   };
 
   const applySmartPrices = (basePriceStr: string) => {
@@ -307,7 +315,7 @@ export function ProductVariantBuilder({
         stock: variants[i].stock,
         attributes: variants[i].attributes,
         media: variants[i].media ?? [],
-        syncImagesToProduct: variants[i].syncImagesToProduct,
+        isMain: variants[i].isMain,
       }))
     );
     onBasePriceChange?.(basePriceStr);
@@ -334,277 +342,328 @@ export function ProductVariantBuilder({
     updateVariant(index, { price });
   };
 
+  const hasOptions = optionGroups.length > 0;
+  const mainIndex = variants.findIndex((v) => v.isMain);
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Product options</CardTitle>
-          <p className="text-[12px] text-muted-foreground">
-            Add options like Color, Shoe Size, Pack size, or Material. Variants are generated from all combinations.
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-subtle)]">
+        <div className="border-b border-border bg-secondary/40 px-5 py-4 sm:px-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Options
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
-              <Label>Add option type</Label>
-              <select
-                className="flex h-10 min-w-[200px] rounded-lg border border-border bg-background px-3 text-sm"
-                value={presetType}
-                onChange={(e) => setPresetType(e.target.value as VariantOptionType)}
-              >
-                {Object.entries(VARIANT_OPTION_PRESETS).map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="button" variant="outline" onClick={addOptionGroup}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add option
-            </Button>
-            {optionGroups.length > 0 && (
-              <Button type="button" onClick={generateVariants}>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate variants
-              </Button>
-            )}
-          </div>
+          <h2 className="mt-1 text-lg font-semibold text-foreground">
+            How shoppers choose this product
+          </h2>
+          <p className="mt-1 max-w-2xl text-[13px] text-muted-foreground">
+            Add option types below — variants update automatically. Pick one{" "}
+            <strong className="font-medium text-foreground">Main</strong> row for
+            the default price and images. With no options, set a simple price
+            instead.
+          </p>
+        </div>
 
-          {optionGroups.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-6 text-center text-small text-muted-foreground">
-              No options yet. Add Color for apparel, Shoe Size for footwear, Capacity for electronics, etc.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {optionGroups.map((group, gi) => (
-                <div
-                  key={group.id}
-                  className="rounded-lg border border-border bg-secondary/20 p-4"
-                >
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        value={group.name}
-                        onChange={(e) => updateGroup(gi, { name: e.target.value })}
-                        className="max-w-[180px] font-medium"
-                        placeholder="Option name"
-                      />
-                      <span className="rounded bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                        {VARIANT_OPTION_PRESETS[group.type]?.label ?? group.type}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => removeGroup(gi)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {group.values.map((val, vi) => (
-                      <div
-                        key={`${gi}-${vi}-${val.value || "new"}`}
-                        className="flex flex-wrap items-center gap-2"
-                      >
-                        {group.type === "color" && (
-                          <input
-                            type="color"
-                            value={val.hex ?? "#111111"}
-                            onChange={(e) =>
-                              updateValue(gi, vi, { hex: e.target.value })
-                            }
-                            className="h-9 w-9 cursor-pointer rounded border border-border"
-                          />
-                        )}
-                        <Input
-                          value={val.label}
-                          onChange={(e) =>
-                            updateValue(gi, vi, { label: e.target.value })
-                          }
-                          placeholder="Display label"
-                          className="max-w-[140px]"
-                        />
-                        <Input
-                          value={val.value}
-                          onChange={(e) =>
-                            updateValue(gi, vi, { value: e.target.value })
-                          }
-                          placeholder="Value key"
-                          className="max-w-[120px] text-[12px]"
-                          title="Internal key — must be unique within this option"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => removeValue(gi, vi)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addValueToGroup(gi)}
-                    >
-                      <Plus className="mr-1 h-3.5 w-3.5" />
-                      Add value
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {variants.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
-            <div>
-              <CardTitle>Variants ({variants.length})</CardTitle>
-              <p className="text-[12px] text-muted-foreground">
-                Enter one base price — others auto-fill with smart adjustments. Add
-                images per variant so the product gallery switches when shoppers
-                pick that option. Leave images empty to keep using product photos.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-[11px]">Base price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={smartBasePrice}
-                  onChange={(e) => handleBasePriceChange(e.target.value)}
-                  onBlur={() => {
-                    if (variants.length > 1) applySmartPrices(smartBasePrice);
-                  }}
-                  className="h-8 w-28"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      applySmartPrices(smartBasePrice);
-                    }
-                  }}
-                />
+        <div className="space-y-6 p-5 sm:p-6">
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Option types</h3>
+                <p className="text-[12px] text-muted-foreground">
+                  Color, size, pack… Adding or removing syncs the variant table.
+                </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => applySmartPrices(smartBasePrice || variants[0]?.price || "0")}
-              >
-                <Wand2 className="mr-1 h-3.5 w-3.5" />
-                Smart prices
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={generateVariants}>
-                <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                Regenerate
-              </Button>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Type</Label>
+                  <select
+                    className="flex h-10 min-w-[180px] rounded-lg border border-border bg-background px-3 text-sm"
+                    value={presetType}
+                    onChange={(e) =>
+                      setPresetType(e.target.value as VariantOptionType)
+                    }
+                  >
+                    {Object.entries(VARIANT_OPTION_PRESETS).map(([key, preset]) => (
+                      <option key={key} value={key}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button type="button" onClick={addOptionGroup}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add option
+                </Button>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-small">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 pr-3">Variant</th>
-                    <th className="pb-2 pr-3">Images</th>
-                    <th className="pb-2 pr-3" title="Add this variant’s images to product Images">
-                      In product
-                    </th>
-                    <th className="pb-2 pr-3">SKU</th>
-                    <th className="pb-2 pr-3">Price</th>
-                    <th className="pb-2 pr-3">Compare</th>
-                    <th className="pb-2">Stock</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {variants.map((v, i) => (
-                    <tr key={v.id} className="border-b border-border/60 align-top">
-                      <td className="py-2 pr-3 font-medium">{v.name}</td>
-                      <td className="py-2 pr-3">
-                        <VariantMediaCell
-                          media={v.media ?? []}
-                          accessToken={accessToken}
-                          productName={productName}
-                          onChange={(media) => updateVariant(i, { media })}
+
+            {!hasOptions ? (
+              <div className="rounded-xl border border-dashed border-border bg-secondary/20 px-5 py-8 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  Single product — no options
+                </p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Use price &amp; compare-at below. Add an option when buyers need
+                  to choose size, pack, color, etc.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {optionGroups.map((group, gi) => (
+                  <div
+                    key={group.id}
+                    className="rounded-xl border border-border bg-background p-4"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          value={group.name}
+                          onChange={(e) =>
+                            updateGroup(gi, { name: e.target.value })
+                          }
+                          className="max-w-[200px] font-medium"
+                          placeholder="Option name"
                         />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-border"
-                            checked={Boolean(v.syncImagesToProduct)}
-                            disabled={!(v.media ?? []).length}
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                          {VARIANT_OPTION_PRESETS[group.type]?.label ?? group.type}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {group.values.filter((v) => v.value && v.label).length}{" "}
+                          values · auto-synced
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeGroup(gi)}
+                        title="Remove option (variants update automatically)"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {group.values.map((val, vi) => (
+                        <div
+                          key={`${group.id}-${vi}`}
+                          className="flex flex-wrap items-center gap-2 rounded-lg bg-secondary/30 p-2"
+                        >
+                          {group.type === "color" && (
+                            <input
+                              type="color"
+                              value={val.hex ?? "#111111"}
+                              onChange={(e) =>
+                                updateValue(gi, vi, { hex: e.target.value })
+                              }
+                              className="h-9 w-9 cursor-pointer rounded border border-border"
+                            />
+                          )}
+                          <Input
+                            value={val.label}
+                            onChange={(e) =>
+                              updateValue(gi, vi, { label: e.target.value })
+                            }
+                            placeholder="Label (shoppers see this)"
+                            className="max-w-[180px] bg-background"
+                          />
+                          <Input
+                            value={val.value}
+                            onChange={(e) =>
+                              updateValue(gi, vi, { value: e.target.value })
+                            }
+                            placeholder="Key"
+                            className="max-w-[120px] bg-background text-[12px]"
+                            title="Internal key — unique in this option"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => removeValue(gi, vi)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addValueToGroup(gi)}
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Add value
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {variants.length > 0 ? (
+            <section className="space-y-3 border-t border-border pt-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Variants ({variants.length})
+                  </h3>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    {mainIndex < 0 ? (
+                      <span className="text-destructive">
+                        Select a Main variant — required for listing price &amp;
+                        default images.
+                      </span>
+                    ) : (
+                      <>
+                        Main is required. Row highlighted is the storefront
+                        default.
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Smart fill from</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={smartBasePrice}
+                      onChange={(e) => handleBasePriceChange(e.target.value)}
+                      onBlur={() => {
+                        if (variants.length > 1)
+                          applySmartPrices(smartBasePrice);
+                      }}
+                      className="h-9 w-28"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applySmartPrices(smartBasePrice);
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      applySmartPrices(
+                        smartBasePrice || variants[0]?.price || "0"
+                      )
+                    }
+                  >
+                    <Wand2 className="mr-1 h-3.5 w-3.5" />
+                    Smart prices
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full min-w-[920px] text-small">
+                  <thead>
+                    <tr className="border-b border-border bg-secondary/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <th className="px-3 py-2.5">Variant</th>
+                      <th className="px-3 py-2.5">Images</th>
+                      <th className="px-3 py-2.5">Main</th>
+                      <th className="px-3 py-2.5">SKU</th>
+                      <th className="px-3 py-2.5">Price</th>
+                      <th className="px-3 py-2.5">Compare</th>
+                      <th className="px-3 py-2.5">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {variants.map((v, i) => (
+                      <tr
+                        key={v.id}
+                        className={cn(
+                          "border-b border-border/70 align-top last:border-0",
+                          v.isMain && "bg-primary/[0.07]"
+                        )}
+                      >
+                        <td className="px-3 py-2.5 font-medium">
+                          {v.name}
+                          {v.isMain ? (
+                            <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                              Main
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <VariantMediaCell
+                            media={v.media ?? []}
+                            accessToken={accessToken}
+                            productName={productName}
+                            onChange={(media) => updateVariant(i, { media })}
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+                            <input
+                              type="radio"
+                              name="variant-main"
+                              className="h-4 w-4 border-border accent-primary"
+                              checked={Boolean(v.isMain)}
+                              onChange={() => setMainVariant(i)}
+                            />
+                            Default
+                          </label>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input
+                            value={v.sku}
+                            onChange={(e) =>
+                              updateVariant(i, { sku: e.target.value })
+                            }
+                            className="h-8 min-w-[120px]"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={v.price}
+                            onChange={(e) =>
+                              handlePriceChange(i, e.target.value)
+                            }
+                            className="h-8 w-24"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={v.compareAtPrice}
                             onChange={(e) =>
                               updateVariant(i, {
-                                syncImagesToProduct: e.target.checked,
+                                compareAtPrice: e.target.value,
                               })
                             }
+                            className="h-8 w-24"
                           />
-                          Add
-                        </label>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <Input
-                          value={v.sku}
-                          onChange={(e) => updateVariant(i, { sku: e.target.value })}
-                          className="h-8 min-w-[120px]"
-                        />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={v.price}
-                          onChange={(e) => handlePriceChange(i, e.target.value)}
-                          className="h-8 w-24"
-                          title={
-                            i === 0
-                              ? "Set first price to auto-fill others with smart adjustments"
-                              : undefined
-                          }
-                        />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={v.compareAtPrice}
-                          onChange={(e) =>
-                            updateVariant(i, { compareAtPrice: e.target.value })
-                          }
-                          className="h-8 w-24"
-                        />
-                      </td>
-                      <td className="py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={v.stock}
-                          onChange={(e) => updateVariant(i, { stock: e.target.value })}
-                          className="h-8 w-20"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={v.stock}
+                            onChange={(e) =>
+                              updateVariant(i, { stock: e.target.value })
+                            }
+                            className="h-8 w-20"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

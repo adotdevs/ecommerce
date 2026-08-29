@@ -106,6 +106,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           (variant.attributes as Record<string, unknown>) ?? {}
         ).map(([k, val]) => [k, String(val)])
       ),
+      isMain: Boolean(variant.isMain),
       media: media as { url: string; alt?: string; sortOrder?: number }[],
     };
   });

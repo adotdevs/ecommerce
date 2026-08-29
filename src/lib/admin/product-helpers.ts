@@ -85,16 +85,29 @@ export function normalizeVariants(
         compareAtPrice?: number;
         stock: number;
         attributes?: Record<string, string>;
+        isMain?: boolean;
         media?: ProductMediaInput[];
       }>
     | undefined
 ) {
   if (!variants?.length) return [];
-  return variants.map((v) => ({
+  const normalized = variants.map((v) => ({
     ...v,
     attributes: v.attributes ?? {},
+    isMain: Boolean(v.isMain),
     media: normalizeMedia(v.media),
   }));
+  const mainIndex = normalized.findIndex((v) => v.isMain);
+  if (mainIndex < 0) {
+    normalized[0] = { ...normalized[0], isMain: true };
+  } else {
+    for (let i = 0; i < normalized.length; i++) {
+      if (i !== mainIndex && normalized[i].isMain) {
+        normalized[i] = { ...normalized[i], isMain: false };
+      }
+    }
+  }
+  return normalized;
 }
 
 export function isOnSale(pricing: {

@@ -283,7 +283,7 @@ export default function AdminCategoriesPage() {
                   onChange={(url) => setForm({ ...form, image: url })}
                   accessToken={accessToken}
                   folder="categories"
-                  aspectHint="16:10 recommended"
+                  aspectHint="Upload a file, paste https://…, or a local path like /brand/category.png"
                 />
               )}
               <div className="space-y-1.5">

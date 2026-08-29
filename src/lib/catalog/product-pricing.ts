@@ -7,6 +7,8 @@ export interface CatalogPricing {
 export interface VariantPricingLike {
   price?: number | string | null;
   compareAtPrice?: number | string | null;
+  /** When true, this variant drives product listing price / default selection */
+  isMain?: boolean;
 }
 
 function toNumber(value: unknown): number | null {
@@ -15,7 +17,7 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Storefront + save: use lowest variant price when variants exist. */
+/** Storefront + save: main variant price when set, else lowest variant price. */
 export function resolveCatalogPricing(
   pricing: CatalogPricing,
   variants?: VariantPricingLike[]
@@ -26,6 +28,18 @@ export function resolveCatalogPricing(
     return {
       price: toNumber(pricing.price) ?? 0,
       compareAtPrice: toNumber(pricing.compareAtPrice) ?? undefined,
+      currency,
+    };
+  }
+
+  const main = variants.find((v) => v.isMain);
+  if (main) {
+    const price = toNumber(main.price) ?? 0;
+    const compare = toNumber(main.compareAtPrice);
+    return {
+      price,
+      compareAtPrice:
+        compare != null && compare > price ? compare : undefined,
       currency,
     };
   }
@@ -43,17 +57,8 @@ export function resolveCatalogPricing(
     : toNumber(pricing.price) ?? 0;
 
   const maxCompare = comparePrices.length ? Math.max(...comparePrices) : null;
-  const formCompare = toNumber(pricing.compareAtPrice);
-  // When product-level compare-at is present, respect it (do not resurrect a
-  // stale max variant compare like 21.99 after the admin clears/changes Pricing).
-  const hasProductCompare = pricing.compareAtPrice != null;
-  const compareAtPrice = hasProductCompare
-    ? formCompare != null && formCompare > minPrice
-      ? formCompare
-      : undefined
-    : maxCompare != null && maxCompare > minPrice
-      ? maxCompare
-      : undefined;
+  const compareAtPrice =
+    maxCompare != null && maxCompare > minPrice ? maxCompare : undefined;
 
   return {
     price: minPrice,

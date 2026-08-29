@@ -58,9 +58,9 @@ export function ProductVariantSelector({
   }, [variantOptions, variants]);
 
   const initialSelection = useMemo(() => {
-    const first = variants[0];
-    if (!first) return {};
-    return { ...first.attributes };
+    const main = variants.find((v) => v.isMain) ?? variants[0];
+    if (!main) return {};
+    return { ...main.attributes };
   }, [variants]);
 
   const [selected, setSelected] = useState<Record<string, string>>(initialSelection);

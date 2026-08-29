@@ -261,15 +261,23 @@ export function ProductReviewsManager({
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Extra notes (optional)</Label>
+              <Label>Instructions (followed strictly)</Label>
               <Textarea
                 value={genForm.notes}
                 onChange={(e) =>
                   setGenForm({ ...genForm, notes: e.target.value })
                 }
-                rows={2}
-                placeholder="e.g. mention fast shipping, sizing, battery life…"
+                rows={4}
+                placeholder={`Write exact requirements — applied to every review. Examples:
+• Write in German; short 1–2 sentences
+• Mention waterproofing and fast EU shipping
+• Sound like parents buying for kids; avoid slang
+• Half the reviews should mention size runs small`}
               />
+              <p className="text-[11px] text-muted-foreground">
+                These are hard requirements, not optional tips. Be specific about
+                language, topics, tone, and what to mention or avoid.
+              </p>
             </div>
           </div>
           <Button onClick={handleGenerate} disabled={generating}>

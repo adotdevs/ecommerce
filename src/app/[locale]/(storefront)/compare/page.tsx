@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import { useCompareStore } from "@/stores/compare-store";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { Button } from "@/components/ds/button";
 
@@ -73,7 +73,13 @@ export default function ComparePage() {
                 <th key={p._id} className="border-b p-3 text-left align-top">
                   <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl product-media-surface">
                     {p.media?.[0] && (
-                      <Image src={p.media[0].url} alt={p.name} fill className="object-cover" />
+                      <RemoteImage
+                        src={p.media[0].url}
+                        alt={p.name}
+                        fill
+                        className="object-cover"
+                        sizes="120px"
+                      />
                     )}
                   </div>
                   <Link href={`/products/${p.slug}`} className="font-medium hover:underline">

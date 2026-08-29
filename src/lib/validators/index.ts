@@ -40,7 +40,7 @@ export const adminGenerateReviewsSchema = z.object({
   count: z.number().int().min(1).max(50),
   targetAverage: z.number().min(1).max(5),
   dateRangeDays: z.number().int().min(1).max(730).default(90),
-  notes: z.string().max(500).optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 export const adminManualReviewSchema = z.object({

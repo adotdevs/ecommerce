@@ -2,13 +2,13 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { CreditCard, AlertTriangle } from "lucide-react";
 import { CheckoutCard } from "@/components/storefront/checkout/CheckoutCard";
 import {
   CheckoutField,
   RadioOptionCard,
 } from "@/components/storefront/checkout/CheckoutField";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PAYMENT_METHODS } from "@/lib/checkout/constants";
 import {
   CARD_BRAND_LOGOS,
@@ -42,7 +42,7 @@ function PaymentLogo({ src, alt }: { src?: string; alt: string }) {
   if (!src) return null;
   return (
     <div className="relative h-6 w-10 overflow-hidden rounded">
-      <Image src={src} alt={alt} fill className="object-cover"  />
+      <RemoteImage src={src} alt={alt} fill className="object-cover" sizes="40px" />
     </div>
   );
 }
@@ -52,7 +52,7 @@ function CardBrandLogo({ brand }: { brand: ReturnType<typeof detectCardBrand> })
   const logo = CARD_BRAND_LOGOS[brand];
   return (
     <div className="relative h-5 w-8 overflow-hidden rounded">
-      <Image src={logo.src} alt={logo.alt} fill className="object-contain" sizes="32px" />
+      <RemoteImage src={logo.src} alt={logo.alt} fill className="object-contain" sizes="32px" />
     </div>
   );
 }

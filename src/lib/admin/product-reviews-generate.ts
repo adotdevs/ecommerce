@@ -186,18 +186,55 @@ export async function generateProductReviews(
   const count = Math.min(50, Math.max(1, Math.round(input.count)));
   const ratings = distributeRatings(count, input.targetAverage);
   const userNames = Array.from({ length: count }, () => generateReviewerUserName());
+  const merchantInstructions = input.notes?.trim() ?? "";
+  const hasStrictInstructions = merchantInstructions.length > 0;
 
-  const ai = await openAiChatJson<AiReviewBatch>(
-    `You write realistic e-commerce product reviews that sound like real shoppers — casual, specific, sometimes short, occasionally imperfect grammar. Never mention AI. Never use marketing buzzwords like "game-changer", "must-have", "absolutely love", "exceeded expectations". Vary sentence length. Some reviews 1-2 sentences, others 3-5. Return JSON: { "reviews": [{ "userName", "rating", "title", "body", "daysAgo" }] }`,
-    `Product: ${input.productName}
-${input.productDescription ? `About: ${input.productDescription.slice(0, 400)}` : ""}
-Generate exactly ${count} unique reviews.
-Target average rating: ${input.targetAverage.toFixed(1)} — use these exact star ratings in order (shuffle in output): ${ratings.join(", ")}
-Suggested usernames (you may tweak slightly): ${userNames.join(", ")}
-Spread review dates across the last ${input.dateRangeDays} days using daysAgo (integer).
-${input.notes ? `Extra guidance: ${input.notes}` : ""}`,
-    { temperature: 0.85 }
-  );
+  const systemPrompt = hasStrictInstructions
+    ? `You write realistic e-commerce product reviews that sound like real shoppers.
+
+PRIORITY ORDER (highest first):
+1. MERCHANT INSTRUCTIONS — NON-NEGOTIABLE. Obey every requirement in the merchant block. If instructions conflict with style tips below, follow the merchant.
+2. Exact star ratings and count provided in the task.
+3. Natural shopper voice (casual, specific). Never mention AI. Avoid marketing buzzwords ("game-changer", "must-have", "absolutely love", "exceeded expectations").
+
+Rules for merchant instructions:
+- Treat them as hard constraints, not suggestions.
+- Apply them to EVERY review in the batch (unless the merchant explicitly says only some).
+- Cover language, tone, topics to mention/avoid, length, locale, shipping, sizing, materials, use-cases, etc. exactly as requested.
+- Do not invent a different theme that ignores their command.
+- If they list bullet points or numbered steps, satisfy each one.
+
+Return JSON only: { "reviews": [{ "userName", "rating", "title", "body", "daysAgo" }] }`
+    : `You write realistic e-commerce product reviews that sound like real shoppers — casual, specific, sometimes short, occasionally imperfect grammar. Never mention AI. Never use marketing buzzwords like "game-changer", "must-have", "absolutely love", "exceeded expectations". Vary sentence length. Some reviews 1-2 sentences, others 3-5. Return JSON: { "reviews": [{ "userName", "rating", "title", "body", "daysAgo" }] }`;
+
+  const userPrompt = [
+    hasStrictInstructions
+      ? `=== MERCHANT INSTRUCTIONS (MUST FOLLOW STRICTLY — APPLY TO ALL REVIEWS) ===
+${merchantInstructions}
+=== END MERCHANT INSTRUCTIONS ===
+
+Before writing each review, re-read the merchant instructions and ensure the title and body comply.`
+      : null,
+    `Product: ${input.productName}`,
+    input.productDescription
+      ? `About: ${input.productDescription.slice(0, 400)}`
+      : null,
+    `Generate exactly ${count} unique reviews.`,
+    `Target average rating: ${input.targetAverage.toFixed(1)} — use these exact star ratings in order (one per review): ${ratings.join(", ")}`,
+    `Suggested usernames (you may tweak slightly): ${userNames.join(", ")}`,
+    `Spread review dates across the last ${input.dateRangeDays} days using daysAgo (integer 0–${input.dateRangeDays}).`,
+    hasStrictInstructions
+      ? `Reminder: every review must still satisfy the MERCHANT INSTRUCTIONS block above. Do not soften, skip, or reinterpret those requirements.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const ai = await openAiChatJson<AiReviewBatch>(systemPrompt, userPrompt, {
+    // Lower temperature when following strict merchant commands
+    temperature: hasStrictInstructions ? 0.35 : 0.85,
+    maxTokens: Math.min(8000, 400 + count * 220),
+  });
 
   if (ai?.reviews?.length) {
     return ai.reviews.slice(0, count).map((r, i) => {
@@ -215,6 +252,13 @@ ${input.notes ? `Extra guidance: ${input.notes}` : ""}`,
         createdAt,
       };
     });
+  }
+
+  // Do not silently fall back to generic templates when the merchant gave instructions
+  if (hasStrictInstructions) {
+    throw new Error(
+      "AI could not generate reviews that follow your instructions. Check OPENAI_API_KEY or try again with clearer instructions."
+    );
   }
 
   return ratings.map((rating, i) => {

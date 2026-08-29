@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import {
   stringField,
   privacySections,
@@ -26,7 +26,7 @@ function AboutView({ content }: { content: CmsPageContent }) {
       <header className="cms-page__hero">
         {heroImage && (
           <div className="cms-page__hero-media">
-            <Image
+            <RemoteImage
               src={heroImage}
               alt={stringField(content, "heroTitle")}
               fill

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Check, ShoppingBag, Sparkles } from "lucide-react";
@@ -12,6 +11,7 @@ import {
   ModalTitle,
 } from "@/components/ds/modal";
 import { Button } from "@/components/ds/button";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { ProductVariantSelector } from "@/components/storefront/products/ProductVariantSelector";
 import { LowStockHint } from "@/components/storefront/products/LowStockHint";
@@ -87,7 +87,7 @@ export function VariantQuickAddModal({
           <div className="relative flex gap-4">
             <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-white/20 bg-white shadow-[var(--shadow-card)]">
               {image ? (
-                <Image
+                <RemoteImage
                   src={image.url}
                   alt={image.alt ?? product.name}
                   fill

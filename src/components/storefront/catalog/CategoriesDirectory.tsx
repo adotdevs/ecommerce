@@ -3,8 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { Link } from "@/i18n/navigation";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -105,7 +105,7 @@ export function CategoriesDirectory({
       <section className="relative overflow-hidden border-b border-border">
         {content.heroImage ? (
           <div className="absolute inset-0">
-            <Image
+            <RemoteImage
               src={content.heroImage}
               alt=""
               fill
@@ -350,7 +350,7 @@ export function CategoriesDirectory({
                     >
                       <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
                         {cat.image ? (
-                          <Image
+                          <RemoteImage
                             src={cat.image}
                             alt={formatCategoryName(cat.name)}
                             fill

@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import { Trash2, ShoppingCart, Check, ExternalLink } from "lucide-react";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { useWishlistAvailability } from "@/hooks/use-wishlist-availability";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useWishlistHydrated } from "@/hooks/use-wishlist-hydrated";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { Button } from "@/components/ds/button";
 import { Badge } from "@/components/ds/badge";
@@ -82,11 +82,12 @@ export default function WishlistPage() {
                 className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl product-media-surface"
               >
                 {item.image && (
-                  <Image
+                  <RemoteImage
                     src={item.image}
                     alt={item.name}
                     fill
                     className="object-cover"
+                    sizes="200px"
                   />
                 )}
               </Link>

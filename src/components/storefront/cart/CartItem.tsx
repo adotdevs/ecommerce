@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, Card } from "@heroui/react";
 import { Link } from "@/i18n/navigation";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { QuantitySelector } from "@/components/storefront/cart/QuantitySelector";
 import { splitCartItemName } from "@/lib/cart/display";
@@ -29,7 +29,7 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
           className="product-line-thumb product-line-thumb--md relative h-24 w-24 shrink-0 overflow-hidden rounded-[var(--radius-md)] product-media-surface md:h-28 md:w-28"
         >
           {item.image ? (
-            <Image
+            <RemoteImage
               src={item.image}
               alt={title}
               fill

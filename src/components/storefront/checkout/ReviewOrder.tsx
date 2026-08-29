@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
-import Image from "next/image";
 import { CheckoutCard } from "@/components/storefront/checkout/CheckoutCard";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import {
   CheckoutPrimaryButton,
   SecureNote,
@@ -134,7 +134,7 @@ export function ReviewOrder({
               isSupportedBrand(brand) ? CARD_BRAND_LOGOS[brand] : null;
             return logo ? (
               <div className="relative h-5 w-8">
-                <Image
+                <RemoteImage
                   src={logo.src}
                   alt={logo.alt}
                   fill

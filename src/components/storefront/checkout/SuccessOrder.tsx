@@ -2,9 +2,9 @@
 
 import { Check, Package, Truck, Home, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { Button } from "@heroui/react";
 import { useRouter } from "@/i18n/navigation";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { cn } from "@/components/ds/utils";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { getPaymentLabelKey } from "@/lib/checkout/utils";
@@ -98,7 +98,7 @@ export function SuccessOrder({ order }: SuccessOrderProps) {
               <span className="inline-flex items-center gap-2">
                 {order.paymentMethod === "card" && (
                   <span className="relative inline-block h-4 w-7 shrink-0">
-                    <Image
+                    <RemoteImage
                       src="/payments/visa.svg"
                       alt=""
                       fill

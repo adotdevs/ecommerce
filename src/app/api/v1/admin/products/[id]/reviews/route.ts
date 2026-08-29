@@ -132,6 +132,10 @@ export const POST = withAuth(async (request: NextRequest, { params }) => {
     );
   } catch (err) {
     console.error(err);
-    return apiError("Failed to add reviews", 500);
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Failed to add reviews";
+    return apiError(message, 500);
   }
 }, PERMISSIONS.PRODUCTS_WRITE);

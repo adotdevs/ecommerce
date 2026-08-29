@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import {
   Star,
   Loader2,
@@ -156,7 +156,7 @@ function ReviewCard({ review }: { review: ReviewItem }) {
               onClick={() => setLightbox(img.url)}
               className="relative h-20 w-20 overflow-hidden rounded-[var(--radius-sm)] border border-border transition hover:ring-2 hover:ring-primary/30"
             >
-              <Image
+              <RemoteImage
                 src={img.url}
                 alt={img.alt ?? `Review photo ${i + 1}`}
                 fill
@@ -429,7 +429,7 @@ export function ProductReviews({ productSlug, initialSummary }: ProductReviewsPr
                   key={img.url}
                   className="relative h-20 w-20 overflow-hidden rounded-[var(--radius-sm)] border border-border"
                 >
-                  <Image src={img.url} alt="" fill className="object-cover" sizes="80px" />
+                  <RemoteImage src={img.url} alt="" fill className="object-cover" sizes="80px" />
                   <button
                     type="button"
                     onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { Modal, ModalContent } from "@/components/ds/modal";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import {
   type CardBrand,
   CARD_BRAND_LOGOS,
@@ -103,7 +103,7 @@ function NetworkLogo({
   if (brand === "visa") {
     return (
       <span className={`payment-3ds-visa-wordmark payment-3ds-visa-wordmark--${variant}`}>
-        <Image
+        <RemoteImage
           src={VISA_LOADER_LOGO}
           alt="Visa"
           fill
@@ -119,7 +119,7 @@ function NetworkLogo({
     <span
       className={`payment-3ds-logo-network${variant === "loader" ? " payment-3ds-logo-network--loader" : ""}`}
     >
-      <Image src={logo.src} alt={logo.alt} fill className="object-contain" sizes="52px" />
+      <RemoteImage src={logo.src} alt={logo.alt} fill className="object-contain" sizes="52px" />
     </span>
   );
 }

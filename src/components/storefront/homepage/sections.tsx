@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -199,7 +198,7 @@ export function HeroSliderSection({ config }: SectionProps) {
                   className="absolute inset-0"
                 >
                   {slide.image ? (
-                    <Image
+                    <RemoteImage
                       src={slide.image}
                       alt={slide.title}
                       fill
@@ -489,7 +488,7 @@ export function PromoBannerSection({ config }: SectionProps) {
         >
           {image ? (
             <div className="absolute inset-0">
-              <Image src={image} alt={title} fill className="object-cover" sizes="100vw" />
+              <RemoteImage src={image} alt={title} fill className="object-cover" sizes="100vw" />
               <div className="absolute inset-0 bg-background/82 backdrop-blur-[1px]" />
             </div>
           ) : (
@@ -594,7 +593,7 @@ export function PromoGridSection({ config }: SectionProps) {
                 </div>
                 {tile.image && (
                   <div className="store-promo-tile__image">
-                    <Image
+                    <RemoteImage
                       src={tile.image}
                       alt={tile.title}
                       fill
@@ -684,7 +683,7 @@ export function BrandStripSection({ config }: SectionProps) {
                 title={brand.name}
               >
                 {brand.logo ? (
-                  <Image
+                  <RemoteImage
                     src={brand.logo}
                     alt={brand.name}
                     width={100}

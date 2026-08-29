@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { cn } from "@/components/ds/utils";
 
 interface BrandLogoProps {
@@ -43,7 +43,7 @@ export function BrandLogo({
   return (
     <>
       <span className={cn("inline-flex items-center", dark && "dark:hidden")}>
-        <Image
+        <RemoteImage
           src={light}
           alt={name}
           width={width}
@@ -54,7 +54,7 @@ export function BrandLogo({
       </span>
       {dark ? (
         <span className="hidden items-center dark:inline-flex">
-          <Image
+          <RemoteImage
             src={dark}
             alt={name}
             width={width}

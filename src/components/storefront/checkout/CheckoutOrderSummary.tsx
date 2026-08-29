@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Shield, Headphones, RotateCcw, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { PaymentMethodBadges } from "@/components/storefront/cart/PaymentMethodBadges";
 import { splitCartItemName, getCartItemKey } from "@/lib/cart/display";
@@ -68,7 +68,7 @@ function CheckoutLineItem({ item }: { item: CartItem }) {
     <div className="flex gap-3 py-3">
       <div className="product-line-thumb product-line-thumb--sm relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border product-media-surface">
         {item.image ? (
-          <Image
+          <RemoteImage
             src={item.image}
             alt={title}
             fill

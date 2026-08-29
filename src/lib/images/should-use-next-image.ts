@@ -33,9 +33,19 @@ const OPTIMIZED_HOST_PATTERNS = [
   "**.wikimedia.org",
 ];
 
+/** Same-origin /public files — do not send through /_next/image. */
+export function isLocalPublicSrc(src: string): boolean {
+  return Boolean(src) && src.startsWith("/") && !src.startsWith("//");
+}
+
+/**
+ * Whether to use next/image optimization.
+ * Local `/brand/...` (and other public) paths use a plain <img> — the live
+ * optimizer often 400s while the raw file URL still works (e.g. magnifier).
+ */
 export function shouldUseNextImage(src: string): boolean {
   if (!src) return false;
-  if (src.startsWith("/")) return true;
+  if (isLocalPublicSrc(src)) return false;
 
   try {
     const { hostname, protocol } = new URL(src);

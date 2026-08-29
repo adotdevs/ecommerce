@@ -3,7 +3,7 @@
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { ArrowRight } from "lucide-react";
 import {
   CatalogFilters,
@@ -74,7 +74,7 @@ export function CategoryProductsView({
         <header className="catalog-heading">
           {category.image && (
             <div className="relative mb-4 h-28 w-full overflow-hidden rounded-2xl border border-border md:h-36">
-              <Image
+              <RemoteImage
                 src={category.image}
                 alt=""
                 fill

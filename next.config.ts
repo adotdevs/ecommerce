@@ -6,6 +6,13 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   transpilePackages: ["country-flag-icons", "@heroui/react", "@heroui/styles"],
   images: {
+    // Allow optimizing same-origin public assets when next/image is used
+    localPatterns: [
+      { pathname: "/brand/**" },
+      { pathname: "/uploads/**" },
+      { pathname: "/images/**" },
+      { pathname: "/**" },
+    ],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },

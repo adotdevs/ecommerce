@@ -44,12 +44,16 @@ export function resolveCatalogPricing(
 
   const maxCompare = comparePrices.length ? Math.max(...comparePrices) : null;
   const formCompare = toNumber(pricing.compareAtPrice);
-  const compareAtPrice =
-    maxCompare != null && maxCompare > minPrice
+  // When product-level compare-at is present, respect it (do not resurrect a
+  // stale max variant compare like 21.99 after the admin clears/changes Pricing).
+  const hasProductCompare = pricing.compareAtPrice != null;
+  const compareAtPrice = hasProductCompare
+    ? formCompare != null && formCompare > minPrice
+      ? formCompare
+      : undefined
+    : maxCompare != null && maxCompare > minPrice
       ? maxCompare
-      : formCompare != null && formCompare > minPrice
-        ? formCompare
-        : undefined;
+      : undefined;
 
   return {
     price: minPrice,

@@ -124,7 +124,30 @@ export const VARIANT_OPTION_PRESETS: Record<
 };
 
 export function optionKey(name: string) {
-  return name.trim().toLowerCase().replace(/\s+/g, "_");
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+/** Unique value key within an option group (avoids duplicate cart selections). */
+export function uniqueOptionValue(
+  label: string,
+  existingValues: string[],
+  preferred?: string
+): string {
+  const base =
+    (preferred?.trim() && optionKey(preferred)) ||
+    optionKey(label) ||
+    "value";
+  const taken = new Set(
+    existingValues.map((v) => v.trim().toLowerCase()).filter(Boolean)
+  );
+  if (!taken.has(base.toLowerCase())) return base;
+  let i = 2;
+  while (taken.has(`${base}-${i}`.toLowerCase())) i++;
+  return `${base}-${i}`;
 }
 
 export function defaultAttributeKey(group: VariantOptionGroup): string {
@@ -201,6 +224,14 @@ export function sanitizeOptionGroups(groups: VariantOptionGroup[]): VariantOptio
             hex: v.hex,
           }))
           .filter((v) => v.value && v.label)
+          .reduce<VariantOptionValue[]>((acc, v) => {
+            const exists = acc.some(
+              (x) => x.value.toLowerCase() === v.value.toLowerCase()
+            );
+            // Keep first only — duplicate keys break storefront selection / cart
+            if (!exists) acc.push(v);
+            return acc;
+          }, [])
           .map((v) => ({
             ...v,
             hex:

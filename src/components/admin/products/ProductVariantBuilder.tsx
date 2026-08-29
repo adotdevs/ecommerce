@@ -12,6 +12,7 @@ import {
   VARIANT_OPTION_PRESETS,
   newOptionGroup,
   optionKey,
+  uniqueOptionValue,
   generateVariantsFromOptions,
   applySmartVariantPrices,
 } from "@/lib/catalog/variant-options";
@@ -26,6 +27,8 @@ export interface AdminVariantRow {
   stock: string;
   attributes: Record<string, string>;
   media: ProductMediaItem[];
+  /** When true, this variant's images are merged into product.media */
+  syncImagesToProduct?: boolean;
 }
 
 interface ProductVariantBuilderProps {
@@ -35,8 +38,10 @@ interface ProductVariantBuilderProps {
   baseStock: string;
   optionGroups: VariantOptionGroup[];
   variants: AdminVariantRow[];
+  productMedia: ProductMediaItem[];
   onOptionGroupsChange: (groups: VariantOptionGroup[]) => void;
   onVariantsChange: (variants: AdminVariantRow[]) => void;
+  onProductMediaChange: (media: ProductMediaItem[]) => void;
   onBasePriceChange?: (price: string) => void;
   accessToken?: string;
   productName?: string;
@@ -49,8 +54,10 @@ export function ProductVariantBuilder({
   baseStock,
   optionGroups,
   variants,
+  productMedia,
   onOptionGroupsChange,
   onVariantsChange,
+  onProductMediaChange,
   onBasePriceChange,
   accessToken = "",
   productName = "",
@@ -86,23 +93,44 @@ export function ProductVariantBuilder({
     onOptionGroupsChange(optionGroups.filter((_, i) => i !== index));
   };
 
-  const addValueToGroup = (groupIndex: number) => {
-    const g = optionGroups[groupIndex];
-    updateGroup(groupIndex, {
-      values: [...g.values, { value: "", label: "" }],
-    });
-  };
-
   const updateValue = (
     groupIndex: number,
     valueIndex: number,
     patch: Partial<{ value: string; label: string; hex?: string }>
   ) => {
     const g = optionGroups[groupIndex];
-    const values = g.values.map((v, i) =>
-      i === valueIndex ? { ...v, ...patch } : v
-    );
+    const values = g.values.map((v, i) => {
+      if (i !== valueIndex) return v;
+      const next = { ...v, ...patch };
+      if (patch.label != null && patch.value === undefined) {
+        const others = g.values
+          .filter((_, j) => j !== valueIndex)
+          .map((x) => x.value);
+        const autoFromOldLabel = optionKey(v.label || "");
+        const shouldRefreshKey =
+          !v.value.trim() ||
+          v.value === autoFromOldLabel ||
+          v.value === optionKey(patch.label);
+        if (shouldRefreshKey) {
+          next.value = uniqueOptionValue(patch.label, others);
+        }
+      }
+      if (patch.value != null) {
+        const others = g.values
+          .filter((_, j) => j !== valueIndex)
+          .map((x) => x.value);
+        next.value = uniqueOptionValue(next.label || patch.value, others, patch.value);
+      }
+      return next;
+    });
     updateGroup(groupIndex, { values });
+  };
+
+  const addValueToGroup = (groupIndex: number) => {
+    const g = optionGroups[groupIndex];
+    updateGroup(groupIndex, {
+      values: [...g.values, { value: "", label: "" }],
+    });
   };
 
   const removeValue = (groupIndex: number, valueIndex: number) => {
@@ -155,15 +183,93 @@ export function ProductVariantBuilder({
                 sortOrder: m.sortOrder ?? i,
               }))
             : prev?.media ?? [],
+          syncImagesToProduct: prev?.syncImagesToProduct,
         };
       })
     );
   };
 
   const updateVariant = (index: number, patch: Partial<AdminVariantRow>) => {
-    onVariantsChange(
-      variants.map((v, i) => (i === index ? { ...v, ...patch } : v))
-    );
+    const prev = variants[index];
+    const next = variants.map((v, i) => (i === index ? { ...v, ...patch } : v));
+    onVariantsChange(next);
+
+    if (patch.syncImagesToProduct !== undefined || patch.media !== undefined) {
+      applyVariantImageSync(prev, next[index], next);
+    }
+  };
+
+  const urlsFromMedia = (media: ProductMediaItem[] | undefined) =>
+    (media ?? []).map((m) => m.url.trim()).filter(Boolean);
+
+  const applyVariantImageSync = (
+    prev: AdminVariantRow,
+    row: AdminVariantRow,
+    all: AdminVariantRow[]
+  ) => {
+    const stillSyncedByOthers = (url: string) =>
+      all.some(
+        (v) =>
+          v.id !== row.id &&
+          v.syncImagesToProduct &&
+          urlsFromMedia(v.media).includes(url)
+      );
+
+    let media = [...productMedia];
+
+    // Uncheck: drop this variant's images from product (unless another synced variant keeps them)
+    if (prev.syncImagesToProduct && !row.syncImagesToProduct) {
+      const drop = new Set(urlsFromMedia(prev.media));
+      media = media.filter((m) => {
+        const url = m.url.trim();
+        if (!drop.has(url)) return true;
+        return stillSyncedByOthers(url);
+      });
+    }
+
+    // Media changed while synced: remove old URLs that left this variant
+    if (
+      row.syncImagesToProduct &&
+      patchMediaChanged(prev.media, row.media)
+    ) {
+      const nextUrls = new Set(urlsFromMedia(row.media));
+      const oldOnly = urlsFromMedia(prev.media).filter((u) => !nextUrls.has(u));
+      if (oldOnly.length) {
+        const drop = new Set(oldOnly);
+        media = media.filter((m) => {
+          const url = m.url.trim();
+          if (!drop.has(url)) return true;
+          return stillSyncedByOthers(url);
+        });
+      }
+    }
+
+    // Check / synced media update: append missing images
+    if (row.syncImagesToProduct) {
+      const existing = new Set(media.map((m) => m.url.trim()));
+      for (const source of row.media ?? []) {
+        const url = source.url.trim();
+        if (!url || existing.has(url)) continue;
+        media.push({
+          url: source.url,
+          alt: source.alt ?? "",
+          type: source.type ?? "image",
+          sortOrder: media.length,
+        });
+        existing.add(url);
+      }
+    }
+
+    onProductMediaChange(media.map((m, i) => ({ ...m, sortOrder: i })));
+  };
+
+  const patchMediaChanged = (
+    a: ProductMediaItem[] | undefined,
+    b: ProductMediaItem[] | undefined
+  ) => {
+    const au = urlsFromMedia(a).join("\0");
+    const bu = urlsFromMedia(b).join("\0");
+    return au !== bu;
   };
 
   const applySmartPrices = (basePriceStr: string) => {
@@ -201,6 +307,7 @@ export function ProductVariantBuilder({
         stock: variants[i].stock,
         attributes: variants[i].attributes,
         media: variants[i].media ?? [],
+        syncImagesToProduct: variants[i].syncImagesToProduct,
       }))
     );
     onBasePriceChange?.(basePriceStr);
@@ -299,7 +406,10 @@ export function ProductVariantBuilder({
 
                   <div className="space-y-2">
                     {group.values.map((val, vi) => (
-                      <div key={vi} className="flex flex-wrap items-center gap-2">
+                      <div
+                        key={`${gi}-${vi}-${val.value || "new"}`}
+                        className="flex flex-wrap items-center gap-2"
+                      >
                         {group.type === "color" && (
                           <input
                             type="color"
@@ -312,22 +422,20 @@ export function ProductVariantBuilder({
                         )}
                         <Input
                           value={val.label}
-                          onChange={(e) => {
-                            const label = e.target.value;
-                            updateValue(gi, vi, {
-                              label,
-                              value:
-                                val.value || optionKey(label) || label.toLowerCase(),
-                            });
-                          }}
+                          onChange={(e) =>
+                            updateValue(gi, vi, { label: e.target.value })
+                          }
                           placeholder="Display label"
                           className="max-w-[140px]"
                         />
                         <Input
                           value={val.value}
-                          onChange={(e) => updateValue(gi, vi, { value: e.target.value })}
+                          onChange={(e) =>
+                            updateValue(gi, vi, { value: e.target.value })
+                          }
                           placeholder="Value key"
                           className="max-w-[120px] text-[12px]"
+                          title="Internal key — must be unique within this option"
                         />
                         <Button
                           type="button"
@@ -411,6 +519,9 @@ export function ProductVariantBuilder({
                   <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="pb-2 pr-3">Variant</th>
                     <th className="pb-2 pr-3">Images</th>
+                    <th className="pb-2 pr-3" title="Add this variant’s images to product Images">
+                      In product
+                    </th>
                     <th className="pb-2 pr-3">SKU</th>
                     <th className="pb-2 pr-3">Price</th>
                     <th className="pb-2 pr-3">Compare</th>
@@ -428,6 +539,22 @@ export function ProductVariantBuilder({
                           productName={productName}
                           onChange={(media) => updateVariant(i, { media })}
                         />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border"
+                            checked={Boolean(v.syncImagesToProduct)}
+                            disabled={!(v.media ?? []).length}
+                            onChange={(e) =>
+                              updateVariant(i, {
+                                syncImagesToProduct: e.target.checked,
+                              })
+                            }
+                          />
+                          Add
+                        </label>
                       </td>
                       <td className="py-2 pr-3">
                         <Input

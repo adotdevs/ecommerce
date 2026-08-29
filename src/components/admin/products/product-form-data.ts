@@ -142,22 +142,32 @@ export function productToFormData(product: Record<string, any>): ProductFormData
         stock: number;
         attributes: Record<string, string>;
         media?: ProductMediaItem[];
-      }) => ({
-        id: String(v.id),
-        name: String(v.name),
-        sku: String(v.sku),
-        price: String(v.price),
-        compareAtPrice:
-          v.compareAtPrice != null ? String(v.compareAtPrice) : "",
-        stock: String(v.stock),
-        attributes: v.attributes ?? {},
-        media: (v.media ?? []).map((m, i) => ({
+      }) => {
+        const media = (v.media ?? []).map((m, i) => ({
           url: m.url,
           alt: m.alt ?? "",
           type: m.type ?? "image",
           sortOrder: m.sortOrder ?? i,
-        })),
-      })
+        }));
+        const productUrls = new Set(
+          (product.media ?? []).map((m: ProductMediaItem) => m.url?.trim()).filter(Boolean)
+        );
+        const syncImagesToProduct =
+          media.length > 0 &&
+          media.every((m) => productUrls.has(m.url.trim()));
+        return {
+          id: String(v.id),
+          name: String(v.name),
+          sku: String(v.sku),
+          price: String(v.price),
+          compareAtPrice:
+            v.compareAtPrice != null ? String(v.compareAtPrice) : "",
+          stock: String(v.stock),
+          attributes: v.attributes ?? {},
+          media,
+          syncImagesToProduct,
+        };
+      }
     ),
     pricing: (() => {
       const variants = (product.variants ?? []) as {
@@ -172,10 +182,17 @@ export function productToFormData(product: Record<string, any>): ProductFormData
         },
         variants
       );
+      // Prefer the saved product-level compare-at so Pricing step edits stick
+      // after reload (variant max compare must not silently win).
+      const savedCompare = product.pricing?.compareAtPrice;
       return {
         price: String(resolved.price),
         compareAtPrice:
-          resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
+          savedCompare != null && Number(savedCompare) > 0
+            ? String(savedCompare)
+            : resolved.compareAtPrice != null
+              ? String(resolved.compareAtPrice)
+              : "",
         currency: resolved.currency ?? "USD",
       };
     })(),
@@ -240,8 +257,12 @@ export function syncFormPricingFromVariants(
 
   return {
     price: String(resolved.price),
-    compareAtPrice:
-      resolved.compareAtPrice != null ? String(resolved.compareAtPrice) : "",
+    // Keep an explicit Pricing-step compare-at; only derive from variants when empty
+    compareAtPrice: pricing.compareAtPrice.trim()
+      ? pricing.compareAtPrice.trim()
+      : resolved.compareAtPrice != null
+        ? String(resolved.compareAtPrice)
+        : "",
     currency: resolved.currency ?? pricing.currency ?? "USD",
   };
 }
@@ -263,10 +284,10 @@ export function formToPayload(form: ProductFormData) {
       name: v.name,
       sku: v.sku.trim() || fallbackSku,
       price: parseFloat(v.price) || parseFloat(form.pricing.price) || 0,
-      compareAtPrice: v.compareAtPrice.trim()
-        ? parseFloat(v.compareAtPrice)
-        : compareAt
-          ? parseFloat(compareAt)
+      compareAtPrice: compareAt
+        ? parseFloat(compareAt)
+        : v.compareAtPrice.trim()
+          ? parseFloat(v.compareAtPrice)
           : undefined,
       stock: parseInt(v.stock) || 0,
       attributes: v.attributes,

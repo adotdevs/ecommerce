@@ -147,6 +147,23 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
     });
   };
 
+  const handleListingCompareAtChange = (compareAtPrice: string) => {
+    setForm((f) => {
+      if (!f.variants.length) {
+        return { ...f, pricing: { ...f.pricing, compareAtPrice } };
+      }
+      const variants = f.variants.map((v) => ({ ...v, compareAtPrice }));
+      return {
+        ...f,
+        variants,
+        pricing: {
+          ...f.pricing,
+          compareAtPrice,
+        },
+      };
+    });
+  };
+
   const handleNameChange = (name: string) => {
     setForm((f) => ({
       ...f,
@@ -719,8 +736,10 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
           baseStock={form.inventory.stock}
           optionGroups={form.variantOptions}
           variants={form.variants}
+          productMedia={form.media}
           onOptionGroupsChange={(groups) => update("variantOptions", groups)}
           onVariantsChange={handleVariantsChange}
+          onProductMediaChange={(media) => update("media", media)}
           onBasePriceChange={(price) =>
             update("pricing", { ...form.pricing, price })
           }
@@ -761,12 +780,7 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
                   step="0.01"
                   min="0"
                   value={form.pricing.compareAtPrice}
-                  onChange={(e) =>
-                    update("pricing", {
-                      ...form.pricing,
-                      compareAtPrice: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleListingCompareAtChange(e.target.value)}
                   placeholder="Original price for deals"
                 />
                 {isOnSale && (

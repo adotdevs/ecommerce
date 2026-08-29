@@ -84,10 +84,14 @@ export const PATCH = withAuth(async (request: NextRequest, { params }) => {
     if (rest.pricing || rest.variants !== undefined) {
       const variants =
         rest.variants !== undefined ? rest.variants : existing.variants;
+      const compareAtFromBody =
+        rest.pricing &&
+        Object.prototype.hasOwnProperty.call(rest.pricing, "compareAtPrice")
+          ? rest.pricing.compareAtPrice ?? undefined
+          : existing.pricing.compareAtPrice;
       const basePricing = {
         price: rest.pricing?.price ?? existing.pricing.price,
-        compareAtPrice:
-          rest.pricing?.compareAtPrice ?? existing.pricing.compareAtPrice,
+        compareAtPrice: compareAtFromBody,
         currency: rest.pricing?.currency ?? existing.pricing.currency,
       };
       update.pricing = resolveCatalogPricing(basePricing, variants);

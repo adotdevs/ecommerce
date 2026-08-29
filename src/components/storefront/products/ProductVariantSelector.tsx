@@ -24,12 +24,21 @@ export function ProductVariantSelector({
 }: ProductVariantSelectorProps) {
   const groups = useMemo(() => {
     if (variantOptions.length > 0) {
-      return variantOptions.map((g) => ({
-        key: inferAttributeKeyForGroup(g, variants),
-        name: g.name,
-        type: g.type,
-        values: g.values,
-      }));
+      return variantOptions.map((g) => {
+        const seen = new Set<string>();
+        const values = g.values.filter((v) => {
+          const key = v.value.trim().toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return {
+          key: inferAttributeKeyForGroup(g, variants),
+          name: g.name,
+          type: g.type,
+          values,
+        };
+      });
     }
     const attrMap = new Map<string, Set<string>>();
     for (const v of variants) {
@@ -94,14 +103,14 @@ export function ProductVariantSelector({
 
             {group.type === "color" ? (
               <div className="flex flex-wrap gap-2.5">
-                {group.values.map((opt) => {
+                {group.values.map((opt, optIndex) => {
                   const isAvailable = available.has(opt.value);
                   const isSelected = selectedVal === opt.value;
                   const hex = opt.hex ?? "#e5e7eb";
 
                   return (
                     <button
-                      key={opt.value}
+                      key={`${group.key}-${opt.value}-${optIndex}`}
                       type="button"
                       title={opt.label}
                       disabled={!isAvailable}
@@ -140,13 +149,13 @@ export function ProductVariantSelector({
               </div>
             ) : group.type === "shoe_size" || group.type === "apparel_size" ? (
               <div className="flex flex-wrap gap-2">
-                {group.values.map((opt) => {
+                {group.values.map((opt, optIndex) => {
                   const isAvailable = available.has(opt.value);
                   const isSelected = selectedVal === opt.value;
 
                   return (
                     <button
-                      key={opt.value}
+                      key={`${group.key}-${opt.value}-${optIndex}`}
                       type="button"
                       disabled={!isAvailable}
                       onClick={() => handleSelect(group.key, opt.value)}
@@ -166,13 +175,13 @@ export function ProductVariantSelector({
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {group.values.map((opt) => {
+                {group.values.map((opt, optIndex) => {
                   const isAvailable = available.has(opt.value);
                   const isSelected = selectedVal === opt.value;
 
                   return (
                     <button
-                      key={opt.value}
+                      key={`${group.key}-${opt.value}-${optIndex}`}
                       type="button"
                       disabled={!isAvailable}
                       onClick={() => handleSelect(group.key, opt.value)}

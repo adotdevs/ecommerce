@@ -67,6 +67,7 @@ export function VariantQuickAddModal({
       price: selectedVariant.price,
       quantity: 1,
       maxQuantity: selectedVariant.stock,
+      freeShipping: Boolean(product.freeShipping),
     });
     if (ok) onOpenChange(false);
   };

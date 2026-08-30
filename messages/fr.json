@@ -32,7 +32,9 @@
     "brands": "Marques",
     "viewAll": "Voir tous les résultats pour",
     "noSuggestions": "Aucune suggestion - essayez un autre mot-clé",
-    "searching": "Recherche en cours…"
+    "searching": "Recherche en cours…",
+    "recentSearches": "Recherches récentes",
+    "clearRecent": "Effacer"
   },
   "header": {
     "wishlist": "Liste de souhaits",
@@ -47,7 +49,8 @@
     "selectLanguage": "Sélectionner la langue",
     "selectCurrency": "Sélectionner la devise",
     "deliverTo": "Livrer à",
-    "freeShippingPromo": "Livraison gratuite sur les commandes de plus de {amount}"
+    "freeShippingPromo": "Livraison gratuite sur les commandes de plus de {amount}",
+    "freeShippingAlways": "Livraison gratuite sur toutes les commandes"
   },
   "theme": {
     "title": "Préférez-vous le mode sombre ?",
@@ -172,7 +175,8 @@
     "bestSeller": "Meilleure vente",
     "topRated": "Les mieux notés",
     "newArrival": "Nouvelle arrivée",
-    "percentOff": "{percent}% DE RÉDUCTION"
+    "percentOff": "{percent}% DE RÉDUCTION",
+    "freeDelivery": "Livraison gratuite"
   },
   "catalog": {
     "breadcrumbHome": "Accueil",
@@ -222,7 +226,8 @@
     "allCategoriesCta": "Toutes les catégories",
     "breadcrumbNav": "Fil d'Ariane",
     "previous": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "freeShipping": "Livraison gratuite"
   },
   "reviews": {
     "tab": "Avis",

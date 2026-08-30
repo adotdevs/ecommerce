@@ -32,7 +32,9 @@
     "brands": "Brands",
     "viewAll": "View all results for",
     "noSuggestions": "No suggestions — try another keyword",
-    "searching": "Searching…"
+    "searching": "Searching…",
+    "recentSearches": "Recent searches",
+    "clearRecent": "Clear"
   },
   "header": {
     "wishlist": "Wishlist",
@@ -47,7 +49,8 @@
     "selectLanguage": "Select language",
     "selectCurrency": "Select currency",
     "deliverTo": "Deliver to",
-    "freeShippingPromo": "Free shipping on orders over {amount}"
+    "freeShippingPromo": "Free shipping on orders over {amount}",
+    "freeShippingAlways": "Free shipping on all orders"
   },
   "theme": {
     "title": "Prefer dark mode?",
@@ -172,7 +175,8 @@
     "bestSeller": "Best Seller",
     "topRated": "Top Rated",
     "newArrival": "New Arrival",
-    "percentOff": "{percent}% OFF"
+    "percentOff": "{percent}% OFF",
+    "freeDelivery": "Free delivery"
   },
   "catalog": {
     "breadcrumbHome": "Home",
@@ -222,7 +226,8 @@
     "allCategoriesCta": "All categories",
     "breadcrumbNav": "Breadcrumb",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "freeShipping": "Free delivery"
   },
   "reviews": {
     "tab": "Reviews",

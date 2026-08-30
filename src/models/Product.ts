@@ -83,6 +83,8 @@ export interface IProduct extends Document {
   isNewArrival: boolean;
   onSale: boolean;
   flashSale: boolean;
+  /** When true, this product ships free if every cart line also has free shipping. */
+  freeShipping: boolean;
   rating: {
     average: number;
     count: number;
@@ -188,6 +190,7 @@ const ProductSchema = new Schema<IProduct>(
     isNewArrival: { type: Boolean, default: false },
     onSale: { type: Boolean, default: false },
     flashSale: { type: Boolean, default: false },
+    freeShipping: { type: Boolean, default: false },
     rating: {
       average: { type: Number, default: 0 },
       count: { type: Number, default: 0 },

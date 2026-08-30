@@ -9,9 +9,10 @@ import { useCartStore } from "@/stores/cart-store";
 import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCartStockLimits } from "@/hooks/use-cart-stock-limits";
 import { calculateCartTotals } from "@/lib/cart/display";
-import { buildShippingOptions } from "@/lib/checkout/shipping";
+import { buildShippingOptions, cartAllItemsHaveFreeShipping } from "@/lib/checkout/shipping";
 import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { useTaxRatePercent } from "@/components/providers/TaxRateContext";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import { CartItem } from "@/components/storefront/cart/CartItem";
 import { CartPageSkeleton } from "@/components/storefront/cart/CartPageSkeleton";
@@ -32,6 +33,7 @@ export default function CartPage() {
   const removeItem = useCartStore((s) => s.removeItem);
   const { country } = useDisplayPreferences();
   const shippingSettings = useShippingSettings();
+  const taxRatePercent = useTaxRatePercent();
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -51,15 +53,14 @@ export default function CartPage() {
     [appliedPromo, subtotalUsd]
   );
 
-  const { shippingUsd, taxUsd, totalUsd } = useMemo(
-    () =>
-      calculateCartTotals(
-        subtotalUsd,
-        discountUsd,
-        buildShippingOptions(country, shippingSettings)
-      ),
-    [subtotalUsd, discountUsd, country, shippingSettings]
-  );
+  const { shippingUsd, taxUsd, totalUsd } = useMemo(() => {
+    const allItemsHaveFreeShipping = cartAllItemsHaveFreeShipping(items);
+    return calculateCartTotals(subtotalUsd, discountUsd, {
+      ...buildShippingOptions(country, shippingSettings),
+      allItemsHaveFreeShipping,
+      taxRatePercent,
+    });
+  }, [subtotalUsd, discountUsd, country, shippingSettings, items, taxRatePercent]);
 
   const itemsSummary = useMemo(
     () =>
@@ -110,7 +111,11 @@ export default function CartPage() {
           </Button>
         </div>
 
-        <FreeShippingProgress subtotalUsd={subtotalUsd} className="mt-6" />
+        <FreeShippingProgress
+          subtotalUsd={subtotalUsd}
+          allItemsHaveFreeShipping={cartAllItemsHaveFreeShipping(items)}
+          className="mt-6"
+        />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">

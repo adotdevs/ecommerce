@@ -84,6 +84,7 @@ export function CatalogFilters({
       maxPrice: searchParams.get("maxPrice") ?? "",
       onSale: searchParams.get("onSale") === "1",
       featured: searchParams.get("featured") === "1",
+      freeShipping: searchParams.get("freeShipping") === "1",
       sort: (searchParams.get("sort") as SortValue) || "newest",
       q: searchParams.get("q") ?? "",
       minRating: searchParams.get("minRating") ?? "",
@@ -172,6 +173,7 @@ export function CatalogFilters({
     current.maxPrice,
     current.onSale,
     current.featured,
+    current.freeShipping,
     current.minRating,
     current.availability,
   ].filter(Boolean).length;
@@ -448,6 +450,24 @@ export function CatalogFilters({
           </button>
         </div>
 
+        <div className="catalog-filter-toggle catalog-filter-desktop-only">
+          <span>{t("freeShipping")}</span>
+          <button
+            type="button"
+            className="catalog-switch"
+            data-on={current.freeShipping ? "true" : "false"}
+            aria-pressed={current.freeShipping}
+            aria-label={t("freeShipping")}
+            onClick={() =>
+              updateParams({
+                freeShipping: current.freeShipping ? null : "1",
+              })
+            }
+          >
+            <span className="catalog-switch__thumb" />
+          </button>
+        </div>
+
         <div className="catalog-filter-sort">
           <span className="catalog-filter-sort__label">{t("sortBy")}:</span>
           <FilterDropdown
@@ -540,6 +560,15 @@ export function CatalogFilters({
               {t("onSale")} <X className="h-3 w-3" />
             </button>
           )}
+          {current.freeShipping && (
+            <button
+              type="button"
+              className="catalog-chip"
+              onClick={() => updateParams({ freeShipping: null })}
+            >
+              {t("freeShipping")} <X className="h-3 w-3" />
+            </button>
+          )}
           {current.featured && (
             <button
               type="button"
@@ -595,6 +624,25 @@ export function CatalogFilters({
                     aria-pressed={current.onSale}
                     onClick={() =>
                       updateParams({ onSale: current.onSale ? null : "1" })
+                    }
+                  >
+                    <span className="catalog-switch__thumb" />
+                  </button>
+                </div>
+              </MobileFilterSection>
+
+              <MobileFilterSection title={t("freeShipping")}>
+                <div className="catalog-filter-toggle">
+                  <span>{t("freeShipping")}</span>
+                  <button
+                    type="button"
+                    className="catalog-switch"
+                    data-on={current.freeShipping ? "true" : "false"}
+                    aria-pressed={current.freeShipping}
+                    onClick={() =>
+                      updateParams({
+                        freeShipping: current.freeShipping ? null : "1",
+                      })
                     }
                   >
                     <span className="catalog-switch__thumb" />

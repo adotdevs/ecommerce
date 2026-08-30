@@ -1,6 +1,9 @@
 import type { CartItem } from "@/types";
-import { calculateCheckoutTotals } from "@/lib/checkout/shipping";
-import type { ShippingCalculationOptions } from "@/lib/shipping/settings";
+import {
+  calculateCheckoutTotals,
+  type CheckoutTotalsOptions,
+} from "@/lib/checkout/shipping";
+import { DEFAULT_TAX_RATE_PERCENT, taxRateFraction } from "@/lib/tax/settings";
 
 const VARIANT_SEPARATOR = " — ";
 
@@ -27,12 +30,13 @@ export function getCartItemKey(item: CartItem): string {
 export const FREE_SHIPPING_THRESHOLD_USD = 100;
 /** @deprecated Use shipping settings instead. */
 export const STANDARD_SHIPPING_USD = 9.99;
-export const ESTIMATED_TAX_RATE = 0.08;
+/** @deprecated Prefer site settings taxRatePercent via useTaxRatePercent / normalizeTaxRatePercent. */
+export const ESTIMATED_TAX_RATE = taxRateFraction(DEFAULT_TAX_RATE_PERCENT);
 
 export function calculateCartTotals(
   subtotalUsd: number,
   discountUsd = 0,
-  options?: ShippingCalculationOptions
+  options?: CheckoutTotalsOptions
 ) {
   return calculateCheckoutTotals(subtotalUsd, "standard", discountUsd, options);
 }

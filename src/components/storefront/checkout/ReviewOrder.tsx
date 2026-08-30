@@ -31,6 +31,7 @@ interface ReviewOrderProps {
   subtotalUsd: number;
   totalUsd: number;
   loading: boolean;
+  allItemsHaveFreeShipping?: boolean;
   onEditShipping: () => void;
   onEditPayment: () => void;
   onPlaceOrder: () => void;
@@ -70,6 +71,7 @@ export function ReviewOrder({
   subtotalUsd,
   totalUsd,
   loading,
+  allItemsHaveFreeShipping = false,
   onEditShipping,
   onEditPayment,
   onPlaceOrder,
@@ -81,7 +83,10 @@ export function ReviewOrder({
   const shippingPrice = calculateShippingUsd(
     subtotalUsd,
     form.shippingMethod,
-    buildShippingOptions(form.country, shippingSettings)
+    {
+      ...buildShippingOptions(form.country, shippingSettings),
+      allItemsHaveFreeShipping,
+    }
   );
   const shippingFmt = useFormattedPrice(shippingPrice);
 

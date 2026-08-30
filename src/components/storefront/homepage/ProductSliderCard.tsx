@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { RemoteImage } from "@/components/storefront/RemoteImage";
-import { ShoppingBag, Check } from "lucide-react";
+import { ShoppingBag, Check, Truck } from "lucide-react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/components/ds/utils";
 import type { ProductCardData } from "@/lib/catalog/product-card";
 import { isProductCardInStock } from "@/lib/catalog/product-card";
+import { formatCategoryName } from "@/lib/utils";
 
 interface ProductSliderCardProps {
   product: ProductCardData;
@@ -27,6 +28,7 @@ export function ProductSliderCard({
   className,
 }: ProductSliderCardProps) {
   const t = useTranslations("common");
+  const tProducts = useTranslations("products");
   const { addToCart, justAdded } = useAddToCart();
   const image = product.media?.[0];
   const outOfStock = !isProductCardInStock(product);
@@ -50,11 +52,15 @@ export function ProductSliderCard({
       price: product.pricing.price,
       quantity: 1,
       maxQuantity: product.inventory?.stock,
+      freeShipping: Boolean(product.freeShipping),
     });
   };
 
   const displayNew =
     showNewBadge || Boolean(product.isNewArrival);
+  const categoryLabel = product.categoryNames?.[0]
+    ? formatCategoryName(product.categoryNames[0])
+    : product.brandName;
 
   return (
     <article
@@ -88,6 +94,23 @@ export function ProductSliderCard({
           <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
             {product.name}
           </h3>
+          {(categoryLabel || product.freeShipping) && (
+            <div className="flex w-full items-center justify-between gap-2">
+              {categoryLabel ? (
+                <p className="min-w-0 truncate text-[11px] text-muted-foreground">
+                  {categoryLabel}
+                </p>
+              ) : (
+                <span />
+              )}
+              {product.freeShipping && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal-700">
+                  <Truck className="h-2.5 w-2.5" aria-hidden />
+                  {tProducts("freeDelivery")}
+                </span>
+              )}
+            </div>
+          )}
           {reviewCount > 0 && (
             <StarRating rating={rating} count={reviewCount} className="scale-90 origin-left" />
           )}

@@ -138,6 +138,7 @@ const productFieldsSchema = z.object({
   isNewArrival: z.boolean().default(false),
   onSale: z.boolean().default(false),
   flashSale: z.boolean().default(false),
+  freeShipping: z.boolean().default(false),
   seo: z
     .object({
       title: z.string().optional(),

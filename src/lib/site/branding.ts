@@ -1,5 +1,6 @@
 import type { SiteSettingsPublic } from "@/types";
 import { normalizeShippingSettings } from "@/lib/shipping/settings";
+import { normalizeTaxRatePercent } from "@/lib/tax/settings";
 import { normalizeContactLocations } from "@/lib/site/contact-locations";
 
 type RawSiteSettings = {
@@ -50,6 +51,7 @@ type RawSiteSettings = {
     children?: { label?: string; href?: string }[];
   }[];
   shipping?: unknown;
+  taxRatePercent?: unknown;
 } | null;
 
 export function resolveStoreName(settings: RawSiteSettings): string {
@@ -166,5 +168,6 @@ export function toPublicSiteSettings(
     seo,
     navigation,
     shipping: normalizeShippingSettings(settings.shipping),
+    taxRatePercent: normalizeTaxRatePercent(settings.taxRatePercent),
   };
 }

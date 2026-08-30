@@ -16,6 +16,10 @@ import {
   type ShippingCountryRule,
   type ShippingSettings,
 } from "@/lib/shipping/settings";
+import {
+  DEFAULT_TAX_RATE_PERCENT,
+  normalizeTaxRatePercent,
+} from "@/lib/tax/settings";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast, toastError } from "@/hooks/use-toast";
 
@@ -51,6 +55,8 @@ export default function AdminSettingsPage() {
   const [newLang, setNewLang] = useState({ code: "", label: "", nativeLabel: "" });
   const [shipping, setShipping] = useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
   const [newCountryRule, setNewCountryRule] = useState("");
+  const [taxRatePercent, setTaxRatePercent] = useState(DEFAULT_TAX_RATE_PERCENT);
+  const [taxSaved, setTaxSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/v1/settings/site")
@@ -83,6 +89,9 @@ export default function AdminSettingsPage() {
           }
           if (d.data.shipping) {
             setShipping(normalizeShippingSettings(d.data.shipping));
+          }
+          if (d.data.taxRatePercent != null) {
+            setTaxRatePercent(normalizeTaxRatePercent(d.data.taxRatePercent));
           }
           if (Array.isArray(d.data.offers) && d.data.offers.length) {
             const lines = d.data.offers.map(String);
@@ -306,6 +315,38 @@ export default function AdminSettingsPage() {
       setTimeout(() => setSaved(false), 2000);
     } else {
       toastError(data.error ?? "Failed to save shipping settings");
+    }
+  };
+
+  const handleSaveTax = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken) {
+      toastError("You must be logged in to save tax settings.");
+      return;
+    }
+    const rate = normalizeTaxRatePercent(taxRatePercent);
+    const res = await fetch("/api/v1/admin/settings/site", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ taxRatePercent: rate }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setTaxRatePercent(
+        normalizeTaxRatePercent(data.data?.taxRatePercent ?? rate)
+      );
+      setTaxSaved(true);
+      toast({
+        variant: "success",
+        title: "Tax saved",
+        description: `Checkout tax rate set to ${normalizeTaxRatePercent(data.data?.taxRatePercent ?? rate)}%.`,
+      });
+      setTimeout(() => setTaxSaved(false), 2000);
+    } else {
+      toastError(data.error ?? "Failed to save tax settings");
     }
   };
 
@@ -682,6 +723,42 @@ export default function AdminSettingsPage() {
             </div>
 
             <Button type="submit">{saved ? "Saved!" : "Save shipping settings"}</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tax</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveTax} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Estimated sales tax shown on cart and checkout. Applied as a
+              percent of the taxable subtotal (after discounts, before
+              shipping).
+            </p>
+            <div className="max-w-xs">
+              <Label htmlFor="tax-rate-percent">Tax rate (%)</Label>
+              <Input
+                id="tax-rate-percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={taxRatePercent}
+                onChange={(e) =>
+                  setTaxRatePercent(Number(e.target.value))
+                }
+              />
+              <p className="mt-1.5 text-[12px] text-muted-foreground">
+                Example: <strong>8</strong> = 8%. Use <strong>0</strong> for no
+                tax.
+              </p>
+            </div>
+            <Button type="submit">
+              {taxSaved ? "Saved!" : "Save tax settings"}
+            </Button>
           </form>
         </CardContent>
       </Card>

@@ -35,7 +35,8 @@
     "selectCountry": "ملک اور علاقہ منتخب کریں",
     "selectLanguage": "زبان منتخب کریں",
     "selectCurrency": "کرنسی منتخب کریں",
-    "deliverTo": "ترسیل"
+    "deliverTo": "ترسیل",
+    "freeShippingAlways": "تمام آرڈرز پر مفت شپنگ"
   },
   "theme": {
     "title": "ڈارک موڈ پسند ہے؟",
@@ -84,7 +85,8 @@
     "bestSeller": "بہترین فروخت",
     "topRated": "اعلی درجہ",
     "newArrival": "نیا",
-    "percentOff": "{percent}% چھوٹ"
+    "percentOff": "{percent}% چھوٹ",
+    "freeDelivery": "مفت ڈیلیوری"
   },
   "cart": {
     "title": "شاپنگ کارٹ",
@@ -233,6 +235,11 @@
     "allCategoriesCta": "تمام زمرے",
     "breadcrumbNav": "ہوم",
     "previous": "پچھلا",
-    "next": "اگلا"
+    "next": "اگلا",
+    "freeShipping": "مفت ڈیلیوری"
+  },
+  "search": {
+    "recentSearches": "حالیہ تلاشیں",
+    "clearRecent": "صاف کریں"
   }
 }

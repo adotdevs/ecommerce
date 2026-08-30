@@ -8,11 +8,13 @@
     "showingFor": "Overeenkomsten voor \"{query}\"",
     "found": "{count} producten gevonden",
     "noMatchesFor": "Geen producten gevonden voor \"{query}\".",
-    "noMatchesHint": "Niets in de catalogus komt voldoende overeen. Probeer een andere spelling of bekijk de categorieën."
+    "noMatchesHint": "Niets in de catalogus komt voldoende overeen. Probeer een andere spelling of bekijk de categorieën.",
+    "freeDelivery": "Gratis bezorging"
   },
   "catalog": {
     "previous": "Vorige",
-    "next": "Volgende"
+    "next": "Volgende",
+    "freeShipping": "Gratis bezorging"
   },
   "reviews": {
     "shopProduct": "{name} shoppen",
@@ -43,5 +45,12 @@
       "date": "Datum",
       "card": "Kaartnummer"
     }
+  },
+  "header": {
+    "freeShippingAlways": "Gratis verzending op alle bestellingen"
+  },
+  "search": {
+    "recentSearches": "Recente zoekopdrachten",
+    "clearRecent": "Wissen"
   }
 }

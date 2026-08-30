@@ -6,22 +6,37 @@ import { useFormattedPrice, useFormattedPromoPrice } from "@/hooks/use-formatted
 import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
 import { buildShippingOptions } from "@/lib/checkout/shipping";
-import { resolveFreeShippingThresholdUsd } from "@/lib/shipping/settings";
+import {
+  isStandardShippingAlwaysFree,
+  resolveFreeShippingThresholdUsd,
+} from "@/lib/shipping/settings";
 import { cn } from "@/components/ds/utils";
 
 interface FreeShippingProgressProps {
   subtotalUsd: number;
+  /** Hide when every cart line already has product free shipping. */
+  allItemsHaveFreeShipping?: boolean;
   className?: string;
 }
 
 export function FreeShippingProgress({
   subtotalUsd,
+  allItemsHaveFreeShipping = false,
   className,
 }: FreeShippingProgressProps) {
   const t = useTranslations("cart");
   const { country } = useDisplayPreferences();
   const shippingSettings = useShippingSettings();
   const shippingOptions = buildShippingOptions(country, shippingSettings);
+
+  // Admin set shipping to $0 / threshold $0 / country free — no unlock banner
+  if (
+    isStandardShippingAlwaysFree(shippingOptions) ||
+    allItemsHaveFreeShipping
+  ) {
+    return null;
+  }
+
   const thresholdUsd = resolveFreeShippingThresholdUsd(shippingOptions);
   const formattedCurrent = useFormattedPrice(subtotalUsd);
   const formattedGoal = useFormattedPromoPrice(thresholdUsd);
@@ -29,7 +44,7 @@ export function FreeShippingProgress({
   const formattedRemaining = useFormattedPrice(remainingUsd);
   const progress =
     thresholdUsd > 0 ? Math.min(100, (subtotalUsd / thresholdUsd) * 100) : 100;
-  const unlocked = thresholdUsd <= 0 || subtotalUsd >= thresholdUsd;
+  const unlocked = subtotalUsd >= thresholdUsd;
 
   return (
     <Card className={cn("px-4 py-4 md:px-5", className)}>

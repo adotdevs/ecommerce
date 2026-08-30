@@ -55,11 +55,13 @@ export function useCartStockLimits(enabled: boolean) {
             variantId?: string;
             maxQuantity: number;
             valid: boolean;
+            freeShipping?: boolean;
           }) => ({
             productId: line.productId,
             variantId: line.variantId,
             maxQuantity: Number(line.maxQuantity ?? 0),
             valid: line.valid !== false,
+            freeShipping: line.freeShipping === true,
           })
         );
 

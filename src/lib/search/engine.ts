@@ -17,7 +17,7 @@ import {
 } from "@/lib/search/ai-query";
 
 const SELECT =
-  "name slug sku pricing media brandName categoryNames tags shortDescription featured inventory createdAt variants variantOptions specifications highlights";
+  "name slug sku pricing media brandName categoryNames tags shortDescription featured onSale flashSale isNewArrival freeShipping rating inventory createdAt variants variantOptions specifications highlights";
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

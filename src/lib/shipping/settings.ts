@@ -32,6 +32,11 @@ export interface ResolvedShippingRates {
 export interface ShippingCalculationOptions {
   countryCode?: string;
   config?: ShippingSettings;
+  /**
+   * When true, every line in the cart has product-level free shipping.
+   * Mixed carts (any paid-shipping product) must leave this false so global rates apply.
+   */
+  allItemsHaveFreeShipping?: boolean;
 }
 
 export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
@@ -158,6 +163,7 @@ export function calculateShippingUsd(
   const resolved = resolveShippingRates(config, options?.countryCode);
 
   if (resolved.shippingOff) return 0;
+  if (options?.allItemsHaveFreeShipping) return 0;
 
   let baseUsd: number;
   if (method === "standard") {
@@ -170,6 +176,25 @@ export function calculateShippingUsd(
   }
 
   return applyShippingDiscount(baseUsd, resolved.percentOff);
+}
+
+/** True when standard shipping is already free from admin settings (no unlock UI). */
+export function isStandardShippingAlwaysFree(
+  options?: ShippingCalculationOptions
+): boolean {
+  const config = options?.config ?? DEFAULT_SHIPPING_SETTINGS;
+  const resolved = resolveShippingRates(config, options?.countryCode);
+  if (resolved.shippingOff) return true;
+  if (resolved.standardRateUsd <= 0) return true;
+  if (resolved.freeShippingThresholdUsd <= 0) return true;
+  return false;
+}
+
+/** Cart qualifies for product-level free shipping only when every line opts in. */
+export function cartAllItemsHaveFreeShipping(
+  items: { freeShipping?: boolean }[]
+): boolean {
+  return items.length > 0 && items.every((item) => item.freeShipping === true);
 }
 
 export function resolveFreeShippingThresholdUsd(

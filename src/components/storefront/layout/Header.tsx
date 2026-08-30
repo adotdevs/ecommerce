@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   ShoppingCart,
@@ -29,6 +31,9 @@ import type { SiteSettingsPublic } from "@/types";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import { useFormattedPromoPrice } from "@/hooks/use-formatted-price";
 import { useFreeShippingThresholdUsd } from "@/hooks/use-free-shipping-threshold";
+import { useDisplayPreferences } from "@/components/providers/DisplayPreferencesContext";
+import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { isStandardShippingAlwaysFree } from "@/lib/shipping/settings";
 import {
   applyAnnouncementAmount,
   applyBrandingTokens,
@@ -47,11 +52,21 @@ interface HeaderProps {
 
 export function Header({ settings }: HeaderProps) {
   const t = useTranslations();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // Keep header search in sync with URL; clear when leaving search results
+  useEffect(() => {
+    const q = searchParams.get("q") ?? "";
+    const onProductsListing =
+      pathname === "/products" || pathname.endsWith("/products");
+    setSearchQuery(onProductsListing ? q : "");
+  }, [pathname, searchParams]);
 
   const mounted = useClientMounted();
   const itemCount = useCartStore((s) =>
@@ -98,6 +113,12 @@ export function Header({ settings }: HeaderProps) {
   const storeName = settings?.storeName ?? "";
   const thresholdUsd = useFreeShippingThresholdUsd();
   const freeShippingThresholdFmt = useFormattedPromoPrice(thresholdUsd);
+  const { country } = useDisplayPreferences();
+  const shippingSettings = useShippingSettings();
+  const shippingAlwaysFree = isStandardShippingAlwaysFree({
+    config: shippingSettings,
+    countryCode: country,
+  });
   const tokens = brandingTokensFromSettings(settings);
   const announcement = settings?.announcement?.trim();
   const topBarMessage = announcement
@@ -107,9 +128,11 @@ export function Header({ settings }: HeaderProps) {
         }),
         freeShippingThresholdFmt
       )
-    : t("header.freeShippingPromo", {
-        amount: freeShippingThresholdFmt,
-      });
+    : shippingAlwaysFree
+      ? t("header.freeShippingAlways")
+      : t("header.freeShippingPromo", {
+          amount: freeShippingThresholdFmt,
+        });
 
   return (
     <>

@@ -47,6 +47,7 @@ export interface ProductFormData {
   isNewArrival: boolean;
   onSale: boolean;
   flashSale: boolean;
+  freeShipping: boolean;
   seo: {
     title: string;
     description: string;
@@ -93,6 +94,7 @@ export const emptyProductForm = (): ProductFormData => ({
   isNewArrival: false,
   onSale: false,
   flashSale: false,
+  freeShipping: false,
   seo: {
     title: "",
     description: "",
@@ -218,6 +220,7 @@ export function productToFormData(product: Record<string, any>): ProductFormData
     isNewArrival: product.isNewArrival ?? false,
     onSale: product.onSale ?? false,
     flashSale: product.flashSale ?? false,
+    freeShipping: product.freeShipping ?? false,
     seo: {
       title: product.seo?.title ?? "",
       description: product.seo?.description ?? "",
@@ -361,6 +364,7 @@ export function formToPayload(form: ProductFormData) {
     isNewArrival: form.isNewArrival,
     onSale: form.onSale,
     flashSale: form.flashSale,
+    freeShipping: form.freeShipping,
     seo: {
       title: form.seo.title.trim() || undefined,
       description: form.seo.description.trim() || undefined,

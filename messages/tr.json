@@ -8,11 +8,13 @@
     "showingFor": "\"{query}\" ile eşleşenler",
     "found": "{count} ürün bulundu",
     "noMatchesFor": "\"{query}\" için ürün bulunamadı.",
-    "noMatchesHint": "Katalogda yeterince yakın bir eşleşme yok. Farklı bir yazım deneyin veya kategorilere göz atın."
+    "noMatchesHint": "Katalogda yeterince yakın bir eşleşme yok. Farklı bir yazım deneyin veya kategorilere göz atın.",
+    "freeDelivery": "Ücretsiz kargo"
   },
   "catalog": {
     "previous": "Önceki",
-    "next": "Sonraki"
+    "next": "Sonraki",
+    "freeShipping": "Ücretsiz teslimat"
   },
   "reviews": {
     "shopProduct": "{name} satın al",
@@ -43,5 +45,12 @@
       "date": "Tarih",
       "card": "Kart Numarası"
     }
+  },
+  "header": {
+    "freeShippingAlways": "Tüm siparişlerde ücretsiz kargo"
+  },
+  "search": {
+    "recentSearches": "Son aramalar",
+    "clearRecent": "Temizle"
   }
 }

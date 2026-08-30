@@ -1,7 +1,7 @@
 "use client";
 
 import { SearchAutocomplete } from "@/components/storefront/search/SearchAutocomplete";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 interface CatalogSearchBarProps {
@@ -17,6 +17,10 @@ export function CatalogSearchBar({
 }: CatalogSearchBarProps) {
   const t = useTranslations("common");
   const [query, setQuery] = useState(initialQuery);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   return (
     <SearchAutocomplete

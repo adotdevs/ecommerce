@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ds/card";
 import { Switch } from "@/components/ds/switch";
 import { formatPrice } from "@/lib/utils";
 import { toast, toastError } from "@/hooks/use-toast";
-import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2, Zap, Palette } from "lucide-react";
+import { Loader2, Search, Star, Sparkles, Tag, Upload, MessageSquare, Trash2, Zap, Palette, Truck } from "lucide-react";
 import { ProductReviewsManager } from "@/components/admin/products/ProductReviewsManager";
 
 const PAGE_SIZE = 100;
@@ -29,6 +29,7 @@ interface Product {
   isNewArrival?: boolean;
   onSale?: boolean;
   flashSale?: boolean;
+  freeShipping?: boolean;
   categoryNames?: string[];
   media?: { url: string }[];
 }
@@ -254,6 +255,7 @@ export default function AdminProductsPage() {
     flashSale?: boolean;
     onSale?: boolean;
     isNewArrival?: boolean;
+    freeShipping?: boolean;
   }) => {
     if (!accessToken || selectedIds.size === 0) return;
     setBulkMerchandising(true);
@@ -474,6 +476,23 @@ export default function AdminProductsPage() {
               onClick={() => applyBulkMerchandising({ isNewArrival: false })}
             >
               Remove new
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ freeShipping: true })}
+            >
+              <Truck className="mr-1.5 h-3.5 w-3.5" />
+              Free delivery
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkMerchandising || bulkDeleting}
+              onClick={() => applyBulkMerchandising({ freeShipping: false })}
+            >
+              Remove free delivery
             </Button>
             <Button
               size="sm"
@@ -724,6 +743,11 @@ export default function AdminProductsPage() {
                             {p.onSale && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] text-green-600">
                                 <Tag className="h-2.5 w-2.5" /> Deal
+                              </span>
+                            )}
+                            {p.freeShipping && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-teal-700">
+                                <Truck className="h-2.5 w-2.5" /> Free delivery
                               </span>
                             )}
                             {hasDiscount(p) && !p.onSale && (

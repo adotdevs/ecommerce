@@ -29,7 +29,9 @@
     "brands": "العلامات",
     "viewAll": "عرض كل النتائج لـ",
     "noSuggestions": "لا اقتراحات — جرّب كلمة أخرى",
-    "searching": "جاري البحث…"
+    "searching": "جاري البحث…",
+    "recentSearches": "عمليات البحث الأخيرة",
+    "clearRecent": "مسح"
   },
   "header": {
     "wishlist": "المفضلة",
@@ -43,7 +45,8 @@
     "selectCountry": "اختر البلد والمنطقة",
     "selectLanguage": "اختر اللغة",
     "selectCurrency": "اختر العملة",
-    "deliverTo": "التوصيل إلى"
+    "deliverTo": "التوصيل إلى",
+    "freeShippingAlways": "شحن مجاني على جميع الطلبات"
   },
   "theme": {
     "title": "هل تفضّل الوضع الداكن؟",
@@ -92,7 +95,8 @@
     "bestSeller": "الأكثر مبيعاً",
     "topRated": "الأعلى تقييماً",
     "newArrival": "وصل حديثاً",
-    "percentOff": "خصم {percent}%"
+    "percentOff": "خصم {percent}%",
+    "freeDelivery": "توصيل مجاني"
   },
   "cart": {
     "title": "سلة التسوق",
@@ -241,6 +245,7 @@
     "allCategoriesCta": "كل الفئات",
     "breadcrumbNav": "الرئيسية",
     "previous": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "freeShipping": "توصيل مجاني"
   }
 }

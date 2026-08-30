@@ -17,6 +17,7 @@ export interface ReservationLineResult {
   maxQuantity: number;
   available: number;
   valid: boolean;
+  freeShipping?: boolean;
 }
 
 function reservationKey(productId: string, variantId?: string) {
@@ -56,7 +57,7 @@ export async function reserveCartLines(
   const products = await Product.find({
     _id: { $in: productIds },
     status: "published",
-  }).select("variants inventory status");
+  }).select("variants inventory status freeShipping");
 
   const productMap = new Map(products.map((p) => [String(p._id), p]));
   const results: ReservationLineResult[] = [];
@@ -86,6 +87,7 @@ export async function reserveCartLines(
             maxQuantity: 0,
             available: 0,
             valid: false,
+            freeShipping: false,
           });
           continue;
         }
@@ -119,6 +121,7 @@ export async function reserveCartLines(
             maxQuantity: qty,
             available: qty,
             valid: true,
+            freeShipping: Boolean(product.freeShipping),
           });
           continue;
         }
@@ -160,6 +163,7 @@ export async function reserveCartLines(
           maxQuantity,
           available,
           valid: true,
+          freeShipping: Boolean(product.freeShipping),
         });
       }
     });

@@ -32,8 +32,9 @@ import { useCartHydrated } from "@/hooks/use-cart-hydrated";
 import { useCurrency } from "@/stores/locale-store";
 import { useFormattedPrice } from "@/hooks/use-formatted-price";
 import { toastError } from "@/hooks/use-toast";
-import { calculateCheckoutTotals, buildShippingOptions } from "@/lib/checkout/shipping";
+import { calculateCheckoutTotals, buildShippingOptions, cartAllItemsHaveFreeShipping } from "@/lib/checkout/shipping";
 import { useShippingSettings } from "@/components/providers/ShippingSettingsContext";
+import { useTaxRatePercent } from "@/components/providers/TaxRateContext";
 import { useSiteBranding } from "@/components/providers/SiteBrandingProvider";
 import { calculatePromoDiscountUsd } from "@/lib/promo/validate";
 import {
@@ -145,6 +146,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
   const currency = useCurrency();
   const { country: deliverToCountry } = useDisplayPreferences();
   const shippingSettings = useShippingSettings();
+  const taxRatePercent = useTaxRatePercent();
 
   const [step, setStep] = useState<CheckoutStep>(() => {
     const draft = loadCheckoutDraft();
@@ -230,8 +232,12 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
   );
   const shippingCountry = form.country || deliverToCountry;
   const shippingOptions = useMemo(
-    () => buildShippingOptions(shippingCountry, shippingSettings),
-    [shippingCountry, shippingSettings]
+    () => ({
+      ...buildShippingOptions(shippingCountry, shippingSettings),
+      allItemsHaveFreeShipping: cartAllItemsHaveFreeShipping(items),
+      taxRatePercent,
+    }),
+    [shippingCountry, shippingSettings, items, taxRatePercent]
   );
   const { shippingUsd, taxUsd, totalUsd } = useMemo(
     () =>
@@ -509,6 +515,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
               <ShippingMethodSelect
                 form={form}
                 subtotalUsd={subtotalUsd}
+                allItemsHaveFreeShipping={shippingOptions.allItemsHaveFreeShipping}
                 onChange={updateForm}
                 onContinue={goToPayment}
               />
@@ -542,6 +549,7 @@ export function CheckoutFlow({ merchantName = "" }: { merchantName?: string }) {
               subtotalUsd={subtotalUsd}
               totalUsd={totalUsd}
               loading={loading}
+              allItemsHaveFreeShipping={shippingOptions.allItemsHaveFreeShipping}
               onEditShipping={() => setStep("shipping")}
               onEditPayment={() => setStep("payment")}
               onPlaceOrder={placeOrder}

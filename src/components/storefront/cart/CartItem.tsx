@@ -19,6 +19,7 @@ interface CartItemProps {
 export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
   const t = useTranslations("cart");
   const tc = useTranslations("common");
+  const tp = useTranslations("products");
   const { title, variant } = splitCartItemName(item.name);
 
   return (
@@ -54,6 +55,13 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
               </Link>
               {variant && (
                 <p className="mt-1 text-small text-muted-foreground">{variant}</p>
+              )}
+              {item.freeShipping && (
+                <p className="mt-1.5">
+                  <span className="inline-flex rounded-md bg-teal-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                    {tp("freeDelivery")}
+                  </span>
+                </p>
               )}
             </div>
 

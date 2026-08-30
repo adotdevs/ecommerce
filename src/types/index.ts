@@ -41,6 +41,8 @@ export interface CartItem {
   quantity: number;
   sku?: string;
   maxQuantity?: number;
+  /** Product-level free delivery; mixed carts still pay global shipping. */
+  freeShipping?: boolean;
 }
 
 export type HomepageSectionType =
@@ -114,6 +116,8 @@ export interface SiteSettingsPublic {
       freeShippingThresholdUsd?: number;
     }[];
   };
+  /** Estimated sales tax percent (e.g. 8 for 8%). */
+  taxRatePercent?: number;
 }
 
 export interface AuthUser {

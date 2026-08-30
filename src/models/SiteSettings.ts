@@ -57,6 +57,8 @@ export interface ISiteSettings extends Document {
       freeShippingThresholdUsd?: number;
     }[];
   };
+  /** Estimated sales tax percent applied at checkout (e.g. 8 = 8%). */
+  taxRatePercent?: number;
 }
 
 const SiteSettingsSchema = new Schema<ISiteSettings>(
@@ -132,6 +134,7 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
         },
       ],
     },
+    taxRatePercent: { type: Number, default: 8 },
   },
   { timestamps: true }
 );

@@ -15,7 +15,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/components/ds/utils";
-import { Check, ChevronDown, Heart } from "lucide-react";
+import { Check, ChevronDown, Heart, Truck } from "lucide-react";
 import { ProductVariantSelector } from "@/components/storefront/products/ProductVariantSelector";
 import { QuantitySelector } from "@/components/storefront/cart/QuantitySelector";
 import { LowStockHint } from "@/components/storefront/products/LowStockHint";
@@ -56,6 +56,7 @@ interface ProductData {
   specifications: ProductSpecification[];
   faqs: { question: string; answer: string }[];
   rating: { average: number; count: number };
+  freeShipping?: boolean;
 }
 
 function groupSpecifications(specs: ProductSpecification[]) {
@@ -233,6 +234,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
       price,
       quantity,
       maxQuantity: availableStock,
+      freeShipping: Boolean(product.freeShipping),
     });
   };
 
@@ -251,6 +253,7 @@ export function ProductDetailView({ product }: { product: ProductData }) {
       price,
       quantity,
       maxQuantity: availableStock,
+      freeShipping: Boolean(product.freeShipping),
     };
 
     const existing = useCartStore
@@ -307,6 +310,14 @@ export function ProductDetailView({ product }: { product: ProductData }) {
             </p>
           )}
           <h1 className="mt-2 text-display-h2 text-foreground">{product.name}</h1>
+          {product.freeShipping && (
+            <div className="mt-3">
+              <Badge className="inline-flex items-center gap-1.5 bg-teal-700 text-white hover:bg-teal-700">
+                <Truck className="h-3.5 w-3.5" aria-hidden />
+                {tp("freeDelivery")}
+              </Badge>
+            </div>
+          )}
 
           {reviewCount > 0 && (
             <button

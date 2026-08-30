@@ -21,7 +21,7 @@ import {
   normalizeShippingSettings,
 } from "@/lib/shipping/settings";
 import { getSiteSettings } from "@/lib/data/site-settings";
-import { ESTIMATED_TAX_RATE } from "@/lib/cart/display";
+import { taxRateFraction, normalizeTaxRatePercent } from "@/lib/tax/settings";
 import {
   calculatePromoDiscountUsd,
   normalizePromoCode,
@@ -94,6 +94,9 @@ export async function POST(request: NextRequest) {
     const shipping = calculateShippingUsd(subtotal, method, {
       countryCode: countryCode || undefined,
       config: shippingConfig,
+      allItemsHaveFreeShipping: (items as { productId: string }[]).every(
+        (item) => Boolean(productMap.get(String(item.productId))?.freeShipping)
+      ),
     });
 
     let discount = 0;
@@ -109,7 +112,11 @@ export async function POST(request: NextRequest) {
     }
 
     const taxable = Math.max(0, subtotal - discount);
-    const tax = taxable * ESTIMATED_TAX_RATE;
+    const tax = taxable * taxRateFraction(
+      normalizeTaxRatePercent(
+        (siteSettings as { taxRatePercent?: unknown } | null)?.taxRatePercent
+      )
+    );
     const total = subtotal + shipping + tax - discount;
 
     const user = getAuthUser(request);

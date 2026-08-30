@@ -12,6 +12,7 @@ const bulkMerchandisingSchema = z.object({
   flashSale: z.boolean().optional(),
   onSale: z.boolean().optional(),
   isNewArrival: z.boolean().optional(),
+  freeShipping: z.boolean().optional(),
 });
 
 export const POST = withAuth(async (request: NextRequest) => {
@@ -23,13 +24,15 @@ export const POST = withAuth(async (request: NextRequest) => {
       return apiError(parsed.error.issues[0]?.message ?? "Invalid request");
     }
 
-    const { ids, featured, flashSale, onSale, isNewArrival } = parsed.data;
+    const { ids, featured, flashSale, onSale, isNewArrival, freeShipping } =
+      parsed.data;
     const update: Record<string, boolean> = {};
 
     if (featured !== undefined) update.featured = featured;
     if (flashSale !== undefined) update.flashSale = flashSale;
     if (onSale !== undefined) update.onSale = onSale;
     if (isNewArrival !== undefined) update.isNewArrival = isNewArrival;
+    if (freeShipping !== undefined) update.freeShipping = freeShipping;
 
     if (Object.keys(update).length === 0) {
       return apiError("No merchandising fields to update");

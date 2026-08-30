@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Check,
   Eye,
+  Truck,
 } from "lucide-react";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { StarRating } from "@/components/storefront/products/StarRating";
@@ -82,6 +83,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       price: product.pricing.price,
       quantity: 1,
       maxQuantity: product.inventory?.stock,
+      freeShipping: Boolean(product.freeShipping),
     });
   };
 
@@ -226,10 +228,18 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <h3 className="catalog-product-card__name">{product.name}</h3>
         </Link>
 
-        {subtitleParts.length > 0 && (
-          <p className="catalog-product-card__meta">
-            {subtitleParts.join(" • ")}
-          </p>
+        {(subtitleParts.length > 0 || product.freeShipping) && (
+          <div className="catalog-product-card__meta-row">
+            <p className="catalog-product-card__meta">
+              {subtitleParts.length > 0 ? subtitleParts.join(" • ") : "\u00A0"}
+            </p>
+            {product.freeShipping && (
+              <span className="catalog-product-card__free-ship">
+                <Truck className="h-3 w-3 shrink-0" aria-hidden />
+                {tProducts("freeDelivery")}
+              </span>
+            )}
+          </div>
         )}
 
         <div className="catalog-product-card__price-row">

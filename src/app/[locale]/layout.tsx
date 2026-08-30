@@ -14,7 +14,9 @@ import type { CurrencyCode } from "@/config/locales";
 import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
 import { getSiteSettings } from "@/lib/data/site-settings";
 import { normalizeShippingSettings } from "@/lib/shipping/settings";
+import { normalizeTaxRatePercent } from "@/lib/tax/settings";
 import { ShippingSettingsProvider } from "@/components/providers/ShippingSettingsContext";
+import { TaxRateProvider } from "@/components/providers/TaxRateContext";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +58,9 @@ export default async function LocaleLayout({
   const exchangeRates = await fetchLiveExchangeRates();
   const siteSettings = await getSiteSettings();
   const shippingSettings = normalizeShippingSettings(siteSettings?.shipping);
+  const taxRatePercent = normalizeTaxRatePercent(
+    (siteSettings as { taxRatePercent?: unknown } | null)?.taxRatePercent
+  );
 
   const serverPreferences = {
     country:
@@ -81,12 +86,14 @@ export default async function LocaleLayout({
       <NextIntlClientProvider messages={messages}>
         <DisplayPreferencesProvider value={displayPrefs}>
           <ShippingSettingsProvider value={shippingSettings}>
-            <LocaleInitializer
-              locale={locale as Locale}
-              serverPreferences={serverPreferences}
-            />
-            <FirstVisitTracker />
-            {children}
+            <TaxRateProvider value={taxRatePercent}>
+              <LocaleInitializer
+                locale={locale as Locale}
+                serverPreferences={serverPreferences}
+              />
+              <FirstVisitTracker />
+              {children}
+            </TaxRateProvider>
           </ShippingSettingsProvider>
         </DisplayPreferencesProvider>
       </NextIntlClientProvider>

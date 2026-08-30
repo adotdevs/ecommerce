@@ -32,7 +32,9 @@
     "brands": "Marki",
     "viewAll": "Zobacz wszystkie wyniki dla",
     "noSuggestions": "Brak sugestii — spróbuj innego słowa kluczowego",
-    "searching": "Wyszukiwanie…"
+    "searching": "Wyszukiwanie…",
+    "recentSearches": "Ostatnie wyszukiwania",
+    "clearRecent": "Wyczyść"
   },
   "header": {
     "wishlist": "Lista życzeń",
@@ -46,7 +48,8 @@
     "selectCountry": "Wybierz kraj i region",
     "selectLanguage": "Wybierz język",
     "selectCurrency": "Wybierz walutę",
-    "deliverTo": "Dostawa do"
+    "deliverTo": "Dostawa do",
+    "freeShippingAlways": "Darmowa dostawa na wszystkie zamówienia"
   },
   "theme": {
     "title": "Preferujesz tryb ciemny?",
@@ -104,7 +107,8 @@
     "bestSeller": "Bestseller",
     "topRated": "Najwyżej oceniane",
     "newArrival": "Nowość",
-    "percentOff": "{percent}% TANIEJ"
+    "percentOff": "{percent}% TANIEJ",
+    "freeDelivery": "Darmowa dostawa"
   },
   "reviews": {
     "tab": "Opinie",
@@ -418,6 +422,7 @@
     "allCategoriesCta": "Wszystkie kategorie",
     "breadcrumbNav": "Strona główna",
     "previous": "Poprzednie",
-    "next": "Następne"
+    "next": "Następne",
+    "freeShipping": "Darmowa dostawa"
   }
 }

@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         : undefined,
       onSale: searchParams.get("onSale") === "1",
       featured: searchParams.get("featured") === "1",
+      freeShipping: searchParams.get("freeShipping") === "1",
       minRating: searchParams.get("minRating")
         ? Number(searchParams.get("minRating"))
         : undefined,

@@ -18,6 +18,7 @@ import type { CheckoutFormState, ShippingMethodId } from "@/lib/checkout/types";
 interface ShippingMethodSelectProps {
   form: CheckoutFormState;
   subtotalUsd: number;
+  allItemsHaveFreeShipping?: boolean;
   onChange: (patch: Partial<CheckoutFormState>) => void;
   onContinue: () => void;
 }
@@ -27,12 +28,14 @@ function ShippingMethodOption({
   selected,
   subtotalUsd,
   countryCode,
+  allItemsHaveFreeShipping,
   onSelect,
 }: {
   method: (typeof SHIPPING_METHODS)[number];
   selected: boolean;
   subtotalUsd: number;
   countryCode: string;
+  allItemsHaveFreeShipping?: boolean;
   onSelect: () => void;
 }) {
   const t = useTranslations("checkout");
@@ -41,7 +44,10 @@ function ShippingMethodOption({
   const price = calculateShippingUsd(
     subtotalUsd,
     method.id,
-    buildShippingOptions(countryCode, shippingSettings)
+    {
+      ...buildShippingOptions(countryCode, shippingSettings),
+      allItemsHaveFreeShipping,
+    }
   );
   const formatted = useFormattedPrice(price);
 
@@ -60,6 +66,7 @@ function ShippingMethodOption({
 export function ShippingMethodSelect({
   form,
   subtotalUsd,
+  allItemsHaveFreeShipping = false,
   onChange,
   onContinue,
 }: ShippingMethodSelectProps) {
@@ -80,6 +87,7 @@ export function ShippingMethodSelect({
             selected={form.shippingMethod === method.id}
             subtotalUsd={subtotalUsd}
             countryCode={countryCode}
+            allItemsHaveFreeShipping={allItemsHaveFreeShipping}
             onSelect={() => onChange({ shippingMethod: method.id as ShippingMethodId })}
           />
         ))}

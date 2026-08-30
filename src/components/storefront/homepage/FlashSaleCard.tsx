@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { RemoteImage } from "@/components/storefront/RemoteImage";
 import { motion } from "framer-motion";
-import { Flame, ShoppingBag, Zap, Check } from "lucide-react";
+import { Flame, ShoppingBag, Zap, Check, Truck } from "lucide-react";
 import { Button } from "@/components/ds/button";
 import { PriceDisplay } from "@/components/storefront/products/PriceDisplay";
 import { VariantQuickAddModal } from "@/components/storefront/products/VariantQuickAddModal";
@@ -38,6 +38,7 @@ export function FlashSaleCard({
   className?: string;
 }) {
   const t = useTranslations("common");
+  const tProducts = useTranslations("products");
   const { addToCart, justAdded } = useAddToCart();
   const image = product.media?.[0];
   const off = discountPercent(product.pricing.price, product.pricing.compareAtPrice);
@@ -61,6 +62,7 @@ export function FlashSaleCard({
       price: product.pricing.price,
       quantity: 1,
       maxQuantity: product.inventory?.stock,
+      freeShipping: Boolean(product.freeShipping),
     });
   };
 
@@ -100,14 +102,27 @@ export function FlashSaleCard({
         </div>
 
         <div className="flex flex-1 flex-col gap-2.5 border-t border-amber-500/15 bg-gradient-to-b from-amber-500/[0.06] to-transparent p-4">
-          {product.brandName && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700/80 dark:text-amber-400/80">
-              {product.brandName}
-            </p>
-          )}
           <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
             {product.name}
           </h3>
+
+          {(product.brandName || product.freeShipping) && (
+            <div className="flex w-full items-center justify-between gap-2">
+              {product.brandName ? (
+                <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700/80 dark:text-amber-400/80">
+                  {product.brandName}
+                </p>
+              ) : (
+                <span />
+              )}
+              {product.freeShipping && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal-700">
+                  <Truck className="h-2.5 w-2.5" aria-hidden />
+                  {tProducts("freeDelivery")}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-baseline gap-2">
             <PriceDisplay

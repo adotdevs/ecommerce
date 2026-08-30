@@ -27,7 +27,9 @@ export default async function StorefrontLayout({
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
-      <Header settings={settings} />
+      <Suspense fallback={null}>
+        <Header settings={settings} />
+      </Suspense>
       <StorefrontMain>{children}</StorefrontMain>
       <Footer settings={settings} />
       <MobileBottomBar />

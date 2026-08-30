@@ -1653,6 +1653,19 @@ export function ProductForm({ productId: productIdProp, initialData }: ProductFo
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
                 <div>
+                  <p className="font-medium">Free delivery</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    This product ships free when every item in the cart also has
+                    free delivery. Mixed carts still use global shipping rates.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.freeShipping}
+                  onCheckedChange={(v) => update("freeShipping", v)}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div>
                   <p className="font-medium">Deals / Sale</p>
                   <p className="text-[12px] text-muted-foreground">
                     Include on the Deals page. Compare-at price only controls the

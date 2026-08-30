@@ -9,6 +9,7 @@ interface StockLimitLine {
   variantId?: string;
   maxQuantity: number;
   valid?: boolean;
+  freeShipping?: boolean;
 }
 
 interface CartState {
@@ -89,6 +90,8 @@ export const useCartStore = create<CartState>()(
                       ...i,
                       quantity: nextQuantity,
                       maxQuantity: maxQuantity ?? i.maxQuantity,
+                      freeShipping:
+                        item.freeShipping ?? i.freeShipping ?? false,
                     }
                   : i
               ),
@@ -157,7 +160,15 @@ export const useCartStore = create<CartState>()(
               if (maxQuantity != null && maxQuantity <= 0) return null;
               const quantity = clampQuantity(item.quantity, maxQuantity);
               if (quantity <= 0) return null;
-              return { ...item, maxQuantity, quantity };
+              return {
+                ...item,
+                maxQuantity,
+                quantity,
+                freeShipping:
+                  limit?.freeShipping != null
+                    ? limit.freeShipping
+                    : item.freeShipping,
+              };
             })
             .filter(Boolean) as CartItem[];
 

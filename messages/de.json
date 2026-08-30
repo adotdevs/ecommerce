@@ -29,7 +29,9 @@
     "brands": "Marken",
     "viewAll": "Alle Ergebnisse anzeigen",
     "noSuggestions": "Keine Vorschläge — versuchen Sie es mit einem anderen Schlüsselwort",
-    "searching": "Suchen …"
+    "searching": "Suchen …",
+    "recentSearches": "Letzte Suchen",
+    "clearRecent": "Löschen"
   },
   "header": {
     "wishlist": "Wunschzettel",
@@ -43,7 +45,8 @@
     "selectCountry": "Land/Region auswählen",
     "selectLanguage": "Sprache auswählen",
     "selectCurrency": "Währung wählen",
-    "deliverTo": "Lieferung nach"
+    "deliverTo": "Lieferung nach",
+    "freeShippingAlways": "Kostenloser Versand für alle Bestellungen"
   },
   "theme": {
     "title": "Dunkelmodus bevorzugt?",
@@ -101,7 +104,8 @@
     "bestSeller": "Bestseller",
     "topRated": "Top bewertet",
     "newArrival": "Neuheit",
-    "percentOff": "{percent} % RABATT"
+    "percentOff": "{percent} % RABATT",
+    "freeDelivery": "Kostenloser Versand"
   },
   "cart": {
     "title": "Warenkorb",
@@ -271,6 +275,7 @@
     "allCategoriesCta": "Alle Kategorien",
     "breadcrumbNav": "Startseite",
     "previous": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "freeShipping": "Kostenlose Lieferung"
   }
 }

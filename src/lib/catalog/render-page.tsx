@@ -18,6 +18,7 @@ export type CatalogSearchParams = {
   maxPrice?: string;
   onSale?: string;
   featured?: string;
+  freeShipping?: string;
   minRating?: string;
   availability?: string;
 };
@@ -69,6 +70,7 @@ export async function renderCatalogPage({
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
     onSale: searchParams.onSale === "1",
     featured: searchParams.featured === "1",
+    freeShipping: searchParams.freeShipping === "1",
     minRating: searchParams.minRating
       ? Number(searchParams.minRating)
       : undefined,

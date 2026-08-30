@@ -1129,6 +1129,10 @@
   background: #2563eb;
 }
 
+.catalog-badge--free-ship {
+  background: #0f766e;
+}
+
 .catalog-product-card__wish {
   position: absolute;
   top: 0.75rem;
@@ -1232,6 +1236,35 @@
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-width: 0;
+}
+
+.catalog-product-card__meta-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.catalog-product-card__free-ship {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: fit-content;
+  margin-inline-start: auto;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .catalog-product-card__price-row {

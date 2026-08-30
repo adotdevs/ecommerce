@@ -212,6 +212,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       average: reviewSummary.average,
       count: reviewSummary.count,
     },
+    freeShipping: Boolean(p.freeShipping),
   };
 
   if (productData.rating.count > 0) {

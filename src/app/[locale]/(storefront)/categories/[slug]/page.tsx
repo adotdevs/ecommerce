@@ -58,6 +58,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
       maxPrice: sp.maxPrice ? Number(sp.maxPrice) : undefined,
       onSale: sp.onSale === "1",
       featured: sp.featured === "1",
+      freeShipping: sp.freeShipping === "1",
       minRating: sp.minRating ? Number(sp.minRating) : undefined,
       availability,
       locale,

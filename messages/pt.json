@@ -8,11 +8,13 @@
     "showingFor": "Correspondências para \"{query}\"",
     "found": "{count} produtos encontrados",
     "noMatchesFor": "Nenhum produto encontrado para \"{query}\".",
-    "noMatchesHint": "Nada no catálogo corresponde o suficiente. Tente outra grafia ou navegue pelas categorias."
+    "noMatchesHint": "Nada no catálogo corresponde o suficiente. Tente outra grafia ou navegue pelas categorias.",
+    "freeDelivery": "Entrega grátis"
   },
   "catalog": {
     "previous": "Anterior",
-    "next": "Seguinte"
+    "next": "Seguinte",
+    "freeShipping": "Entrega grátis"
   },
   "reviews": {
     "shopProduct": "Comprar {name}",
@@ -43,5 +45,12 @@
       "date": "Data",
       "card": "Número do Cartão"
     }
+  },
+  "header": {
+    "freeShippingAlways": "Frete grátis em todos os pedidos"
+  },
+  "search": {
+    "recentSearches": "Pesquisas recentes",
+    "clearRecent": "Limpar"
   }
 }

@@ -25,6 +25,7 @@ export interface CatalogQueryInput {
   maxPrice?: number;
   onSale?: boolean;
   featured?: boolean;
+  freeShipping?: boolean;
   /** Minimum average rating (1–5) */
   minRating?: number;
   /** Stock filter */
@@ -91,6 +92,10 @@ function buildCatalogFilter(
     input.sort === "deals";
   if (onSale) {
     filter.onSale = true;
+  }
+
+  if (input.freeShipping === true) {
+    filter.freeShipping = true;
   }
 
   if (input.minRating != null && !Number.isNaN(input.minRating) && input.minRating > 0) {

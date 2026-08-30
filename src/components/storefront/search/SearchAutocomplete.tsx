@@ -9,13 +9,18 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Clock, X } from "lucide-react";
 import { Input } from "@/components/ds/input";
 import { cn } from "@/components/ds/utils";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import type { SearchSuggestion } from "@/lib/search/products";
 import { startNavigationProgress } from "@/lib/navigation/progress";
+import {
+  clearRecentSearches,
+  pushRecentSearch,
+  readRecentSearches,
+} from "@/lib/search/recent-searches";
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) {
@@ -69,19 +74,30 @@ export function SearchAutocomplete({
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [recent, setRecent] = useState<string[]>([]);
 
   const debouncedQuery = useDebouncedValue(value, 280);
   const { data, loading } = useSearchSuggestions(debouncedQuery, open);
 
   const products = data?.products ?? [];
   const trimmedValue = value.trim();
-  const showPanel = open && trimmedValue.length >= 2;
-  const itemCount = 1 + products.length;
+  const showSuggestions = trimmedValue.length >= 2;
+  const showRecent = open && !showSuggestions && recent.length > 0;
+  const showPanel = open && (showSuggestions || showRecent);
+  const itemCount = showSuggestions
+    ? 1 + products.length
+    : recent.length;
+
+  const refreshRecent = useCallback(() => {
+    setRecent(readRecentSearches());
+  }, []);
 
   const goToSearch = useCallback(
     (q: string) => {
       const trimmed = q.trim();
       if (!trimmed) return;
+
+      setRecent(pushRecentSearch(trimmed));
 
       const nextRouteKey = `/products?q=${encodeURIComponent(trimmed)}`;
       let isSameSearch = false;
@@ -110,11 +126,16 @@ export function SearchAutocomplete({
     (item: SearchSuggestion) => {
       setOpen(false);
       onChange(item.name);
+      setRecent(pushRecentSearch(item.name));
       startNavigationProgress();
       router.push(item.href);
     },
     [onChange, router]
   );
+
+  useEffect(() => {
+    refreshRecent();
+  }, [refreshRecent]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -126,13 +147,14 @@ export function SearchAutocomplete({
 
   useEffect(() => {
     setActiveIndex(-1);
-  }, [debouncedQuery, products.length]);
+  }, [debouncedQuery, products.length, showRecent]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setOpen(false);
       return;
     }
+
     if (!showPanel) {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -153,6 +175,14 @@ export function SearchAutocomplete({
     }
     if (e.key === "Enter") {
       e.preventDefault();
+      if (showRecent) {
+        if (activeIndex >= 0 && recent[activeIndex]) {
+          goToSearch(recent[activeIndex]);
+        } else {
+          goToSearch(value);
+        }
+        return;
+      }
       if (activeIndex === 0) {
         goToSearch(trimmedValue);
       } else if (activeIndex > 0) {
@@ -201,11 +231,18 @@ export function SearchAutocomplete({
             onChange(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => trimmedValue.length >= 2 && setOpen(true)}
+          onFocus={() => {
+            refreshRecent();
+            setOpen(true);
+          }}
+          onClick={() => {
+            refreshRecent();
+            setOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           className={cn("bg-secondary", sizeClass, inputClassName)}
         />
-        {loading && (
+        {loading && showSuggestions && (
           <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
       </form>
@@ -216,63 +253,110 @@ export function SearchAutocomplete({
           id={listboxId}
           role="listbox"
         >
-          <ul className="max-h-[min(70vh,360px)] overflow-y-auto">
-            <li>
-              <button
-                type="button"
-                role="option"
-                aria-selected={activeIndex === 0}
-                onMouseEnter={() => setActiveIndex(0)}
-                onClick={() => goToSearch(trimmedValue)}
-                className={cn(
-                  "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                  activeIndex === 0 ? "bg-secondary" : "hover:bg-secondary/70"
-                )}
-              >
-                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-small font-bold text-foreground">
-                  {trimmedValue}
+          {showRecent ? (
+            <ul className="max-h-[min(70vh,360px)] overflow-y-auto">
+              <li className="flex items-center justify-between px-4 pb-1 pt-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("recentSearches")}
                 </span>
-              </button>
-            </li>
+                <button
+                  type="button"
+                  className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  onClick={() => {
+                    clearRecentSearches();
+                    setRecent([]);
+                  }}
+                >
+                  {t("clearRecent")}
+                </button>
+              </li>
+              {recent.map((term, idx) => {
+                const isActive = activeIndex === idx;
+                return (
+                  <li key={`${term}-${idx}`}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => goToSearch(term)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                        isActive ? "bg-secondary" : "hover:bg-secondary/70"
+                      )}
+                    >
+                      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate text-small text-foreground">
+                        {term}
+                      </span>
+                      <X
+                        className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-hidden
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <ul className="max-h-[min(70vh,360px)] overflow-y-auto">
+              <li>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={activeIndex === 0}
+                  onMouseEnter={() => setActiveIndex(0)}
+                  onClick={() => goToSearch(trimmedValue)}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                    activeIndex === 0 ? "bg-secondary" : "hover:bg-secondary/70"
+                  )}
+                >
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-small font-bold text-foreground">
+                    {trimmedValue}
+                  </span>
+                </button>
+              </li>
 
-            {products.map((item, idx) => {
-              const optionIndex = idx + 1;
-              const isActive = activeIndex === optionIndex;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    onMouseEnter={() => setActiveIndex(optionIndex)}
-                    onClick={() => selectProduct(item)}
-                    className={cn(
-                      "flex w-full items-center px-4 py-2 text-left transition-colors",
-                      isActive ? "bg-secondary" : "hover:bg-secondary/70"
-                    )}
-                  >
-                    <span className="truncate text-small">
-                      {highlightMatch(item.name, trimmedValue)}
-                    </span>
-                  </button>
+              {products.map((item, idx) => {
+                const optionIndex = idx + 1;
+                const isActive = activeIndex === optionIndex;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onMouseEnter={() => setActiveIndex(optionIndex)}
+                      onClick={() => selectProduct(item)}
+                      className={cn(
+                        "flex w-full items-center px-4 py-2 text-left transition-colors",
+                        isActive ? "bg-secondary" : "hover:bg-secondary/70"
+                      )}
+                    >
+                      <span className="truncate text-small">
+                        {highlightMatch(item.name, trimmedValue)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+
+              {loading && products.length === 0 && (
+                <li className="flex items-center gap-2 px-4 py-2 text-[12px] text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("searching")}
                 </li>
-              );
-            })}
+              )}
 
-            {loading && products.length === 0 && (
-              <li className="flex items-center gap-2 px-4 py-2 text-[12px] text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t("searching")}
-              </li>
-            )}
-
-            {!loading && products.length === 0 && (
-              <li className="px-4 py-2 text-[12px] text-muted-foreground">
-                {t("noSuggestions")}
-              </li>
-            )}
-          </ul>
+              {!loading && products.length === 0 && (
+                <li className="px-4 py-2 text-[12px] text-muted-foreground">
+                  {t("noSuggestions")}
+                </li>
+              )}
+            </ul>
+          )}
         </div>
       )}
     </div>

@@ -630,9 +630,10 @@ export function PreSendVisualConfirmationModal({
                         Visual Products & Section Titles ({editSections.length} blocks)
                       </label>
                       {editSections.map((sec, idx) => {
+                        const secContent = sec.content as any;
                         if (sec.type === "product") {
-                          const prodTitle = sec.content?.displayTitle || sec.content?.productSnapshot?.name || "";
-                          const prodDesc = sec.content?.displayDescription || sec.content?.productSnapshot?.description || "";
+                          const prodTitle = secContent?.displayTitle || secContent?.productSnapshot?.name || "";
+                          const prodDesc = secContent?.displayDescription || secContent?.productSnapshot?.description || "";
                           return (
                             <div key={sec.id || idx} className="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700 space-y-2">
                               <span className="text-[10px] uppercase font-bold text-indigo-400">Product Card #{idx + 1}</span>
@@ -645,10 +646,11 @@ export function PreSendVisualConfirmationModal({
                                     setEditSections((prev) => {
                                       const next = [...prev];
                                       const s = { ...next[idx] };
-                                      s.content = { ...s.content, displayTitle: val };
-                                      if (s.content.productSnapshot) {
-                                        s.content.productSnapshot = { ...s.content.productSnapshot, name: val };
+                                      const c = { ...(s.content as any), displayTitle: val };
+                                      if (c.productSnapshot) {
+                                        c.productSnapshot = { ...c.productSnapshot, name: val };
                                       }
+                                      s.content = c;
                                       next[idx] = s;
                                       return next;
                                     });
@@ -667,10 +669,11 @@ export function PreSendVisualConfirmationModal({
                                     setEditSections((prev) => {
                                       const next = [...prev];
                                       const s = { ...next[idx] };
-                                      s.content = { ...s.content, displayDescription: val };
-                                      if (s.content.productSnapshot) {
-                                        s.content.productSnapshot = { ...s.content.productSnapshot, description: val };
+                                      const c = { ...(s.content as any), displayDescription: val };
+                                      if (c.productSnapshot) {
+                                        c.productSnapshot = { ...c.productSnapshot, description: val };
                                       }
+                                      s.content = c;
                                       next[idx] = s;
                                       return next;
                                     });
@@ -682,13 +685,13 @@ export function PreSendVisualConfirmationModal({
                               <div>
                                 <label className="text-[10px] text-slate-400 block mb-0.5">Button CTA</label>
                                 <Input
-                                  value={sec.content?.ctaText || "Shop Now"}
+                                  value={secContent?.ctaText || "Shop Now"}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     setEditSections((prev) => {
                                       const next = [...prev];
                                       const s = { ...next[idx] };
-                                      s.content = { ...s.content, ctaText: val };
+                                      s.content = { ...(s.content as any), ctaText: val };
                                       next[idx] = s;
                                       return next;
                                     });
@@ -701,7 +704,7 @@ export function PreSendVisualConfirmationModal({
                           );
                         }
                         if (sec.type === "product-grid") {
-                          const items = sec.content?.items || sec.content?.products || [];
+                          const items = secContent?.items || secContent?.products || [];
                           return (
                             <div key={sec.id || idx} className="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700 space-y-2">
                               <span className="text-[10px] uppercase font-bold text-indigo-400">Product Grid #{idx + 1}</span>
@@ -715,11 +718,13 @@ export function PreSendVisualConfirmationModal({
                                       setEditSections((prev) => {
                                         const next = [...prev];
                                         const s = { ...next[idx] };
-                                        const sItems = [...(s.content?.items || s.content?.products || [])];
+                                        const sContent = { ...(s.content as any) };
+                                        const sItems = [...(sContent?.items || sContent?.products || [])];
                                         if (sItems[itmIdx]) {
                                           sItems[itmIdx] = { ...sItems[itmIdx], name: val };
-                                          s.content = { ...s.content, items: sItems };
+                                          sContent.items = sItems;
                                         }
+                                        s.content = sContent;
                                         next[idx] = s;
                                         return next;
                                       });

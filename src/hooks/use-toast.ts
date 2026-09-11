@@ -18,9 +18,13 @@ export interface ToastItem {
   action?: ToastAction;
 }
 
+export type ToastInput = Omit<ToastItem, "id" | "variant"> & {
+  variant?: ToastVariant;
+};
+
 interface ToastStore {
   toasts: ToastItem[];
-  push: (toast: Omit<ToastItem, "id">) => void;
+  push: (toast: ToastInput) => void;
   dismiss: (id: string) => void;
 }
 
@@ -28,7 +32,12 @@ export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
   push: (toast) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
+    const fullToast: ToastItem = {
+      variant: "info",
+      ...toast,
+      id,
+    };
+    set((s) => ({ toasts: [...s.toasts, fullToast] }));
     const duration = toast.duration ?? 5000;
     if (duration > 0) {
       setTimeout(() => {
@@ -40,7 +49,7 @@ export const useToastStore = create<ToastStore>((set) => ({
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));
 
-export function toast(input: Omit<ToastItem, "id">) {
+export function toast(input: ToastInput) {
   useToastStore.getState().push(input);
 }
 

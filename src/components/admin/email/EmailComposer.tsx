@@ -499,7 +499,7 @@ export function EmailComposer({
     const newSections = [...baseSections];
     const targetSection = { ...newSections[sectionIndex] };
     targetSection.content = {
-      ...targetSection.content,
+      ...(targetSection.content as any),
       [field]: value,
     };
     newSections[sectionIndex] = targetSection;
@@ -535,7 +535,7 @@ export function EmailComposer({
     if (!baseSections || !baseSections[sectionIndex]) return;
     const newSections = [...baseSections];
     const targetSection = { ...newSections[sectionIndex] };
-    const content = { ...targetSection.content };
+    const content = { ...(targetSection.content as any) };
     content.displayTitle = val;
     if (content.productSnapshot) {
       content.productSnapshot = { ...content.productSnapshot, name: val };
@@ -571,7 +571,7 @@ export function EmailComposer({
     if (!baseSections || !baseSections[sectionIndex]) return;
     const newSections = [...baseSections];
     const targetSection = { ...newSections[sectionIndex] };
-    const content = { ...targetSection.content };
+    const content = { ...(targetSection.content as any) };
     content.displayDescription = val;
     if (content.productSnapshot) {
       content.productSnapshot = { ...content.productSnapshot, description: val };
@@ -607,7 +607,7 @@ export function EmailComposer({
     if (!baseSections || !baseSections[sectionIndex]) return;
     const newSections = [...baseSections];
     const targetSection = { ...newSections[sectionIndex] };
-    const content = { ...targetSection.content };
+    const content = { ...(targetSection.content as any) };
     const items = [...(content.items || content.products || [])];
     if (items[itemIndex]) {
       items[itemIndex] = { ...items[itemIndex], [field]: val };
@@ -640,7 +640,7 @@ export function EmailComposer({
   };
 
   const insertTokenIntoVisualSection = (sectionIndex: number, field: string, token: string) => {
-    const currentVal = activeVisualSections[sectionIndex]?.content?.[field] || "";
+    const currentVal = (activeVisualSections[sectionIndex]?.content as any)?.[field] || "";
     updateVisualSection(sectionIndex, field, currentVal ? `${currentVal} ${token}` : token);
   };
 
@@ -1797,7 +1797,7 @@ export function EmailComposer({
                                     Product Title / Name ({activeLocale.toUpperCase()})
                                   </label>
                                   <Input
-                                    value={sec.content?.displayTitle || sec.content?.productSnapshot?.name || ""}
+                                    value={(sec.content as any)?.displayTitle || (sec.content as any)?.productSnapshot?.name || ""}
                                     onChange={(e) => updateProductTitle(sIdx, e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Product title in current language..."
@@ -1810,7 +1810,7 @@ export function EmailComposer({
                                   </label>
                                   <textarea
                                     rows={2}
-                                    value={sec.content?.displayDescription || sec.content?.productSnapshot?.description || ""}
+                                    value={(sec.content as any)?.displayDescription || (sec.content as any)?.productSnapshot?.description || ""}
                                     onChange={(e) => updateProductDescription(sIdx, e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Product description in current language..."
@@ -1825,7 +1825,7 @@ export function EmailComposer({
                                       Button CTA Text
                                     </label>
                                     <Input
-                                      value={sec.content?.ctaText || "Shop Now"}
+                                      value={(sec.content as any)?.ctaText || "Shop Now"}
                                       onChange={(e) => updateVisualSection(sIdx, "ctaText", e.target.value)}
                                       dir={isRtl ? "rtl" : "ltr"}
                                       placeholder="Shop Now"
@@ -1837,7 +1837,7 @@ export function EmailComposer({
                                       Badge / Tag
                                     </label>
                                     <Input
-                                      value={sec.content?.badgeText || ""}
+                                      value={(sec.content as any)?.badgeText || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "badgeText", e.target.value)}
                                       dir={isRtl ? "rtl" : "ltr"}
                                       placeholder="e.g. Limited Deal"
@@ -1850,7 +1850,7 @@ export function EmailComposer({
                                     Section Header (Optional)
                                   </label>
                                   <Input
-                                    value={sec.content?.title || ""}
+                                    value={(sec.content as any)?.title || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "title", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="e.g. Featured Pick"
@@ -1859,7 +1859,7 @@ export function EmailComposer({
                                 </div>
                                 <div className="text-[11px] text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 flex items-center justify-between">
                                   <span>Dynamic Price: {activeCurrency} (Rate: {storeRates[activeCurrency] || 1}x)</span>
-                                  <span className="font-mono text-[10px] text-indigo-600">ID: {sec.content?.productId || "snapshot"}</span>
+                                  <span className="font-mono text-[10px] text-indigo-600">ID: {(sec.content as any)?.productId || "snapshot"}</span>
                                 </div>
                               </div>
                             )}
@@ -1872,7 +1872,7 @@ export function EmailComposer({
                                       Grid Header
                                     </label>
                                     <Input
-                                      value={sec.content?.title || ""}
+                                      value={(sec.content as any)?.title || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "title", e.target.value)}
                                       dir={isRtl ? "rtl" : "ltr"}
                                       placeholder="Featured Collection"
@@ -1884,7 +1884,7 @@ export function EmailComposer({
                                       Grid Subtitle
                                     </label>
                                     <Input
-                                      value={sec.content?.subtitle || ""}
+                                      value={(sec.content as any)?.subtitle || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "subtitle", e.target.value)}
                                       dir={isRtl ? "rtl" : "ltr"}
                                       placeholder="Handpicked essentials"
@@ -1897,19 +1897,19 @@ export function EmailComposer({
                                     Card Button CTA
                                   </label>
                                   <Input
-                                    value={sec.content?.ctaText || "Shop Now"}
+                                    value={(sec.content as any)?.ctaText || "Shop Now"}
                                     onChange={(e) => updateVisualSection(sIdx, "ctaText", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Shop Now"
                                     className={`text-xs ${isRtl ? "text-right" : ""}`}
                                   />
                                 </div>
-                                {Array.isArray(sec.content?.items || sec.content?.products) && (sec.content?.items || sec.content?.products).length > 0 && (
+                                {Array.isArray((sec.content as any)?.items || (sec.content as any)?.products) && ((sec.content as any)?.items || (sec.content as any)?.products).length > 0 && (
                                   <div className="space-y-1.5 pt-1">
                                     <label className="text-[11px] font-bold text-gray-700 block">
                                       Grid Items ({activeLocale.toUpperCase()} Titles):
                                     </label>
-                                    {(sec.content?.items || sec.content?.products).map((item: any, itmIdx: number) => (
+                                    {((sec.content as any)?.items || (sec.content as any)?.products).map((item: any, itmIdx: number) => (
                                       <div key={item.id || itmIdx} className="p-2 bg-gray-50 border border-gray-200 rounded-lg space-y-1">
                                         <div className="flex items-center justify-between text-[10px] text-gray-500 font-semibold">
                                           <span>Item #{itmIdx + 1}</span>

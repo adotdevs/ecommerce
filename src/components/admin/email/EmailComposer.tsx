@@ -1950,20 +1950,20 @@ export function EmailComposer({
                                     Banner Text / Headline
                                   </label>
                                   <Input
-                                    value={sec.content?.headline || sec.content?.text || ""}
+                                    value={secContent.headline || secContent.text || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "headline", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Special announcement..."
                                     className={`text-xs ${isRtl ? "text-right" : ""}`}
                                   />
                                 </div>
-                                {sec.content?.couponCode !== undefined && (
+                                {secContent.couponCode !== undefined && (
                                   <div>
                                     <label className="text-[11px] font-semibold text-gray-600 block mb-0.5">
                                       Coupon Code
                                     </label>
                                     <Input
-                                      value={sec.content?.couponCode || ""}
+                                      value={secContent.couponCode || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "couponCode", e.target.value)}
                                       placeholder="DISCOUNT20"
                                       className="text-xs font-mono"
@@ -1981,7 +1981,7 @@ export function EmailComposer({
                                   </label>
                                   <textarea
                                     rows={2}
-                                    value={sec.content?.address || sec.content?.text || ""}
+                                    value={secContent.address || secContent.text || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "address", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Company info..."

@@ -409,7 +409,7 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
       createTextBlock({ text: "Welcome to our online store!" }),
       createProductBlock(
         "prod_test",
-        { name: "Wireless ANC Headphones", price: 100 },
+        { name: "Wireless ANC Headphones", slug: "wireless-anc-headphones", price: 100 },
         "image-top",
         { ctaText: "Buy Now" }
       ),
@@ -425,7 +425,7 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
           createTextBlock({ text: "Bienvenue sur notre boutique en ligne !" }),
           createProductBlock(
             "prod_test",
-            { name: "Wireless ANC Headphones", price: 100 },
+            { name: "Wireless ANC Headphones", slug: "wireless-anc-headphones", price: 100 },
             "image-top",
             { ctaText: "Acheter maintenant" }
           ),
@@ -474,7 +474,7 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
     doc.sections = [
       createProductBlock(
         "prod_test",
-        { name: "Premium Leather Jacket", price: 100 },
+        { name: "Premium Leather Jacket", slug: "premium-leather-jacket", price: 100 },
         "image-top",
         { ctaText: "Order Now" }
       ),
@@ -513,7 +513,7 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
     doc.sections = [
       createProductBlock(
         "prod_leather",
-        { name: "Men's Luxury Leather Jacket", price: 250, description: "Handcrafted Italian leather" },
+        { name: "Men's Luxury Leather Jacket", slug: "mens-luxury-leather-jacket", price: 250, description: "Handcrafted Italian leather" },
         "image-top",
         { ctaText: "Shop Now" }
       ),
@@ -551,6 +551,7 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
             "prod_leather",
             {
               name: "جاكيت جلد رجالي فاخر",
+              slug: "mens-luxury-leather-jacket",
               price: 250,
               description: "مصنوع يدوياً من الجلد الإيطالي الفاخر",
             },

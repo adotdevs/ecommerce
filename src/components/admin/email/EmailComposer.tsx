@@ -1601,7 +1601,7 @@ export function EmailComposer({
                           size="sm"
                           onClick={() => {
                             const textParts = activeVisualSections
-                              .map((s) => s.content?.text || s.content?.headline || s.content?.subtitle || "")
+                              .map((s) => (s.content as any)?.text || (s.content as any)?.headline || (s.content as any)?.subtitle || "")
                               .filter(Boolean)
                               .join("\n\n");
                             setBody(textParts || body);
@@ -1618,6 +1618,7 @@ export function EmailComposer({
                     <div className="space-y-3 max-h-[540px] overflow-y-auto pr-1">
                       {activeVisualSections.map((sec, sIdx) => {
                         const blockType = sec.type;
+                        const secContent = (sec.content || {}) as any;
                         return (
                           <div
                             key={sec.id || sIdx}
@@ -1636,7 +1637,7 @@ export function EmailComposer({
                                   {blockType}
                                 </Badge>
                                 <span className="text-xs font-bold text-gray-800 truncate max-w-64">
-                                  {sec.content?.headline || sec.content?.title || `${blockType.toUpperCase()} BLOCK`}
+                                  {secContent.headline || secContent.title || `${blockType.toUpperCase()} BLOCK`}
                                 </span>
                               </div>
 
@@ -1670,7 +1671,7 @@ export function EmailComposer({
                                     Hero Headline
                                   </label>
                                   <Input
-                                    value={sec.content?.headline || ""}
+                                    value={secContent.headline || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "headline", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Big bold headline..."
@@ -1682,7 +1683,7 @@ export function EmailComposer({
                                     Subtitle / Tagline
                                   </label>
                                   <Input
-                                    value={sec.content?.subtitle || ""}
+                                    value={secContent.subtitle || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "subtitle", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Supporting description..."
@@ -1695,7 +1696,7 @@ export function EmailComposer({
                                       Button Text
                                     </label>
                                     <Input
-                                      value={sec.content?.buttonText || sec.content?.ctaText || ""}
+                                      value={secContent.buttonText || secContent.ctaText || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "buttonText", e.target.value)}
                                       dir={isRtl ? "rtl" : "ltr"}
                                       placeholder="Shop Now"
@@ -1707,20 +1708,20 @@ export function EmailComposer({
                                       Button URL
                                     </label>
                                     <Input
-                                      value={sec.content?.buttonUrl || sec.content?.ctaUrl || ""}
+                                      value={secContent.buttonUrl || secContent.ctaUrl || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "buttonUrl", e.target.value)}
                                       placeholder="/products"
                                       className="text-xs"
                                     />
                                   </div>
                                 </div>
-                                {sec.content?.imageUrl !== undefined && (
+                                {secContent.imageUrl !== undefined && (
                                   <div>
                                     <label className="text-[11px] font-semibold text-gray-600 block mb-0.5">
                                       Hero Banner Image URL
                                     </label>
                                     <Input
-                                      value={sec.content?.imageUrl || ""}
+                                      value={secContent.imageUrl || ""}
                                       onChange={(e) => updateVisualSection(sIdx, "imageUrl", e.target.value)}
                                       placeholder="https://..."
                                       className="text-xs"
@@ -1751,7 +1752,7 @@ export function EmailComposer({
                                 </div>
                                 <textarea
                                   rows={4}
-                                  value={sec.content?.text || ""}
+                                  value={secContent.text || ""}
                                   onChange={(e) => updateVisualSection(sIdx, "text", e.target.value)}
                                   dir={isRtl ? "rtl" : "ltr"}
                                   placeholder="Paragraph copy..."
@@ -1769,7 +1770,7 @@ export function EmailComposer({
                                     Button Label
                                   </label>
                                   <Input
-                                    value={sec.content?.buttonText || sec.content?.text || ""}
+                                    value={secContent.buttonText || secContent.text || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "buttonText", e.target.value)}
                                     dir={isRtl ? "rtl" : "ltr"}
                                     placeholder="Click Here"
@@ -1781,7 +1782,7 @@ export function EmailComposer({
                                     Target URL
                                   </label>
                                   <Input
-                                    value={sec.content?.buttonUrl || sec.content?.url || ""}
+                                    value={secContent.buttonUrl || secContent.url || ""}
                                     onChange={(e) => updateVisualSection(sIdx, "buttonUrl", e.target.value)}
                                     placeholder="https://..."
                                     className="text-xs"

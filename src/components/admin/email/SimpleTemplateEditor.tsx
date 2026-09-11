@@ -272,7 +272,7 @@ export function SimpleTemplateEditor({
           sourceLocale: "en",
           subject: emailDocument.subject,
           previewText: emailDocument.previewText,
-          bodyText: emailDocument.bodyText,
+          bodyText: bodyText,
           sections: emailDocument.sections,
           document: emailDocument,
           preserveTokens: true,

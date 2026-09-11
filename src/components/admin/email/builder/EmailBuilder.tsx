@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { EmailDocument, BlockType, ProductBlockContent, EmailSection } from "@/lib/email/document-schema";
 import { useEmailBuilder } from "./useEmailBuilder";
 import { useAutoSave } from "./useAutoSave";
@@ -12,20 +12,30 @@ import { GlobalStylesPanel } from "./GlobalStylesPanel";
 import { ProductPicker } from "./ProductPicker";
 import { PreviewPanel } from "./PreviewPanel";
 import { AiDesignPanel } from "./AiDesignPanel";
+import { TemplateSelectorModal, type SelectedTemplateResult } from "../TemplateSelectorModal";
+import { createDefaultEmailDocument } from "@/lib/email/document-defaults";
 import type { DeviceMode, CanvasZoom } from "./types";
 
 interface EmailBuilderProps {
   initialDocument?: EmailDocument;
   campaignId?: string;
+  templateId?: string;
+  templateName?: string;
   onContinueToSend?: (document: EmailDocument) => void;
   isSavingCampaign?: boolean;
+  backUrl?: string;
+  onOpenTemplatePicker?: () => void;
 }
 
 export function EmailBuilder({
   initialDocument,
   campaignId,
+  templateId,
+  templateName,
   onContinueToSend,
   isSavingCampaign = false,
+  backUrl = "/admin/campaigns",
+  onOpenTemplatePicker,
 }: EmailBuilderProps) {
   const {
     document,
@@ -49,10 +59,17 @@ export function EmailBuilder({
     duplicateSection,
   } = useEmailBuilder(initialDocument);
 
-  const { status: saveStatus, lastSavedAt } = useAutoSave({
+  const {
+    status: saveStatus,
+    lastSavedAt,
+    hasSavedDraft,
+    loadSavedDraft,
+    discardDraft,
+  } = useAutoSave({
     campaignId,
+    templateId,
     document,
-    enabled: Boolean(campaignId),
+    enabled: true,
   });
 
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
@@ -60,7 +77,22 @@ export function EmailBuilder({
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [aiDesignOpen, setAiDesignOpen] = useState(false);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [restoredBannerOpen, setRestoredBannerOpen] = useState(false);
+  const [restoredTime, setRestoredTime] = useState<string | null>(null);
   const [rightPanelMode, setRightPanelMode] = useState<"inspector" | "global">("inspector");
+
+  // Restore working draft if arriving at blank campaign page
+  useEffect(() => {
+    if (!initialDocument && !campaignId && !templateId) {
+      const saved = loadSavedDraft();
+      if (saved?.document && saved?.document?.sections?.length > 0) {
+        setDocument(saved.document);
+        setRestoredTime(saved.updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setRestoredBannerOpen(true);
+      }
+    }
+  }, [initialDocument, campaignId, templateId, loadSavedDraft, setDocument]);
 
   const selectedSection = getSelectedSection();
 
@@ -115,6 +147,36 @@ export function EmailBuilder({
 
   return (
     <div className="flex flex-col h-full flex-1 w-full bg-slate-100 overflow-hidden min-h-0">
+      {/* Restored Draft Banner */}
+      {restoredBannerOpen && (
+        <div className="bg-slate-900 text-slate-100 text-xs px-4 py-2 flex items-center justify-between z-30 shrink-0 border-b border-slate-800 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Working draft restored {restoredTime ? `from ${restoredTime}` : "from local storage"}.</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                discardDraft();
+                setRestoredBannerOpen(false);
+                setDocument(createDefaultEmailDocument());
+              }}
+              className="text-xs text-indigo-300 hover:text-white underline cursor-pointer"
+            >
+              Discard & Reset
+            </button>
+            <button
+              type="button"
+              onClick={() => setRestoredBannerOpen(false)}
+              className="text-slate-400 hover:text-white text-sm font-bold ml-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Action Toolbar */}
       <ToolbarActions
         document={document}
@@ -132,8 +194,10 @@ export function EmailBuilder({
         onUpdatePreviewText={updatePreviewText}
         onOpenPreview={() => setPreviewOpen(true)}
         onOpenAiDesign={() => setAiDesignOpen(true)}
+        onOpenTemplates={onOpenTemplatePicker || (() => setTemplateSelectorOpen(true))}
         onContinueToSend={onContinueToSend ? () => onContinueToSend(document) : undefined}
         isSavingCampaign={isSavingCampaign}
+        backUrl={backUrl}
       />
 
       {/* Main 3-Column Layout with min-h-0 to guarantee scrollability */}
@@ -143,6 +207,7 @@ export function EmailBuilder({
           onAddBlock={(type: BlockType) => addSection(type)}
           onOpenProductPicker={() => setProductPickerOpen(true)}
           onSelectTemplate={(tpl) => handleApplyTemplate(tpl.document)}
+          onOpenTemplateModal={onOpenTemplatePicker || (() => setTemplateSelectorOpen(true))}
         />
 
         {/* Center Column: Visual Canvas */}
@@ -248,6 +313,15 @@ export function EmailBuilder({
         }}
         onApplyStyles={(styles) => {
           updateGlobalStyles(styles);
+        }}
+      />
+
+      <TemplateSelectorModal
+        open={templateSelectorOpen}
+        onOpenChange={setTemplateSelectorOpen}
+        onSelectTemplate={(res) => {
+          setDocument(res.emailDocument);
+          setTemplateSelectorOpen(false);
         }}
       />
     </div>

@@ -24,6 +24,7 @@ import {
   createTextBlock,
   createButtonBlock,
   createProductBlock,
+  createProductGridBlock,
   createCouponBlock,
 } from "../document-defaults";
 import { renderEmailDocument } from "../document-renderer";
@@ -399,4 +400,209 @@ describe("Structured Document Renderer (HTML & Text)", () => {
     assert.ok(result.text.includes("Unsubscribe"));
   });
 });
+
+describe("Multilingual & Multi-Currency Email Rendering", () => {
+  it("renders localized translation variant when targetLocale matches", () => {
+    const doc = createDefaultEmailDocument("Hello {{firstName}}! Exclusive Flash Sale");
+    doc.previewText = "Don't miss our summer sale";
+    doc.sections = [
+      createTextBlock({ text: "Welcome to our online store!" }),
+      createProductBlock(
+        "prod_test",
+        { name: "Wireless ANC Headphones", price: 100 },
+        "image-top",
+        { ctaText: "Buy Now" }
+      ),
+    ];
+
+    // Add French translation variant
+    doc.translations = {
+      fr: {
+        locale: "fr",
+        subject: "Bonjour {{firstName}} ! Vente Flash Exclusive",
+        previewText: "Ne manquez pas nos soldes d'été",
+        sections: [
+          createTextBlock({ text: "Bienvenue sur notre boutique en ligne !" }),
+          createProductBlock(
+            "prod_test",
+            { name: "Wireless ANC Headphones", price: 100 },
+            "image-top",
+            { ctaText: "Acheter maintenant" }
+          ),
+        ],
+        direction: "ltr",
+      },
+    };
+
+    // Render for French recipient
+    const rendered = renderEmailDocument(doc, {
+      targetLocale: "fr",
+      personalization: { firstName: "Amélie" },
+    });
+
+    assert.equal(rendered.subject, "Bonjour Amélie ! Vente Flash Exclusive");
+    assert.equal(rendered.previewText, "Ne manquez pas nos soldes d'été");
+    assert.ok(rendered.html.includes("Bienvenue sur notre boutique en ligne !"));
+    assert.ok(rendered.html.includes("Acheter maintenant"));
+    assert.ok(rendered.html.includes('lang="fr"'));
+  });
+
+  it("applies RTL direction for Arabic and Urdu recipients", () => {
+    const doc = createDefaultEmailDocument("Welcome");
+    doc.sections = [createTextBlock({ text: "Hello" })];
+
+    doc.translations = {
+      ar: {
+        locale: "ar",
+        subject: "مرحباً بك",
+        sections: [createTextBlock({ text: "أهلاً وسهلاً" })],
+        direction: "rtl",
+      },
+    };
+
+    const rendered = renderEmailDocument(doc, {
+      targetLocale: "ar",
+    });
+
+    assert.ok(rendered.html.includes('dir="rtl"'));
+    assert.ok(rendered.html.includes('lang="ar"'));
+    assert.equal(rendered.subject, "مرحباً بك");
+  });
+
+  it("converts product price dynamically based on targetCurrency and exchangeRates", () => {
+    const doc = createDefaultEmailDocument("Great Deals");
+    doc.sections = [
+      createProductBlock(
+        "prod_test",
+        { name: "Premium Leather Jacket", price: 100 },
+        "image-top",
+        { ctaText: "Order Now" }
+      ),
+    ];
+
+    const rates = {
+      USD: 1,
+      EUR: 0.92,
+      GBP: 0.8,
+      AED: 3.67,
+      PKR: 278,
+    };
+
+    // Render in EUR
+    const eurResult = renderEmailDocument(doc, {
+      targetCurrency: "EUR",
+      exchangeRates: rates,
+    });
+    // 100 * 0.92 = 92 EUR
+    assert.ok(eurResult.html.includes("92") || eurResult.html.includes("€92"));
+    // Ensure no double symbol like $$
+    assert.ok(!eurResult.html.includes("$$"));
+    assert.ok(!eurResult.html.includes("€€"));
+
+    // Render in AED
+    const aedResult = renderEmailDocument(doc, {
+      targetCurrency: "AED",
+      exchangeRates: rates,
+    });
+    // 100 * 3.67 = 367 AED
+    assert.ok(aedResult.html.includes("367"));
+  });
+
+  it("renders translated product titles and product grid item names accurately", () => {
+    const doc = createDefaultEmailDocument("Exclusive Collection");
+    doc.sections = [
+      createProductBlock(
+        "prod_leather",
+        { name: "Men's Luxury Leather Jacket", price: 250, description: "Handcrafted Italian leather" },
+        "image-top",
+        { ctaText: "Shop Now" }
+      ),
+      createProductGridBlock({
+        title: "Trending Items",
+        items: [
+          {
+            id: "grid_1",
+            productId: "prod_1",
+            name: "Wireless Noise Cancelling Earbuds",
+            slug: "wireless-earbuds",
+            price: 79,
+            badge: "Best Seller",
+          },
+          {
+            id: "grid_2",
+            productId: "prod_2",
+            name: "Smart Fitness Watch",
+            slug: "smart-watch",
+            price: 120,
+            badge: "New",
+          },
+        ],
+      }),
+    ];
+
+    // Arabic translation with fully localized product titles
+    doc.translations = {
+      ar: {
+        locale: "ar",
+        subject: "تشكيلة حصرية فاخرة",
+        direction: "rtl",
+        sections: [
+          createProductBlock(
+            "prod_leather",
+            {
+              name: "جاكيت جلد رجالي فاخر",
+              price: 250,
+              description: "مصنوع يدوياً من الجلد الإيطالي الفاخر",
+            },
+            "image-top",
+            {
+              displayTitle: "جاكيت جلد رجالي فاخر",
+              displayDescription: "مصنوع يدوياً من الجلد الإيطالي الفاخر",
+              ctaText: "تسوق الآن",
+            }
+          ),
+          createProductGridBlock({
+            title: "المنتجات الأكثر رواجاً",
+            items: [
+              {
+                id: "grid_1",
+                productId: "prod_1",
+                name: "سماعات أذن لاسلكية عازلة للضوضاء",
+                slug: "wireless-earbuds",
+                price: 79,
+                badge: "الأكثر مبيعاً",
+              },
+              {
+                id: "grid_2",
+                productId: "prod_2",
+                name: "ساعة ذكية للياقة البدنية",
+                slug: "smart-watch",
+                price: 120,
+                badge: "جديد",
+              },
+            ],
+          }),
+        ],
+      },
+    };
+
+    const rendered = renderEmailDocument(doc, {
+      targetLocale: "ar",
+    });
+
+    // Verify product title translated in HTML & Text
+    assert.ok(rendered.html.includes("جاكيت جلد رجالي فاخر"), "HTML should contain translated product title");
+    assert.ok(rendered.html.includes("مصنوع يدوياً من الجلد الإيطالي الفاخر"), "HTML should contain translated product description");
+    assert.ok(rendered.html.includes("سماعات أذن لاسلكية عازلة للضوضاء"), "HTML should contain translated grid product title 1");
+    assert.ok(rendered.html.includes("ساعة ذكية للياقة البدنية"), "HTML should contain translated grid product title 2");
+    assert.ok(rendered.html.includes("الأكثر مبيعاً"), "HTML should contain translated badge");
+    assert.ok(rendered.html.includes("المنتجات الأكثر رواجاً"), "HTML should contain translated grid section title");
+    assert.ok(rendered.html.includes("تسوق الآن"), "HTML should contain translated CTA");
+
+    // Plain text check
+    assert.ok(rendered.text.includes("جاكيت جلد رجالي فاخر"), "Text version should include translated product title");
+    assert.ok(rendered.text.includes("سماعات أذن لاسلكية عازلة للضوضاء"), "Text version should include translated grid product title 1");
+  });
+});
+
 

@@ -49,6 +49,14 @@ export interface DocumentRenderOptions {
   /** Recipient for unsubscribe link */
   recipientEmail?: string;
   recipientLeadId?: string;
+  /** Target language locale for recipient (e.g. "fr", "de", "ar", "es") */
+  targetLocale?: string;
+  /** Target currency code for recipient (e.g. "EUR", "GBP", "AED", "PKR", "USD") */
+  targetCurrency?: string;
+  /** Live exchange rates dictionary for price conversion */
+  exchangeRates?: Record<string, number>;
+  /** Text layout direction (default: "rtl" if locale is ar/ur, else "ltr") */
+  direction?: "ltr" | "rtl";
 }
 
 export interface DocumentRenderResult {
@@ -60,7 +68,8 @@ export interface DocumentRenderResult {
   missingVariables: string[];
 }
 
-function esc(str: string): string {
+function esc(str: unknown): string {
+  if (typeof str !== "string") return str != null ? String(str) : "";
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -158,11 +167,57 @@ function renderImageBlock(content: ImageBlockContent, gs: GlobalStyles, section:
   return `<div style="text-align: ${align};">${img}</div>`;
 }
 
+function formatPriceDisplay(
+  rawPrice: number | undefined,
+  snapCurrency: string | undefined,
+  opts: DocumentRenderOptions
+): { formatted: string; currencySymbol: string } {
+  if (rawPrice == null) return { formatted: "0", currencySymbol: snapCurrency || "Rs" };
+
+  if (opts.targetCurrency && opts.exchangeRates) {
+    const srcCurr = (snapCurrency || "USD").toUpperCase();
+    let priceUsd = rawPrice;
+    if (srcCurr === "PKR" || srcCurr === "RS") {
+      const pkrRate = opts.exchangeRates["PKR"] || 278;
+      priceUsd = rawPrice / pkrRate;
+    } else if (srcCurr !== "USD" && opts.exchangeRates[srcCurr]) {
+      priceUsd = rawPrice / opts.exchangeRates[srcCurr];
+    }
+
+    const targetRate = opts.exchangeRates[opts.targetCurrency] || 1;
+    const converted = priceUsd * targetRate;
+    const targetLocale = opts.targetLocale || "en-US";
+    try {
+      const formattedNumber = new Intl.NumberFormat(targetLocale, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(converted);
+      return {
+        formatted: formattedNumber,
+        currencySymbol: opts.targetCurrency,
+      };
+    } catch {
+      return {
+        formatted: converted.toFixed(0),
+        currencySymbol: opts.targetCurrency,
+      };
+    }
+  }
+
+  const curr = snapCurrency || "Rs";
+  const numStr = typeof rawPrice === "number" ? rawPrice.toLocaleString() : String(rawPrice);
+  return { formatted: numStr, currencySymbol: curr };
+}
+
 function renderProductBlock(content: ProductBlockContent, gs: GlobalStyles, section: EmailSection, opts: DocumentRenderOptions): string {
   const snap = content.productSnapshot;
   const title = resolvePersonalization(content.displayTitle || snap.name, opts.personalization);
   const desc = resolvePersonalization(content.displayDescription || snap.description || "", opts.personalization);
-  const currency = snap.currency || "Rs";
+  const priceDisp = formatPriceDisplay(snap.price, snap.currency, opts);
+  const salePriceDisp = formatPriceDisplay(snap.salePrice, snap.currency, opts);
+  const currency = priceDisp.currencySymbol;
+  const priceFormatted = priceDisp.formatted;
+  const salePriceFormatted = snap.salePrice ? salePriceDisp.formatted : "";
   const hasDiscount = content.showSalePrice && snap.salePrice && snap.price && snap.salePrice < snap.price;
   const discountPercent = hasDiscount
     ? Math.round(((snap.price! - snap.salePrice!) / snap.price!) * 100)
@@ -203,10 +258,6 @@ function renderProductBlock(content: ProductBlockContent, gs: GlobalStyles, sect
   if (content.showDescription && desc) {
     descHtml = `<p style="margin: 0 0 12px 0; font-size: 13px; color: #6b7280; line-height: 1.4; font-family: ${gs.fontFamily};">${esc(desc.slice(0, 200))}</p>`;
   }
-
-  const formatMoney = (val: unknown) => (typeof val === "number" ? val.toLocaleString() : (val ? String(val) : "0"));
-  const priceFormatted = formatMoney(snap.price);
-  const salePriceFormatted = formatMoney(snap.salePrice);
 
   let priceHtml = "";
   if (content.showPrice || content.showSalePrice) {
@@ -608,10 +659,12 @@ function renderProductGridBlock(content: ProductGridBlockContent, gs: GlobalStyl
 
       const itemUrl = toAbsoluteUrl(`/products/${item.slug}`);
       const trackedUrl = resolveUrl(itemUrl, opts, "PRODUCT_GRID_ITEM", item.productId, item.name, section.id);
-      const currency = item.currency || "Rs";
+      const priceDisp = formatPriceDisplay(item.price, item.currency, opts);
+      const saleDisp = formatPriceDisplay(item.salePrice, item.currency, opts);
+      const currency = priceDisp.currencySymbol;
+      const formattedPrice = priceDisp.formatted;
+      const formattedSalePrice = item.salePrice ? saleDisp.formatted : "";
       const hasDiscount = item.salePrice && item.price && item.salePrice < item.price;
-      const formattedPrice = item.price ? Number(item.price).toLocaleString() : "";
-      const formattedSalePrice = item.salePrice ? Number(item.salePrice).toLocaleString() : "";
 
       const card = `<div style="border: 1px solid ${cardBorder}; border-radius: ${cardRadius}px; background-color: ${cardBg}; padding: 12px; text-align: center; height: 100%;">
         ${item.image ? `<a href="${esc(trackedUrl)}" style="text-decoration: none; display: block; margin-bottom: 8px;">
@@ -811,14 +864,26 @@ function renderSection(section: EmailSection, gs: GlobalStyles, opts: DocumentRe
 
 export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOptions = {}): DocumentRenderResult {
   const gs = doc.globalStyles;
-  const subject = resolvePersonalization(doc.subject, opts.personalization);
-  const previewText = resolvePersonalization(doc.previewText || "", opts.personalization);
+
+  // Resolve target language and direction
+  const lang = opts.targetLocale || doc.defaultLocale || "en";
+  const isRtl = opts.direction === "rtl" || lang === "ar" || lang === "ur";
+  const dir = isRtl ? "rtl" : "ltr";
+
+  // Check if a localized variant exists for this language
+  const variant = doc.translations?.[lang];
+  const rawSubject = variant?.subject || doc.subject;
+  const rawPreview = variant?.previewText !== undefined ? variant.previewText : (doc.previewText || "");
+  const activeSections = variant?.sections && variant.sections.length > 0 ? variant.sections : doc.sections;
+
+  const subject = resolvePersonalization(rawSubject, opts.personalization);
+  const previewText = resolvePersonalization(rawPreview, opts.personalization);
 
   // Check for a footer block; if missing, add mandatory unsubscribe
-  const hasFooter = doc.sections.some(s => s.type === "footer" && s.visible);
+  const hasFooter = activeSections.some(s => s.type === "footer" && s.visible);
 
   // Render all visible sections
-  const sectionsHtml = doc.sections
+  const sectionsHtml = activeSections
     .filter(s => s.visible)
     .map(s => renderSection(s, gs, opts))
     .join("");
@@ -837,9 +902,9 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
     </div>`;
   }
 
-  // Build complete email HTML
+  // Build complete email HTML with locale and direction
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${esc(lang)}" dir="${dir}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -851,7 +916,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${gs.backgroundColor}; font-family: ${gs.fontFamily}; -webkit-font-smoothing: antialiased;">
+<body dir="${dir}" style="margin: 0; padding: 0; background-color: ${gs.backgroundColor}; font-family: ${gs.fontFamily}; text-align: ${isRtl ? "right" : "left"}; -webkit-font-smoothing: antialiased;">
   ${previewText ? `<div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all; font-size: 1px; line-height: 1px; max-width: 0px; opacity: 0;">${esc(previewText)}</div>` : ""}
   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${gs.backgroundColor}; padding: 32px 12px;">
     <tr>
@@ -872,7 +937,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
 
   // Generate plain-text fallback
   const textLines: string[] = [];
-  for (const section of doc.sections.filter(s => s.visible)) {
+  for (const section of activeSections.filter(s => s.visible)) {
     const c = section.content;
     switch (section.type) {
       case "text": {

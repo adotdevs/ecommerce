@@ -13,6 +13,8 @@ import { checkLeadEligibility } from "@/lib/email/eligibility";
 import { renderEmail } from "@/lib/email/render";
 import { renderEmailDocument } from "@/lib/email/document-renderer";
 import type { EmailDocument } from "@/lib/email/document-schema";
+import { countryLocaleMap, countryCurrencyMap } from "@/lib/geo/country-preferences";
+import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
 import { buildTrackingUrl } from "@/lib/email/tracking";
 import { canSendCount } from "@/lib/email/quota";
 import { processPendingQueue } from "@/lib/email/queue";
@@ -50,6 +52,8 @@ const createCampaignSchema = z.object({
   sendImmediately: z.boolean().default(true),
   scheduledAt: z.string().optional(),
   ignoreCooldown: z.boolean().default(false),
+  overrideLocale: z.string().optional(),
+  overrideCurrency: z.string().optional(),
 });
 
 export const GET = withAuth(async (request: NextRequest) => {
@@ -180,11 +184,17 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
     // 2. Create EmailMessage jobs with immutable rendered snapshots
     const messageDocs = [];
     const campaignIdStr = String(campaign._id);
+    const exchangeRates = await fetchLiveExchangeRates().catch(() => undefined);
 
     for (const lead of eligibleLeads) {
       const emailMessageId = crypto.randomUUID();
       const trackingToken = crypto.randomBytes(24).toString("hex");
       const idempotencyKey = `camp_${campaignIdStr}_lead_${String(lead._id)}`;
+
+      // Resolve recipient market preferences
+      const countryCode = (lead.country || lead.phoneCountry || (lead.meta as any)?.country || "US").toUpperCase();
+      const targetLocale = data.overrideLocale || (lead.meta as any)?.preferredLanguage || countryLocaleMap[countryCode] || "en";
+      const targetCurrency = data.overrideCurrency || (lead.meta as any)?.preferredCurrency || countryCurrencyMap[countryCode] || "USD";
 
       let renderedSubject = data.subject;
       let renderedPreviewText = data.previewText;
@@ -200,6 +210,9 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
             email: lead.email || "",
             leadId: String(lead._id),
           },
+          targetLocale,
+          targetCurrency,
+          exchangeRates,
           emailMessageId,
           campaignId: campaignIdStr,
           leadId: String(lead._id),

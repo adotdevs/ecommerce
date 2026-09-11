@@ -18,6 +18,7 @@ import {
   ZoomIn,
   Wand2,
   ChevronDown,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ds/button";
 import { Modal, ModalContent, ModalHeader, ModalTitle } from "@/components/ds/modal";
@@ -43,8 +44,10 @@ interface ToolbarActionsProps {
   onUpdatePreviewText: (previewText: string) => void;
   onOpenPreview: () => void;
   onOpenAiDesign: () => void;
+  onOpenTemplates?: () => void;
   onContinueToSend?: () => void;
   isSavingCampaign?: boolean;
+  backUrl?: string;
 }
 
 export function ToolbarActions({
@@ -63,8 +66,10 @@ export function ToolbarActions({
   onUpdatePreviewText,
   onOpenPreview,
   onOpenAiDesign,
+  onOpenTemplates,
   onContinueToSend,
   isSavingCampaign = false,
+  backUrl = "/admin/campaigns",
 }: ToolbarActionsProps) {
   const { accessToken } = useAuthStore();
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -74,6 +79,8 @@ export function ToolbarActions({
 
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("general_promotion");
+  const [templateDescription, setTemplateDescription] = useState("");
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
 
@@ -140,21 +147,30 @@ export function ToolbarActions({
         },
         body: JSON.stringify({
           name: templateName.trim(),
+          category: templateCategory,
+          description: templateDescription.trim() || undefined,
           subjectTemplate: document.subject || "Template Subject",
           previewTextTemplate: document.previewText,
           emailDocument: document,
+          translations: document.translations || {},
+          templateType: "visual",
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setTemplateSaved(true);
         setTimeout(() => {
           setTemplateSaved(false);
           setTemplateModalOpen(false);
+          setTemplateName("");
+          setTemplateDescription("");
         }, 1500);
+      } else {
+        alert(data.error || data.message || "Failed to save template. Please check inputs.");
       }
-    } catch {
-      // Handled
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error saving template");
     } finally {
       setTemplateSaving(false);
     }
@@ -205,12 +221,12 @@ export function ToolbarActions({
         {/* Left: Breadcrumbs & Subject Editor */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Link
-            href="/admin/campaigns"
+            href={backUrl}
             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-900 transition flex items-center gap-1 text-xs font-semibold flex-shrink-0"
-            title="Back to Campaigns"
+            title="Back"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden lg:inline text-gray-400 font-normal">Campaigns /</span>
+            <span className="hidden lg:inline text-gray-400 font-normal">Back /</span>
             <span className="hidden sm:inline">Studio</span>
           </Link>
 
@@ -431,15 +447,30 @@ export function ToolbarActions({
             <span className="hidden sm:inline">Preview</span>
           </Button>
 
+          {onOpenTemplates && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onOpenTemplates}
+              title="Browse and select email templates"
+              className="gap-1.5 text-xs text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 border-indigo-200 shadow-2xs font-semibold"
+            >
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden md:inline">Templates</span>
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={() => setTemplateModalOpen(true)}
-            title="Save as reusable template"
-            className="gap-1 text-xs text-gray-700 hover:text-gray-900 border-gray-200"
+            title="Save as new reusable template in library"
+            className="gap-1.5 text-xs text-indigo-700 bg-white hover:bg-indigo-50 border-indigo-200 shadow-2xs font-semibold"
           >
-            <Save className="w-3.5 h-3.5 text-gray-500" />
+            <Save className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden lg:inline">Save as Template</span>
           </Button>
 
           {onContinueToSend && (
@@ -550,12 +581,12 @@ export function ToolbarActions({
 
           <div className="space-y-4 py-3 text-xs">
             <p className="text-gray-500 leading-relaxed">
-              Save this email layout to your library so you or your marketing team can launch future campaigns using this structure in seconds.
+              Save this email layout as a reusable template in your library under a custom name. Unsaved work will still remain preserved in your working draft.
             </p>
 
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-1 block">
-                Template Name
+                Template Name <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -566,10 +597,47 @@ export function ToolbarActions({
               />
             </div>
 
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-1 block">
+                Category
+              </label>
+              <select
+                value={templateCategory}
+                onChange={(e) => setTemplateCategory(e.target.value)}
+                className="w-full text-xs rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-800 focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="general_promotion">General Promotion</option>
+                <option value="flash_sale">Flash Sale</option>
+                <option value="new_arrivals">New Arrivals</option>
+                <option value="welcome_series">Welcome Series</option>
+                <option value="re_engagement">Re-engagement</option>
+                <option value="abandoned_cart">Abandoned Cart</option>
+                <option value="newsletter">Newsletter</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-1 block">
+                Description (Optional)
+              </label>
+              <textarea
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+                placeholder="Brief notes about when to use this template..."
+                rows={2}
+                className="w-full text-xs rounded-lg border border-gray-200 p-2 text-gray-800 focus:border-indigo-500 focus:outline-none resize-none"
+              />
+            </div>
+
+            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 flex items-start gap-1.5">
+              <span className="font-bold text-slate-700">Note:</span>
+              <span>If you don't save now, your template stays safe in your browser's auto-saved draft. Saving stores it permanently for team use.</span>
+            </div>
+
             {templateSaved && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                Template successfully saved to library!
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                Template successfully saved to your template library!
               </div>
             )}
           </div>

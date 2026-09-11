@@ -24,6 +24,7 @@ import {
   Mail,
   DollarSign,
   Users,
+  Layers,
 } from "lucide-react";
 import { EmailComposer, type SelectedLeadContext } from "@/components/admin/email/EmailComposer";
 import { cn } from "@/components/ds/utils";
@@ -265,6 +266,12 @@ export default function AdminCampaignsPage() {
           >
             <Mail className="mr-1.5 h-3.5 w-3.5" />
             Quick Composer
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/campaigns/templates">
+              <Layers className="mr-1.5 h-3.5 w-3.5 text-indigo-600" />
+              Templates
+            </Link>
           </Button>
           <Button
             variant="primary"

@@ -387,6 +387,18 @@ export interface EmailSection {
   content: BlockContent;
 }
 
+// ─── Localized Email Variant ──────────────────────────────────────────────────
+
+export interface LocalizedEmailVariant {
+  locale: string;
+  subject: string;
+  previewText?: string;
+  bodyText?: string;
+  sections?: EmailSection[];
+  direction?: "ltr" | "rtl";
+  updatedAt?: string;
+}
+
 // ─── Email Document ──────────────────────────────────────────────────────────
 
 export interface EmailDocument {
@@ -395,6 +407,8 @@ export interface EmailDocument {
   previewText?: string;
   globalStyles: GlobalStyles;
   sections: EmailSection[];
+  defaultLocale?: string;
+  translations?: Record<string, LocalizedEmailVariant>;
   metadata?: {
     lastSavedAt?: string;
     autoSaveId?: string;

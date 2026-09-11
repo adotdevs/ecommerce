@@ -257,6 +257,7 @@ export function createTestimonialBlock(overrides?: Partial<TestimonialBlockConte
   return makeSection("testimonial", content, { paddingTop: 16, paddingBottom: 16 });
 }
 
+
 export function createHeroBlock(overrides?: Partial<HeroBlockContent>): EmailSection {
   const content: HeroBlockContent = {
     title: "",
@@ -381,6 +382,158 @@ export function createDefaultEmailDocument(subject: string = ""): EmailDocument 
     ],
   };
 }
+
+// ─── Simple Email Document Factory ──────────────────────────────────────────
+
+export function createSimpleEmailDocument(
+  subject: string,
+  bodyText: string,
+  options: {
+    previewText?: string;
+    buttonText?: string;
+    buttonUrl?: string;
+    signOff?: string;
+  } = {}
+): EmailDocument {
+  const sections: EmailSection[] = [
+    createTextBlock({
+      text: bodyText || "Hi {{firstName}},\n\nWe wanted to share an update with you.",
+      fontSize: 16,
+      lineHeight: 1.7,
+      textColor: "#1f2937",
+    }),
+  ];
+
+  if (options.buttonText && options.buttonUrl) {
+    sections.push(
+      createButtonBlock({
+        text: options.buttonText,
+        url: options.buttonUrl,
+        alignment: "left",
+        fontSize: 15,
+        fontWeight: 600,
+      })
+    );
+  }
+
+  if (options.signOff) {
+    sections.push(
+      createTextBlock({
+        text: options.signOff,
+        fontSize: 14,
+        lineHeight: 1.6,
+        textColor: "#4b5563",
+      })
+    );
+  }
+
+  sections.push(
+    createFooterBlock({
+      showUnsubscribe: true,
+      text: "You are receiving this email because you opted in on our store.",
+    })
+  );
+
+  return {
+    version: 1,
+    subject: subject || "Personal note from the team",
+    previewText: options.previewText || "",
+    globalStyles: {
+      backgroundColor: "#f9fafb",
+      contentWidth: 560,
+      contentBackground: "#ffffff",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      textColor: "#1f2937",
+      linkColor: "#4f46e5",
+      buttonColor: "#111827",
+      buttonTextColor: "#ffffff",
+      buttonRadius: 6,
+      headingColor: "#111827",
+      sectionSpacing: 0,
+      borderRadius: 8,
+    },
+    sections,
+  };
+}
+
+export interface StarterSimpleTemplate {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
+  previewText?: string;
+  bodyText: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  signOff?: string;
+  category: "welcome" | "personal_offer" | "feedback" | "announcement";
+  iconName: string;
+}
+
+export const STARTER_SIMPLE_TEMPLATES: StarterSimpleTemplate[] = [
+  {
+    id: "founder_welcome",
+    name: "Founder Welcome & Personal Story",
+    description: "Heartfelt, high-open-rate personal founder introduction letter.",
+    category: "welcome",
+    iconName: "Heart",
+    subject: "A personal note from our founder",
+    previewText: "Why we started this brand and a small welcome gift for you.",
+    bodyText: `Hi {{firstName}},
+
+I wanted to personally reach out and welcome you to {{storeName}}.
+
+When we started this journey, our goal was simple: to craft timeless, premium products that don't cut corners on quality or integrity. Every piece in our catalog is something we've personally tested, refined, and stand behind 100%.
+
+As a token of appreciation for joining us, please enjoy a special welcome discount on your first order. Use code **WELCOME10** at checkout.
+
+If you ever have feedback, questions, or just want to tell us how your experience was, simply reply directly to this email. I read every message.`,
+    buttonText: "Explore Our Best Sellers",
+    buttonUrl: "/products",
+    signOff: "Warm regards,\nThe Founder & Team\n{{storeName}}",
+  },
+  {
+    id: "vip_exclusive_invite",
+    name: "VIP Private Access Invitation",
+    description: "Exclusive tone offering early access or members-only pricing.",
+    category: "personal_offer",
+    iconName: "Sparkles",
+    subject: "Private Invitation: Early access for {{firstName}}",
+    previewText: "Your private access pass to our private vault release.",
+    bodyText: `Hello {{firstName}},
+
+Because you've been one of our valued subscribers, we're opening up our private archive release 24 hours before it goes public.
+
+Inventory on this curated drop is strictly limited, and once pieces are claimed they won't be restocked this season.
+
+Use your VIP privilege link below to access the private showcase before the general announcement tomorrow.`,
+    buttonText: "Access VIP Vault →",
+    buttonUrl: "/products",
+    signOff: "Best,\nClient Experience Team\n{{storeName}}",
+  },
+  {
+    id: "simple_announcement",
+    name: "Clean Store Update & Announcement",
+    description: "Direct, scannable text notification for new arrivals or updates.",
+    category: "announcement",
+    iconName: "FileText",
+    subject: "Quick update: Exciting changes at {{storeName}}",
+    previewText: "Here is what we've been working on this week.",
+    bodyText: `Hey {{firstName}},
+
+Quick update from the workshop today. We just restocked our most popular items and added fresh new colorways that you requested.
+
+Here are the highlights:
+• Restocked best-selling sizes across all key collections
+• New express shipping options for faster delivery
+• Extended 30-day effortless return policy
+
+Take a look around and see what catches your eye.`,
+    buttonText: "Check What's New",
+    buttonUrl: "/products",
+    signOff: "Cheers,\nThe {{storeName}} Team",
+  },
+];
 
 // ─── Pre-built Designer Templates ──────────────────────────────────────────
 

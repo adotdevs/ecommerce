@@ -289,9 +289,14 @@ export default function AdminLeadsPage() {
         email: lead.email,
         firstName: lead.firstName,
         lastName: lead.lastName,
+        country: lead.country,
+        phoneCountry: lead.phoneCountry,
+        phone: lead.phone,
         emailSentCount: lead.emailSentCount,
         lastEmailSentAt: lead.lastEmailSentAt,
         isSuppressed: lead.isSuppressed,
+        cooldownUntil: lead.cooldownUntil,
+        brand: lead.brand,
       },
     ]);
     setIsComposerOpen(true);
@@ -305,9 +310,14 @@ export default function AdminLeadsPage() {
         email: lead.email,
         firstName: lead.firstName,
         lastName: lead.lastName,
+        country: lead.country,
+        phoneCountry: lead.phoneCountry,
+        phone: lead.phone,
         emailSentCount: lead.emailSentCount,
         lastEmailSentAt: lead.lastEmailSentAt,
         isSuppressed: lead.isSuppressed,
+        cooldownUntil: lead.cooldownUntil,
+        brand: lead.brand,
       }));
     if (!chosen.length) {
       toastError("No leads selected", "Please select at least one lead.");

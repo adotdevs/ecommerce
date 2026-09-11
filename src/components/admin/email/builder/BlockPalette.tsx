@@ -21,6 +21,7 @@ import {
   Search,
   BookTemplate,
   Check,
+  Layers,
 } from "lucide-react";
 import type { BlockType } from "@/lib/email/document-schema";
 import { STARTER_TEMPLATES, type StarterTemplate } from "@/lib/email/document-defaults";
@@ -29,6 +30,7 @@ interface BlockPaletteProps {
   onAddBlock: (type: BlockType) => void;
   onOpenProductPicker: () => void;
   onSelectTemplate?: (template: StarterTemplate) => void;
+  onOpenTemplateModal?: () => void;
 }
 
 interface PaletteItem {
@@ -163,6 +165,7 @@ export function BlockPalette({
   onAddBlock,
   onOpenProductPicker,
   onSelectTemplate,
+  onOpenTemplateModal,
 }: BlockPaletteProps) {
   const [activeTab, setActiveTab] = useState<"blocks" | "templates">("blocks");
   const [searchQuery, setSearchQuery] = useState("");
@@ -294,9 +297,20 @@ export function BlockPalette({
             <div>
               <h4 className="text-xs font-bold text-gray-900">Pre-Built Layouts</h4>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Click any template to apply a complete, high-converting email structure.
+                Click any template to apply a complete email structure.
               </p>
             </div>
+
+            {onOpenTemplateModal && (
+              <button
+                type="button"
+                onClick={onOpenTemplateModal}
+                className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center justify-center gap-1.5 shadow-2xs"
+              >
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Browse All Templates</span>
+              </button>
+            )}
 
             <div className="space-y-2 pt-1">
               {STARTER_TEMPLATES.map((tpl) => {

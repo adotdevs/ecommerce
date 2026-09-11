@@ -23,6 +23,24 @@ export interface IVisitorGeo {
   hosting?: boolean;
 }
 
+export interface IVisitorCampaignAttribution {
+  isCampaignVisit?: boolean;
+  campaignId?: string;
+  campaignName?: string;
+  emailMessageId?: string;
+  leadId?: string;
+  productId?: string;
+  productName?: string;
+  linkType?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  campaignClickedAt?: string;
+  marketingSource?: string;
+  howTheyCame?: string;
+}
+
 export interface IVisitorLog extends Document {
   ip?: string;
   geo?: IVisitorGeo;
@@ -39,6 +57,7 @@ export interface IVisitorLog extends Document {
   timezone?: string;
   platform?: string;
   telegramSent: boolean;
+  campaignAttribution?: IVisitorCampaignAttribution;
   visitedAt: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -70,6 +89,27 @@ const VisitorGeoSchema = new Schema<IVisitorGeo>(
   { _id: false }
 );
 
+const VisitorCampaignAttributionSchema = new Schema<IVisitorCampaignAttribution>(
+  {
+    isCampaignVisit: Boolean,
+    campaignId: String,
+    campaignName: String,
+    emailMessageId: String,
+    leadId: String,
+    productId: String,
+    productName: String,
+    linkType: String,
+    utmSource: String,
+    utmMedium: String,
+    utmCampaign: String,
+    utmContent: String,
+    campaignClickedAt: String,
+    marketingSource: String,
+    howTheyCame: String,
+  },
+  { _id: false }
+);
+
 const VisitorLogSchema = new Schema<IVisitorLog>(
   {
     ip: { type: String, index: true },
@@ -87,6 +127,7 @@ const VisitorLogSchema = new Schema<IVisitorLog>(
     timezone: String,
     platform: String,
     telegramSent: { type: Boolean, default: false },
+    campaignAttribution: VisitorCampaignAttributionSchema,
     visitedAt: { type: Date, default: Date.now, index: true },
   },
   { timestamps: true }
@@ -94,6 +135,7 @@ const VisitorLogSchema = new Schema<IVisitorLog>(
 
 VisitorLogSchema.index({ "geo.countryCode": 1, visitedAt: -1 });
 VisitorLogSchema.index({ createdAt: -1 });
+VisitorLogSchema.index({ "campaignAttribution.isCampaignVisit": 1, visitedAt: -1 });
 
 if (mongoose.models.VisitorLog) {
   delete mongoose.models.VisitorLog;

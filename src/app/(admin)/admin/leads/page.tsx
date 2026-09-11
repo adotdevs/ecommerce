@@ -12,13 +12,20 @@ import { toast, toastError } from "@/hooks/use-toast";
 import {
   ChevronLeft,
   ChevronRight,
+  Clock,
   Loader2,
   Mail,
   MapPin,
+  Pencil,
   Phone,
+  Plus,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
+import { EmailComposer, type SelectedLeadContext } from "@/components/admin/email/EmailComposer";
+import { LeadEmailHistoryModal } from "@/components/admin/email/LeadEmailHistoryModal";
+import { LeadFormModal } from "@/components/admin/leads/LeadFormModal";
 import {
   LEAD_TARGET_FIELDS,
   type LeadTargetField,
@@ -55,8 +62,17 @@ interface LeadRow {
   brand?: string;
   address?: string;
   status?: string;
+  agent?: string;
+  notes?: string;
+  tags?: string[];
   source?: string;
   createdAt?: string;
+  emailSentCount?: number;
+  lastEmailSentAt?: string;
+  lastEmailStatus?: string;
+  isSuppressed?: boolean;
+  suppressionReason?: string;
+  cooldownUntil?: string;
 }
 
 type MappingState = Record<string, LeadTargetField | "">;
@@ -166,6 +182,13 @@ export default function AdminLeadsPage() {
   const [dirPhoneLength, setDirPhoneLength] = useState("");
   const [dirStatus, setDirStatus] = useState("");
   const [dirBrand, setDirBrand] = useState("");
+  const [dirEmailStatus, setDirEmailStatus] = useState("");
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerLeads, setComposerLeads] = useState<SelectedLeadContext[]>([]);
+  const [historyModalLead, setHistoryModalLead] = useState<LeadRow | null>(null);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<LeadRow | null>(null);
+  const [loadingEligible, setLoadingEligible] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [facets, setFacets] = useState<{
     countries: { value: string; count: number; aliases?: string[] }[];
@@ -229,6 +252,7 @@ export default function AdminLeadsPage() {
       if (dirPhoneLength.trim()) params.set("phoneLength", dirPhoneLength.trim());
       if (dirStatus.trim()) params.set("status", dirStatus.trim());
       if (dirBrand.trim()) params.set("brand", dirBrand.trim());
+      if (dirEmailStatus.trim()) params.set("emailStatus", dirEmailStatus.trim());
 
       const res = await fetch(`/api/v1/admin/leads?${params}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -255,7 +279,136 @@ export default function AdminLeadsPage() {
     dirPhoneLength,
     dirStatus,
     dirBrand,
+    dirEmailStatus,
   ]);
+
+  const handleSendEmail = (lead: LeadRow) => {
+    setComposerLeads([
+      {
+        _id: lead._id,
+        email: lead.email,
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        emailSentCount: lead.emailSentCount,
+        lastEmailSentAt: lead.lastEmailSentAt,
+        isSuppressed: lead.isSuppressed,
+      },
+    ]);
+    setIsComposerOpen(true);
+  };
+
+  const handleEmailSelected = () => {
+    const chosen = leads
+      .filter((l) => selected.has(l._id))
+      .map((lead) => ({
+        _id: lead._id,
+        email: lead.email,
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        emailSentCount: lead.emailSentCount,
+        lastEmailSentAt: lead.lastEmailSentAt,
+        isSuppressed: lead.isSuppressed,
+      }));
+    if (!chosen.length) {
+      toastError("No leads selected", "Please select at least one lead.");
+      return;
+    }
+    setComposerLeads(chosen);
+    setIsComposerOpen(true);
+  };
+
+  const handlePrepareToday = async () => {
+    setLoadingEligible(true);
+    try {
+      const res = await fetch("/api/v1/admin/email/next-eligible?limit=10", {
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toastError("Could not fetch eligible leads", data.error);
+        return;
+      }
+      if (!data.data.leads || data.data.leads.length === 0) {
+        toast({
+          variant: "warning",
+          title: "No leads currently eligible",
+          description:
+            data.data.quota?.remainingToday === 0
+              ? "Daily limit reached. Resets tomorrow at midnight."
+              : "All leads with valid email are either in 14-day cooldown or unsubscribed.",
+        });
+        return;
+      }
+      setComposerLeads(
+        data.data.leads.map((l: any) => ({
+          _id: l._id,
+          email: l.email,
+          firstName: l.firstName,
+          lastName: l.lastName,
+          emailSentCount: l.emailSentCount,
+          lastEmailSentAt: l.lastEmailSentAt,
+          isSuppressed: l.isSuppressed,
+        }))
+      );
+      setIsComposerOpen(true);
+    } catch (e) {
+      toastError("Failed to fetch eligible leads", e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoadingEligible(false);
+    }
+  };
+
+  const handleToggleBlock = async (lead: LeadRow) => {
+    const willBlock = !lead.isSuppressed;
+    const res = await fetch(`/api/v1/admin/email/leads/${lead._id}/block`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        block: willBlock,
+        reason: willBlock ? "admin_manual" : undefined,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast({
+        variant: "success",
+        title: willBlock ? "Lead blocked from emails" : "Lead unblocked",
+      });
+      loadLeads();
+    } else {
+      toastError("Failed to update status", data.error);
+    }
+  };
+
+  const handleDeleteSingleLead = async (lead: LeadRow) => {
+    const leadName =
+      [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||
+      lead.email ||
+      lead.phone ||
+      "this lead";
+    if (!confirm(`Are you sure you want to permanently delete ${leadName}?`)) return;
+
+    try {
+      const res = await fetch(`/api/v1/admin/leads/${lead._id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          variant: "success",
+          title: "Lead deleted",
+          description: `Successfully deleted ${leadName}`,
+        });
+        loadLeads();
+        loadFacets();
+      } else {
+        toastError("Delete failed", data.error || "Failed to delete lead");
+      }
+    } catch (err) {
+      toastError("Delete failed", err instanceof Error ? err.message : "Unknown error");
+    }
+  };
 
   useEffect(() => {
     if (tab === "directory" && accessToken) {
@@ -915,15 +1068,52 @@ export default function AdminLeadsPage() {
                     </span>
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!selected.size}
-                  onClick={deleteSelected}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete ({selected.size})
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setEditingLead(null);
+                      setLeadModalOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Add Lead
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={loadingEligible}
+                    onClick={handlePrepareToday}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm hover:from-purple-700 hover:to-indigo-700"
+                  >
+                    {loadingEligible ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    ✨ Prepare Today&apos;s 10
+                  </Button>
+                  {selected.size > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEmailSelected}
+                    >
+                      <Mail className="mr-1.5 h-3.5 w-3.5" />
+                      Email Selected ({selected.size})
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!selected.size}
+                    onClick={deleteSelected}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete ({selected.size})
+                  </Button>
+                </div>
               </div>
             </div>
             <CardContent className="grid gap-4 pt-6 md:grid-cols-2 lg:grid-cols-3">
@@ -1064,6 +1254,26 @@ export default function AdminLeadsPage() {
                   ))}
                 </select>
               </div>
+              <div>
+                <Label>Marketing status</Label>
+                <select
+                  className="flex h-10 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-small"
+                  value={dirEmailStatus}
+                  onChange={(e) => {
+                    setPage(1);
+                    setDirEmailStatus(e.target.value);
+                  }}
+                >
+                  <option value="">All outreach statuses</option>
+                  <option value="eligible_now">⚡ Eligible Today (Email present, cooldown clear)</option>
+                  <option value="never_sent">— Never Sent</option>
+                  <option value="sent_1_plus">✓ Sent 1+ times</option>
+                  <option value="sent_2_plus">✓ Sent 2+ times</option>
+                  <option value="cooldown">⏳ In Cooldown (&lt; 14 days)</option>
+                  <option value="failed">⚠️ Delivery Failed</option>
+                  <option value="suppressed">🚫 Suppressed / Unsubscribed</option>
+                </select>
+              </div>
             </CardContent>
           </Card>
 
@@ -1119,9 +1329,32 @@ export default function AdminLeadsPage() {
                           <p className="truncate font-medium text-foreground">
                             {name}
                           </p>
-                          {lead.status ? (
-                            <Badge variant="secondary">{lead.status}</Badge>
-                          ) : null}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {lead.status ? (
+                              <Badge variant="secondary">{lead.status}</Badge>
+                            ) : null}
+                            {lead.isSuppressed ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                🚫 Blocked
+                              </span>
+                            ) : lead.cooldownUntil && new Date(lead.cooldownUntil) > new Date() ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                ⏳ Cooldown ({Math.ceil((new Date(lead.cooldownUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}d)
+                              </span>
+                            ) : lead.lastEmailStatus === "FAILED" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                ⚠️ Failed
+                              </span>
+                            ) : (lead.emailSentCount ?? 0) > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                ✓ {lead.emailSentCount} sent
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                — Never Sent
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {lead.email ? (
                           <p className="mt-2 flex items-center gap-1.5 truncate text-[12px] text-muted-foreground">
@@ -1154,6 +1387,68 @@ export default function AdminLeadsPage() {
                           {lead.brand ? (
                             <Badge variant="outline">{lead.brand}</Badge>
                           ) : null}
+                        </div>
+
+                        {/* Action buttons on lead card */}
+                        <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[12px]"
+                              disabled={!lead.email || lead.isSuppressed}
+                              onClick={() => handleSendEmail(lead)}
+                            >
+                              <Mail className="mr-1 h-3 w-3" />
+                              {(lead.emailSentCount ?? 0) > 0 ? "Send Again" : "Send Email"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              title="Edit Lead"
+                              onClick={() => {
+                                setEditingLead(lead);
+                                setLeadModalOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              title="View Email History"
+                              onClick={() => setHistoryModalLead(lead)}
+                            >
+                              <Clock className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={cn(
+                                "h-7 px-2 text-[11px]",
+                                lead.isSuppressed
+                                  ? "text-primary hover:text-primary/80"
+                                  : "text-muted-foreground hover:text-destructive"
+                              )}
+                              onClick={() => handleToggleBlock(lead)}
+                              title={lead.isSuppressed ? "Unblock lead" : "Block lead from emails"}
+                            >
+                              {lead.isSuppressed ? "Unblock" : "Block"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                              title="Delete Lead"
+                              onClick={() => handleDeleteSingleLead(lead)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1202,6 +1497,50 @@ export default function AdminLeadsPage() {
           </div>
         </div>
       )}
+
+      {/* Email Composer Modal */}
+      <EmailComposer
+        open={isComposerOpen}
+        onOpenChange={setIsComposerOpen}
+        leads={composerLeads}
+        onSuccess={() => {
+          loadLeads();
+          loadFacets();
+        }}
+      />
+
+      {/* Lead History Modal */}
+      <LeadEmailHistoryModal
+        open={!!historyModalLead}
+        onOpenChange={(open) => {
+          if (!open) setHistoryModalLead(null);
+        }}
+        leadId={historyModalLead?._id ?? null}
+        leadName={[historyModalLead?.firstName, historyModalLead?.lastName].filter(Boolean).join(" ") || "Lead"}
+        leadEmail={historyModalLead?.email}
+        onSendAgain={(l) => {
+          setHistoryModalLead(null);
+          setComposerLeads([
+            {
+              _id: l._id,
+              email: l.email,
+              firstName: l.firstName,
+            },
+          ]);
+          setIsComposerOpen(true);
+        }}
+      />
+
+      {/* Manual Add / Edit Lead Modal */}
+      <LeadFormModal
+        open={leadModalOpen}
+        onOpenChange={setLeadModalOpen}
+        lead={editingLead}
+        onSuccess={() => {
+          loadLeads();
+          loadFacets();
+        }}
+      />
     </div>
   );
 }

@@ -20,7 +20,8 @@ import {
   DEFAULT_TAX_RATE_PERCENT,
   normalizeTaxRatePercent,
 } from "@/lib/tax/settings";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Plus, Trash2, Loader2, Mail } from "lucide-react";
 import { toast, toastError } from "@/hooks/use-toast";
 
 export default function AdminSettingsPage() {
@@ -352,7 +353,15 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-3xl font-bold">Site Settings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold">Site Settings</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/settings/email">
+            <Mail className="mr-1.5 h-3.5 w-3.5" />
+            Email Outreach Settings
+          </Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>

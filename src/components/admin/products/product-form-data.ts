@@ -166,7 +166,7 @@ export function productToFormData(product: Record<string, any>): ProductFormData
           };
         }
       );
-      if (rows.length && !rows.some((r) => r.isMain)) {
+      if (rows.length && !rows.some((r: any) => r.isMain)) {
         rows[0] = { ...rows[0], isMain: true };
       }
       return rows;

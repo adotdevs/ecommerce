@@ -20,6 +20,7 @@ import {
   Users,
   TicketPercent,
   ContactRound,
+  Send,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -28,6 +29,7 @@ import { Button } from "@/components/ds/button";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/campaigns", label: "Email Campaigns", icon: Send },
   { href: "/admin/promos", label: "Promo Codes", icon: TicketPercent },
   { href: "/admin/leads", label: "Leads", icon: ContactRound },
   { href: "/admin/visitors", label: "Visitors", icon: Users },

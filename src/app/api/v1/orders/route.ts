@@ -160,6 +160,20 @@ export async function POST(request: NextRequest) {
       await releaseSessionReservations(sessionId);
     }
 
+    // Read email campaign attribution cookie if customer arrived via campaign link
+    let campaignIdAttr: string | undefined;
+    let messageIdAttr: string | undefined;
+    const attrCookie = request.cookies.get("em_attr")?.value;
+    if (attrCookie) {
+      try {
+        const parsedAttr = JSON.parse(attrCookie);
+        if (parsedAttr?.c) campaignIdAttr = String(parsedAttr.c);
+        if (parsedAttr?.m) messageIdAttr = String(parsedAttr.m);
+      } catch {
+        // Ignore malformed cookie
+      }
+    }
+
     const order = await Order.create({
       orderNumber: generateOrderNumber(),
       userId: user?.id,
@@ -178,7 +192,26 @@ export async function POST(request: NextRequest) {
       promoCode: appliedPromoCode,
       discount,
       notes: parsed.data.notes ?? notes,
+      campaignId: campaignIdAttr,
+      emailMessageId: messageIdAttr,
+      attributionSource: campaignIdAttr ? "email_campaign" : undefined,
     });
+
+    // Update campaign conversion metrics asynchronously
+    if (campaignIdAttr) {
+      (async () => {
+        try {
+          const { getEmailCampaignModel } = await import("@/models/EmailCampaign");
+          const CampaignModel = await getEmailCampaignModel();
+          await CampaignModel.updateOne(
+            { _id: campaignIdAttr },
+            { $inc: { orderCount: 1, attributedRevenue: total } }
+          );
+        } catch (err) {
+          console.error("Failed to update campaign attribution stats:", err);
+        }
+      })();
+    }
 
     if (appliedPromoCode) {
       await PromoCode.updateOne(

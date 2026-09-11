@@ -22,6 +22,15 @@ export interface ILead extends Document {
   importBatchId?: string;
   /** Extra mapped/unmapped fields kept for reference */
   meta?: Record<string, unknown>;
+  /** Marketing email summary fields */
+  emailSentCount?: number;
+  lastEmailSentAt?: Date;
+  lastEmailStatus?: string;
+  firstEmailSentAt?: Date;
+  lastCampaignId?: string;
+  isSuppressed?: boolean;
+  suppressionReason?: string;
+  cooldownUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +54,14 @@ const LeadSchema = new Schema<ILead>(
     source: { type: String, trim: true },
     importBatchId: { type: String, trim: true, index: true },
     meta: { type: Schema.Types.Mixed },
+    emailSentCount: { type: Number, default: 0, min: 0 },
+    lastEmailSentAt: { type: Date },
+    lastEmailStatus: { type: String, trim: true },
+    firstEmailSentAt: { type: Date },
+    lastCampaignId: { type: String, trim: true },
+    isSuppressed: { type: Boolean, default: false },
+    suppressionReason: { type: String, trim: true },
+    cooldownUntil: { type: Date },
   },
   { timestamps: true }
 );
@@ -67,6 +84,11 @@ LeadSchema.index({ country: 1, status: 1, createdAt: -1 });
 LeadSchema.index({ brand: 1 });
 LeadSchema.index({ phoneCountry: 1, phoneLength: 1 });
 LeadSchema.index({ phoneDialCode: 1 });
+LeadSchema.index({ emailSentCount: 1 });
+LeadSchema.index({ lastEmailSentAt: -1 });
+LeadSchema.index({ isSuppressed: 1 });
+LeadSchema.index({ cooldownUntil: 1 });
+LeadSchema.index({ isSuppressed: 1, emailSentCount: 1, lastEmailSentAt: 1 });
 
 export type LeadModel = Model<ILead>;
 

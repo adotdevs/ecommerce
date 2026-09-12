@@ -25,6 +25,7 @@ import {
   DollarSign,
   Users,
   Layers,
+  UserX,
 } from "lucide-react";
 import { EmailComposer, type SelectedLeadContext } from "@/components/admin/email/EmailComposer";
 import { cn } from "@/components/ds/utils";
@@ -271,6 +272,12 @@ export default function AdminCampaignsPage() {
             <Link href="/admin/campaigns/templates">
               <Layers className="mr-1.5 h-3.5 w-3.5 text-indigo-600" />
               Templates
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/leads?tab=unsubscribed">
+              <UserX className="mr-1.5 h-3.5 w-3.5 text-rose-500" />
+              Unsubscribed
             </Link>
           </Button>
           <Button

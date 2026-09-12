@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ds/button";
 import { Input } from "@/components/ds/input";
@@ -22,10 +22,13 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  UserX,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { EmailComposer, type SelectedLeadContext } from "@/components/admin/email/EmailComposer";
 import { LeadEmailHistoryModal } from "@/components/admin/email/LeadEmailHistoryModal";
 import { LeadFormModal } from "@/components/admin/leads/LeadFormModal";
+import { UnsubscribedSection } from "@/components/admin/leads/UnsubscribedSection";
 import {
   LEAD_TARGET_FIELDS,
   type LeadTargetField,
@@ -135,9 +138,14 @@ function initials(first?: string, last?: string, email?: string) {
   return `${a}${b}`;
 }
 
-export default function AdminLeadsPage() {
+function AdminLeadsPageContent() {
   const { accessToken } = useAuthStore();
-  const [tab, setTab] = useState<"import" | "directory">("import");
+  const searchParams = useSearchParams();
+  const paramTab = searchParams.get("tab") as "import" | "directory" | "unsubscribed" | null;
+  const [tab, setTab] = useState<"import" | "directory" | "unsubscribed">(
+    paramTab && ["import", "directory", "unsubscribed"].includes(paramTab) ? paramTab : "import"
+  );
+  const [unsubscribedCount, setUnsubscribedCount] = useState<number>(0);
 
   const [fileName, setFileName] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -375,7 +383,8 @@ export default function AdminLeadsPage() {
       headers: authHeaders,
       body: JSON.stringify({
         block: willBlock,
-        reason: willBlock ? "admin_manual" : undefined,
+        blocked: willBlock,
+        reason: willBlock ? "MANUAL_BLOCK" : undefined,
       }),
     });
     const data = await res.json();
@@ -385,6 +394,18 @@ export default function AdminLeadsPage() {
         title: willBlock ? "Lead blocked from emails" : "Lead unblocked",
       });
       loadLeads();
+      loadFacets();
+      // Also refresh suppressions count
+      fetch("/api/v1/admin/email/suppressions?limit=1", {
+        headers: authHeaders,
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.data?.stats) {
+            setUnsubscribedCount(d.data.stats.total || 0);
+          }
+        })
+        .catch(() => {});
     } else {
       toastError("Failed to update status", data.error);
     }
@@ -703,7 +724,7 @@ export default function AdminLeadsPage() {
         </p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           variant={tab === "import" ? "primary" : "outline"}
           onClick={() => setTab("import")}
@@ -715,6 +736,24 @@ export default function AdminLeadsPage() {
           onClick={() => setTab("directory")}
         >
           Directory
+        </Button>
+        <Button
+          variant={tab === "unsubscribed" ? "primary" : "outline"}
+          onClick={() => setTab("unsubscribed")}
+          className="gap-1.5"
+        >
+          <UserX className="h-4 w-4" />
+          Unsubscribed
+          {unsubscribedCount > 0 && (
+            <span className={cn(
+              "ml-1 rounded-full px-1.5 py-0.5 text-[11px] font-bold",
+              tab === "unsubscribed"
+                ? "bg-white/20 text-white"
+                : "bg-destructive/15 text-destructive"
+            )}>
+              {unsubscribedCount}
+            </span>
+          )}
         </Button>
       </div>
 
@@ -1405,12 +1444,27 @@ export default function AdminLeadsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-[12px]"
-                              disabled={!lead.email || lead.isSuppressed}
-                              onClick={() => handleSendEmail(lead)}
+                              className={cn(
+                                "h-7 px-2 text-[12px]",
+                                lead.isSuppressed && "border-amber-300 text-amber-800 bg-amber-50/50 hover:bg-amber-100"
+                              )}
+                              disabled={!lead.email}
+                              onClick={async () => {
+                                if (lead.isSuppressed) {
+                                  // Unblock first, then open composer immediately
+                                  await handleToggleBlock(lead);
+                                  handleSendEmail({ ...lead, isSuppressed: false });
+                                } else {
+                                  handleSendEmail(lead);
+                                }
+                              }}
                             >
                               <Mail className="mr-1 h-3 w-3" />
-                              {(lead.emailSentCount ?? 0) > 0 ? "Send Again" : "Send Email"}
+                              {lead.isSuppressed
+                                ? "Unblock & Send"
+                                : (lead.emailSentCount ?? 0) > 0
+                                ? "Send Again"
+                                : "Send Email"}
                             </Button>
                             <Button
                               size="sm"
@@ -1441,11 +1495,11 @@ export default function AdminLeadsPage() {
                               className={cn(
                                 "h-7 px-2 text-[11px]",
                                 lead.isSuppressed
-                                  ? "text-primary hover:text-primary/80"
+                                  ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                   : "text-muted-foreground hover:text-destructive"
                               )}
                               onClick={() => handleToggleBlock(lead)}
-                              title={lead.isSuppressed ? "Unblock lead" : "Block lead from emails"}
+                              title={lead.isSuppressed ? "Remove unsubscribe / unblock lead" : "Block lead from emails"}
                             >
                               {lead.isSuppressed ? "Unblock" : "Block"}
                             </Button>
@@ -1508,6 +1562,19 @@ export default function AdminLeadsPage() {
         </div>
       )}
 
+      {/* Unsubscribed & Suppressed Section */}
+      {tab === "unsubscribed" && (
+        <UnsubscribedSection
+          onSendEmail={(leadContext) => {
+            setComposerLeads([leadContext]);
+            setIsComposerOpen(true);
+          }}
+          onStatsChange={(stats) => {
+            setUnsubscribedCount(stats.total);
+          }}
+        />
+      )}
+
       {/* Email Composer Modal */}
       <EmailComposer
         open={isComposerOpen}
@@ -1552,5 +1619,20 @@ export default function AdminLeadsPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function AdminLeadsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6 p-6">
+          <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-40 w-full rounded bg-muted animate-pulse" />
+        </div>
+      }
+    >
+      <AdminLeadsPageContent />
+    </Suspense>
   );
 }

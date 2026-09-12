@@ -136,7 +136,48 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
     }
 
     if (eligibleLeads.length === 0) {
-      return apiError("None of the selected leads are currently eligible to receive outreach.", 400);
+      const reasonCounts: Record<string, number> = {};
+      const sampleDetails: string[] = [];
+
+      for (const item of excludedLeads) {
+        const leadLabel = item.lead.email || [item.lead.firstName, item.lead.lastName].filter(Boolean).join(" ") || String(item.lead._id);
+        const readableReasons = item.reasons.map((r) => {
+          if (r === "COOLDOWN_ACTIVE") return "in 14-day cooldown (recently emailed)";
+          if (r.startsWith("SUPPRESSED_")) return `suppressed/unsubscribed (${r.replace("SUPPRESSED_", "")})`;
+          if (r === "MISSING_EMAIL") return "missing email address";
+          if (r === "INVALID_EMAIL_SYNTAX") return "invalid email syntax";
+          if (r === "MARKETING_PAUSED") return "marketing is paused in settings";
+          return r.toLowerCase().replace(/_/g, " ");
+        });
+
+        if (sampleDetails.length < 3) {
+          sampleDetails.push(`${leadLabel}: ${readableReasons.join(", ")}`);
+        }
+
+        for (const r of item.reasons) {
+          reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+        }
+      }
+
+      const summaryParts = Object.entries(reasonCounts).map(([k, count]) => {
+        if (k === "COOLDOWN_ACTIVE") return `${count} in cooldown`;
+        if (k.startsWith("SUPPRESSED_")) return `${count} unsubscribed/suppressed`;
+        if (k === "MISSING_EMAIL") return `${count} missing email`;
+        if (k === "INVALID_EMAIL_SYNTAX") return `${count} invalid email`;
+        if (k === "MARKETING_PAUSED") return `${count} blocked (marketing paused)`;
+        return `${count} ${k.toLowerCase().replace(/_/g, " ")}`;
+      });
+
+      const onlyCooldown = Object.keys(reasonCounts).every((r) => r === "COOLDOWN_ACTIVE");
+      const hint = onlyCooldown
+        ? " Enable 'Priority 1-on-1 Contact' / 'Ignore Cooldown' to send anyway."
+        : "";
+
+      const details = sampleDetails.length > 0 ? ` (${sampleDetails.join("; ")})` : "";
+      return apiError(
+        `None of the selected leads are currently eligible to receive outreach: ${summaryParts.join(", ")}${details}.${hint}`,
+        400
+      );
     }
 
     // Check quota if sending immediately

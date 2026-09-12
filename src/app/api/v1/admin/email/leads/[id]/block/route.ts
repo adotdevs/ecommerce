@@ -7,7 +7,9 @@ import { getLeadModel } from "@/models/Lead";
 import { suppressEmail, unsuppressEmail } from "@/lib/email/suppression";
 
 const bodySchema = z.object({
-  blocked: z.boolean(),
+  blocked: z.boolean().optional(),
+  block: z.boolean().optional(),
+  reason: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -22,6 +24,11 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
       return apiError(parsed.error.issues[0].message);
     }
 
+    const isBlocked = parsed.data.blocked ?? parsed.data.block;
+    if (typeof isBlocked !== "boolean") {
+      return apiError("Either 'blocked' or 'block' boolean must be provided.");
+    }
+
     const LeadModel = await getLeadModel();
     const lead = await LeadModel.findById(leadId);
     if (!lead) {
@@ -32,10 +39,10 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
       return apiError("Lead has no email address to block.");
     }
 
-    if (parsed.data.blocked) {
+    if (isBlocked) {
       await suppressEmail({
         email: lead.email,
-        reason: "MANUAL_BLOCK",
+        reason: (parsed.data.reason as any) || "MANUAL_BLOCK",
         source: "admin_manual_block",
         actor: ctx.user.email,
         notes: parsed.data.notes || "Blocked by admin",
@@ -48,7 +55,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
     return apiSuccess({
       leadId: String(lead._id),
       email: lead.email,
-      blocked: parsed.data.blocked,
+      blocked: isBlocked,
     });
   } catch (err) {
     return apiError(err instanceof Error ? err.message : "Failed to update lead block status", 500);

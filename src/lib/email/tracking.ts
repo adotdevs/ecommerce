@@ -97,10 +97,12 @@ export function buildTrackingUrl(params: {
   linkType?: EmailLinkType;
   /** Design block ID for per-block analytics */
   blockId?: string;
+  /** Base site URL to use (defaults to getSiteUrl()) */
+  baseUrl?: string;
 }): string {
-  const baseUrl = getSiteUrl();
+  const baseUrl = (params.baseUrl || getSiteUrl()).replace(/\/+$/, "");
   // Ensure the target URL is absolute
-  let finalTarget = toAbsoluteUrl(params.targetUrl);
+  let finalTarget = toAbsoluteUrl(params.targetUrl, baseUrl);
 
   try {
     const parsed = new URL(finalTarget);
@@ -128,8 +130,8 @@ export function buildTrackingUrl(params: {
   return `${baseUrl}/api/v1/email/c/${token}`;
 }
 
-export function buildUnsubscribeUrl(email: string, leadId?: string): string {
-  const baseUrl = getAppBaseUrl();
+export function buildUnsubscribeUrl(email: string, leadId?: string, customBaseUrl?: string): string {
+  const baseUrl = (customBaseUrl || getAppBaseUrl()).replace(/\/+$/, "");
   const token = createUnsubscribeToken(email, leadId);
   return `${baseUrl}/unsubscribe?token=${token}`;
 }

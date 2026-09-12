@@ -1,5 +1,6 @@
 import type { PersonalizationData, RenderedEmail } from "./types";
 import { buildUnsubscribeUrl } from "./tracking";
+import { toAbsoluteUrl } from "@/lib/url";
 
 export function resolveTokens(text: string, data: PersonalizationData): string {
   if (!text) return "";
@@ -55,6 +56,8 @@ export interface RenderTemplateOptions {
     lastName?: string;
   };
   trackingCtaUrl?: string;
+  /** Base site URL to use for links and images */
+  baseUrl?: string;
 }
 
 export function renderEmail(options: RenderTemplateOptions): RenderedEmail {
@@ -76,7 +79,7 @@ export function renderEmail(options: RenderTemplateOptions): RenderedEmail {
         ? `${Math.round(((options.product.price - options.product.salePrice) / options.product.price) * 100)}%`
         : "",
     couponCode: options.couponCode || "",
-    productUrl: options.product?.url || "",
+    productUrl: options.product?.url ? toAbsoluteUrl(options.product.url, options.baseUrl) : "",
   };
 
   const resolvedSubject = resolveTokens(options.subject, data);
@@ -90,8 +93,9 @@ export function renderEmail(options: RenderTemplateOptions): RenderedEmail {
   const missingHeadline = detectMissingTokens(resolvedHeadline);
   const allMissing = Array.from(new Set([...missingSubject, ...missingBody, ...missingHeadline]));
 
-  const unsubscribeUrl = buildUnsubscribeUrl(options.recipient.email, options.recipient.leadId);
-  const ctaUrl = options.trackingCtaUrl || options.ctaUrl || "#";
+  const unsubscribeUrl = buildUnsubscribeUrl(options.recipient.email, options.recipient.leadId, options.baseUrl);
+  const rawCta = options.trackingCtaUrl || options.ctaUrl;
+  const ctaUrl = rawCta ? (rawCta.startsWith("#") ? rawCta : toAbsoluteUrl(rawCta, options.baseUrl)) : "#";
 
   // Body paragraphs to HTML
   const bodyParagraphs = resolvedBody
@@ -114,7 +118,7 @@ export function renderEmail(options: RenderTemplateOptions): RenderedEmail {
       <div style="margin: 24px 0; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background-color: #f9fafb; padding: 18px; text-align: center;">
         ${
           options.product.image
-            ? `<img src="${escapeHtml(options.product.image)}" alt="${escapeHtml(
+            ? `<img src="${escapeHtml(toAbsoluteUrl(options.product.image, options.baseUrl))}" alt="${escapeHtml(
                 options.product.name
               )}" style="max-width: 100%; height: auto; max-height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 12px;" />`
             : ""

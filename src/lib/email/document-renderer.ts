@@ -57,6 +57,8 @@ export interface DocumentRenderOptions {
   exchangeRates?: Record<string, number>;
   /** Text layout direction (default: "rtl" if locale is ar/ur, else "ltr") */
   direction?: "ltr" | "rtl";
+  /** Base site URL to use for links and images (defaults to canonical getSiteUrl()) */
+  baseUrl?: string;
 }
 
 export interface DocumentRenderResult {
@@ -86,7 +88,7 @@ function resolveUrl(
   productName?: string,
   blockId?: string
 ): string {
-  const absoluteUrl = toAbsoluteUrl(url);
+  const absoluteUrl = toAbsoluteUrl(url, opts.baseUrl);
   if (opts.emailMessageId) {
     return buildTrackingUrl({
       targetUrl: absoluteUrl,
@@ -100,6 +102,7 @@ function resolveUrl(
       productName,
       linkType: linkType as EmailLinkType,
       blockId,
+      baseUrl: opts.baseUrl,
     });
   }
   return absoluteUrl;
@@ -151,7 +154,7 @@ function renderButtonBlock(content: ButtonBlockContent, gs: GlobalStyles, sectio
 }
 
 function renderImageBlock(content: ImageBlockContent, gs: GlobalStyles, section: EmailSection, opts: DocumentRenderOptions): string {
-  const src = toAbsoluteUrl(content.src);
+  const src = toAbsoluteUrl(content.src, opts.baseUrl);
   const alt = esc(content.alt || "");
   const width = content.width === "full" ? "100%" : `${content.width || 100}%`;
   const align = content.alignment || "center";
@@ -223,13 +226,13 @@ function renderProductBlock(content: ProductBlockContent, gs: GlobalStyles, sect
     ? Math.round(((snap.price! - snap.salePrice!) / snap.price!) * 100)
     : 0;
 
-  const productUrl = toAbsoluteUrl(content.ctaUrl || `/products/${snap.slug}`);
+  const productUrl = toAbsoluteUrl(content.ctaUrl || `/products/${snap.slug}`, opts.baseUrl);
   const ctaText = content.ctaText || "Shop Now";
 
   const makeLink = (linkType: string) =>
     resolveUrl(productUrl, opts, linkType, content.productId, snap.name, section.id);
 
-  const imageSrc = snap.image ? toAbsoluteUrl(snap.image) : "";
+  const imageSrc = snap.image ? toAbsoluteUrl(snap.image, opts.baseUrl) : "";
   const cardBg = content.cardBackground || "#f9fafb";
   const cardBorder = content.cardBorderColor || "#e5e7eb";
   const cardRadius = content.cardBorderRadius ?? 12;
@@ -491,7 +494,7 @@ function renderHeroBlock(content: HeroBlockContent, gs: GlobalStyles, section: E
 
   let bgStyle = `background-color: ${bgColor};`;
   if (content.backgroundImage) {
-    bgStyle += ` background-image: url('${esc(toAbsoluteUrl(content.backgroundImage))}'); background-size: cover; background-position: center;`;
+    bgStyle += ` background-image: url('${esc(toAbsoluteUrl(content.backgroundImage, opts.baseUrl))}'); background-size: cover; background-position: center;`;
   }
 
   let html = `<div style="${bgStyle} padding: 40px 32px; text-align: ${align}; min-height: ${minHeight}px;">`;
@@ -573,7 +576,7 @@ function renderFooterBlock(
   const bgColor = content.backgroundColor || "#f9fafb";
   const textColor = content.textColor || "#9ca3af";
   const unsubUrl = opts.recipientEmail
-    ? buildUnsubscribeUrl(opts.recipientEmail, opts.recipientLeadId)
+    ? buildUnsubscribeUrl(opts.recipientEmail, opts.recipientLeadId, opts.baseUrl)
     : "#unsubscribe";
 
   let html = `<div style="background-color: ${bgColor}; border-top: 1px solid #f3f4f6; padding: 24px 32px; text-align: center;">`;
@@ -588,7 +591,7 @@ function renderFooterBlock(
     html += `<p style="margin: 0 0 8px 0; font-size: 12px; color: ${textColor}; font-family: ${gs.fontFamily};">${esc(content.address)}</p>`;
   }
   if (content.websiteUrl) {
-    html += `<p style="margin: 0 0 8px 0; font-size: 12px;"><a href="${esc(toAbsoluteUrl(content.websiteUrl))}" style="color: ${gs.linkColor}; text-decoration: underline;">${esc(content.websiteUrl)}</a></p>`;
+    html += `<p style="margin: 0 0 8px 0; font-size: 12px;"><a href="${esc(toAbsoluteUrl(content.websiteUrl, opts.baseUrl))}" style="color: ${gs.linkColor}; text-decoration: underline;">${esc(content.websiteUrl)}</a></p>`;
   }
 
   // Unsubscribe — ALWAYS present in final output even if admin hides it
@@ -657,7 +660,7 @@ function renderProductGridBlock(content: ProductGridBlockContent, gs: GlobalStyl
         continue;
       }
 
-      const itemUrl = toAbsoluteUrl(`/products/${item.slug}`);
+      const itemUrl = toAbsoluteUrl(`/products/${item.slug}`, opts.baseUrl);
       const trackedUrl = resolveUrl(itemUrl, opts, "PRODUCT_GRID_ITEM", item.productId, item.name, section.id);
       const priceDisp = formatPriceDisplay(item.price, item.currency, opts);
       const saleDisp = formatPriceDisplay(item.salePrice, item.currency, opts);
@@ -668,7 +671,7 @@ function renderProductGridBlock(content: ProductGridBlockContent, gs: GlobalStyl
 
       const card = `<div style="border: 1px solid ${cardBorder}; border-radius: ${cardRadius}px; background-color: ${cardBg}; padding: 12px; text-align: center; height: 100%;">
         ${item.image ? `<a href="${esc(trackedUrl)}" style="text-decoration: none; display: block; margin-bottom: 8px;">
-          <img src="${esc(toAbsoluteUrl(item.image))}" alt="${esc(item.name)}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px; display: block;" />
+          <img src="${esc(toAbsoluteUrl(item.image, opts.baseUrl))}" alt="${esc(item.name)}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px; display: block;" />
         </a>` : ""}
         ${content.showBadges && item.badge ? `<span style="display: inline-block; font-size: 9px; font-weight: 800; background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; text-transform: uppercase;">${esc(item.badge)}</span>` : ""}
         <a href="${esc(trackedUrl)}" style="text-decoration: none; color: ${gs.headingColor}; display: block;">
@@ -800,7 +803,7 @@ function renderSection(section: EmailSection, gs: GlobalStyles, opts: DocumentRe
   const s = section.settings;
   const padding = `padding: ${s.paddingTop ?? 16}px ${s.paddingRight ?? 24}px ${s.paddingBottom ?? 16}px ${s.paddingLeft ?? 24}px;`;
   const bgColor = s.backgroundColor ? `background-color: ${s.backgroundColor};` : "";
-  const bgImage = s.backgroundImage ? `background-image: url('${esc(s.backgroundImage)}'); background-size: cover;` : "";
+  const bgImage = s.backgroundImage ? `background-image: url('${esc(toAbsoluteUrl(s.backgroundImage, opts.baseUrl))}'); background-size: cover;` : "";
   const border = s.borderWidth ? `border: ${s.borderWidth}px solid ${s.borderColor || "#e5e7eb"};` : "";
   const radius = s.borderRadius ? `border-radius: ${s.borderRadius}px;` : "";
 
@@ -891,7 +894,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
   // Mandatory unsubscribe if no footer block
   let unsubscribeHtml = "";
   const unsubUrl = opts.recipientEmail
-    ? buildUnsubscribeUrl(opts.recipientEmail, opts.recipientLeadId)
+    ? buildUnsubscribeUrl(opts.recipientEmail, opts.recipientLeadId, opts.baseUrl)
     : "#unsubscribe";
 
   if (!hasFooter) {
@@ -947,7 +950,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
       }
       case "button": {
         const bc = c as ButtonBlockContent;
-        textLines.push(`${bc.text}: ${toAbsoluteUrl(bc.url)}`, "");
+        textLines.push(`${bc.text}: ${toAbsoluteUrl(bc.url, opts.baseUrl)}`, "");
         break;
       }
       case "product": {
@@ -957,7 +960,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
         if (pc.showPrice && pSnap?.price) {
           textLines.push(`Price: ${pSnap.currency || "Rs"} ${pSnap.salePrice || pSnap.price}`);
         }
-        textLines.push(`Link: ${toAbsoluteUrl(pc.ctaUrl || `/products/${pSnap?.slug || ""}`)}`, "");
+        textLines.push(`Link: ${toAbsoluteUrl(pc.ctaUrl || `/products/${pSnap?.slug || ""}`, opts.baseUrl)}`, "");
         break;
       }
       case "hero": {
@@ -990,7 +993,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
         const pgc = c as ProductGridBlockContent;
         if (pgc.title) textLines.push(pgc.title);
         for (const item of pgc.items || []) {
-          textLines.push(`- ${item.name} (${item.currency || "Rs"} ${item.salePrice || item.price}): ${toAbsoluteUrl(`/products/${item.slug}`)}`);
+          textLines.push(`- ${item.name} (${item.currency || "Rs"} ${item.salePrice || item.price}): ${toAbsoluteUrl(`/products/${item.slug}`, opts.baseUrl)}`);
         }
         textLines.push("");
         break;
@@ -998,7 +1001,7 @@ export function renderEmailDocument(doc: EmailDocument, opts: DocumentRenderOpti
       case "countdown": {
         const cdc = c as CountdownBlockContent;
         textLines.push(`[SALE COUNTDOWN] ${cdc.title}: ${cdc.hoursRemaining || 0}h ${cdc.minutesRemaining || 0}m left!`);
-        if (cdc.ctaUrl) textLines.push(`Link: ${toAbsoluteUrl(cdc.ctaUrl)}`);
+        if (cdc.ctaUrl) textLines.push(`Link: ${toAbsoluteUrl(cdc.ctaUrl, opts.baseUrl)}`);
         textLines.push("");
         break;
       }

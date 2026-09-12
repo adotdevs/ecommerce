@@ -16,7 +16,7 @@ import {
   generateVariantsFromOptions,
   applySmartVariantPrices,
 } from "@/lib/catalog/variant-options";
-import type { ProductMediaItem } from "./ProductMediaGallery";
+import { type ProductMediaItem, normalizeLocalPath } from "./ProductMediaGallery";
 import { cn } from "@/components/ds/utils";
 
 export interface AdminVariantRow {
@@ -694,12 +694,12 @@ function VariantMediaCell({
   };
 
   const isLocalPublicPath = (value: string) => {
-    const path = value.trim();
+    const path = normalizeLocalPath(value);
     return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
   };
 
   const isUsableImageSrc = (value: string) => {
-    const path = value.trim();
+    const path = normalizeLocalPath(value);
     return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
   };
 
@@ -739,7 +739,7 @@ function VariantMediaCell({
   };
 
   const addPathOrUrl = () => {
-    const raw = pathRef.current?.value?.trim() ?? "";
+    const raw = normalizeLocalPath(pathRef.current?.value ?? "");
     if (!raw) return;
     if (!isUsableImageSrc(raw)) {
       setPathError("Use https://… or a local path like /brand/photo.png");
@@ -805,7 +805,7 @@ function VariantMediaCell({
                 )}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.url}
+                  src={normalizeLocalPath(item.url)}
                   alt=""
                   className="h-full w-full object-cover"
                 />

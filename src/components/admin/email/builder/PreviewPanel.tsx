@@ -38,6 +38,7 @@ export function PreviewPanel({ open, onOpenChange, document }: PreviewPanelProps
           lastName: "Morgan",
           email: "alex.morgan@example.com",
         },
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
       });
     } catch (err) {
       return {

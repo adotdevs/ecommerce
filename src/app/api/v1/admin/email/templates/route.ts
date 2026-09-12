@@ -7,6 +7,7 @@ import { getEmailTemplateModel } from "@/models/EmailTemplate";
 import { renderEmailDocument } from "@/lib/email/document-renderer";
 import { createSimpleEmailDocument } from "@/lib/email/document-defaults";
 import type { EmailDocument } from "@/lib/email/document-schema";
+import { getRequestSiteUrl } from "@/lib/url";
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, "Template name is required").trim(),
@@ -89,7 +90,9 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
     let previewHtml = "";
     if (emailDocument) {
       try {
-        const renderResult = renderEmailDocument(emailDocument as unknown as EmailDocument);
+        const renderResult = renderEmailDocument(emailDocument as unknown as EmailDocument, {
+          baseUrl: getRequestSiteUrl(request),
+        });
         previewHtml = renderResult.html;
       } catch {
         // Continue even if preview generation fails

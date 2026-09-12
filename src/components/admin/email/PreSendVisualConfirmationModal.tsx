@@ -145,6 +145,7 @@ export function PreSendVisualConfirmationModal({
         exchangeRates: storeRates,
         direction: currentDirection,
         personalization,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
       });
     } catch (err) {
       return {

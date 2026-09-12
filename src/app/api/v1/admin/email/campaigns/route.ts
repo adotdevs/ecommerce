@@ -18,6 +18,7 @@ import { fetchLiveExchangeRates } from "@/lib/currency/live-rates";
 import { buildTrackingUrl } from "@/lib/email/tracking";
 import { canSendCount } from "@/lib/email/quota";
 import { processPendingQueue } from "@/lib/email/queue";
+import { getRequestSiteUrl } from "@/lib/url";
 
 const createCampaignSchema = z.object({
   name: z.string().min(1).trim(),
@@ -104,6 +105,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
 
     const data = parsed.data;
     const settings = await getEmailSettings();
+    const baseUrl = getRequestSiteUrl(request);
 
     if (settings.isMarketingPaused) {
       return apiError("Marketing emails are currently paused.", 403);
@@ -221,6 +223,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
           utmCampaign: campaign.utmCampaign,
           recipientEmail: lead.email!,
           recipientLeadId: String(lead._id),
+          baseUrl,
         });
 
         renderedSubject = docResult.subject || data.subject;
@@ -237,6 +240,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
               utmSource: campaign.utmSource,
               utmMedium: campaign.utmMedium,
               utmCampaign: campaign.utmCampaign,
+              baseUrl,
             })
           : undefined;
 
@@ -259,6 +263,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
             lastName: lead.lastName,
           },
           trackingCtaUrl,
+          baseUrl,
         });
 
         renderedSubject = rendered.subject;

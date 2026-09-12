@@ -313,6 +313,7 @@ export function SimpleTemplateEditor({
         personalization,
         targetLocale: activeLocale,
         direction: isRtl ? "rtl" : "ltr",
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
       });
     } catch (err) {
       return {

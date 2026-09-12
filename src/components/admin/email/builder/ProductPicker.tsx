@@ -78,22 +78,32 @@ function getProductPricing(p: ProductItem) {
   };
 }
 
+function normalizeCandidateSrc(src: string): string {
+  let s = src.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/(brand|uploads)\//i.test(s)) {
+    s = s.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, "");
+  } else if (/^(brand|uploads)\//i.test(s)) {
+    s = "/" + s;
+  }
+  return s;
+}
+
 export function extractProductImage(p: any): string {
   if (!p) return "";
   // 1. Direct image property
-  if (typeof p.image === "string" && p.image.trim()) return p.image.trim();
-  if (p.image?.url && typeof p.image.url === "string") return p.image.url.trim();
+  if (typeof p.image === "string" && p.image.trim()) return normalizeCandidateSrc(p.image);
+  if (p.image?.url && typeof p.image.url === "string") return normalizeCandidateSrc(p.image.url);
 
   // 2. Media array
   if (Array.isArray(p.media) && p.media.length > 0) {
     const thumb = p.media.find((m: any) => Boolean(m?.isThumbnail) && (m?.url || typeof m === "string"));
     if (thumb) {
       const u = typeof thumb === "string" ? thumb : thumb.url;
-      if (u && typeof u === "string" && u.trim()) return u.trim();
+      if (u && typeof u === "string" && u.trim()) return normalizeCandidateSrc(u);
     }
     for (const m of p.media) {
-      if (typeof m === "string" && m.trim()) return m.trim();
-      if (m?.url && typeof m.url === "string" && m.url.trim()) return m.url.trim();
+      if (typeof m === "string" && m.trim()) return normalizeCandidateSrc(m);
+      if (m?.url && typeof m.url === "string" && m.url.trim()) return normalizeCandidateSrc(m.url);
     }
   }
 
@@ -102,8 +112,8 @@ export function extractProductImage(p: any): string {
     for (const v of p.variants) {
       if (Array.isArray(v?.media) && v.media.length > 0) {
         for (const m of v.media) {
-          if (typeof m === "string" && m.trim()) return m.trim();
-          if (m?.url && typeof m.url === "string" && m.url.trim()) return m.url.trim();
+          if (typeof m === "string" && m.trim()) return normalizeCandidateSrc(m);
+          if (m?.url && typeof m.url === "string" && m.url.trim()) return normalizeCandidateSrc(m.url);
         }
       }
     }
@@ -112,13 +122,13 @@ export function extractProductImage(p: any): string {
   // 4. Images array
   if (Array.isArray(p.images) && p.images.length > 0) {
     for (const img of p.images) {
-      if (typeof img === "string" && img.trim()) return img.trim();
-      if (img?.url && typeof img.url === "string" && img.url.trim()) return img.url.trim();
+      if (typeof img === "string" && img.trim()) return normalizeCandidateSrc(img);
+      if (img?.url && typeof img.url === "string" && img.url.trim()) return normalizeCandidateSrc(img.url);
     }
   }
 
   // 5. Thumbnail property
-  if (typeof p.thumbnail === "string" && p.thumbnail.trim()) return p.thumbnail.trim();
+  if (typeof p.thumbnail === "string" && p.thumbnail.trim()) return normalizeCandidateSrc(p.thumbnail);
 
   return "";
 }

@@ -7,6 +7,7 @@ import { getEmailTemplateModel } from "@/models/EmailTemplate";
 import { renderEmailDocument } from "@/lib/email/document-renderer";
 import { createSimpleEmailDocument } from "@/lib/email/document-defaults";
 import type { EmailDocument } from "@/lib/email/document-schema";
+import { getRequestSiteUrl } from "@/lib/url";
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1).trim().optional(),
@@ -78,7 +79,9 @@ export const PUT = withAuth(async (request: NextRequest, ctx) => {
     if (data.emailDocument) {
       existing.emailDocument = data.emailDocument;
       try {
-        const rendered = renderEmailDocument(data.emailDocument as unknown as EmailDocument);
+        const rendered = renderEmailDocument(data.emailDocument as unknown as EmailDocument, {
+          baseUrl: getRequestSiteUrl(request),
+        });
         existing.previewHtml = rendered.html;
       } catch {
         // preserve existing snapshot if rendering fails
@@ -96,7 +99,9 @@ export const PUT = withAuth(async (request: NextRequest, ctx) => {
       );
       existing.emailDocument = generatedDoc as unknown as Record<string, unknown>;
       try {
-        const rendered = renderEmailDocument(generatedDoc);
+        const rendered = renderEmailDocument(generatedDoc, {
+          baseUrl: getRequestSiteUrl(request),
+        });
         existing.previewHtml = rendered.html;
       } catch {
         // Ignore

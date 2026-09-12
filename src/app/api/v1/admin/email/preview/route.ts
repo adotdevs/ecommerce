@@ -7,6 +7,7 @@ import { getLeadModel } from "@/models/Lead";
 import { checkLeadEligibility } from "@/lib/email/eligibility";
 import { renderEmail } from "@/lib/email/render";
 import { getEmailSettings } from "@/lib/email/settings";
+import { getRequestSiteUrl } from "@/lib/url";
 
 const previewSchema = z.object({
   subject: z.string().min(1),
@@ -113,6 +114,7 @@ export const POST = withAuth(async (request: NextRequest) => {
         firstName: sampleLead.firstName,
         lastName: sampleLead.lastName,
       },
+      baseUrl: getRequestSiteUrl(request),
     });
 
     return apiSuccess({

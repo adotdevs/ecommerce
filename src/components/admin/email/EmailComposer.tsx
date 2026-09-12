@@ -411,6 +411,7 @@ export function EmailComposer({
         targetCurrency: activeCurrency,
         direction: isRtl ? "rtl" : "ltr",
         exchangeRates: storeRates,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
       });
 
       return res.html;

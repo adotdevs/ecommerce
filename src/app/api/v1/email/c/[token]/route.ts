@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTrackingToken } from "@/lib/email/tracking";
-import { getSiteUrl, isInternalUrl } from "@/lib/url";
+import { getSiteUrl, getRequestSiteUrl, isInternalUrl } from "@/lib/url";
 import { getEmailMessageModel } from "@/models/EmailMessage";
 import { getEmailCampaignModel } from "@/models/EmailCampaign";
 import { getEmailEventModel } from "@/models/EmailEvent";
@@ -42,7 +42,7 @@ export async function GET(
 ) {
   const { token } = await context.params;
   const payload = verifyTrackingToken(token);
-  const baseUrl = getSiteUrl();
+  const baseUrl = getRequestSiteUrl(request) || getSiteUrl();
 
   if (!payload || !payload.u) {
     return NextResponse.redirect(baseUrl);
@@ -100,10 +100,16 @@ export async function GET(
   // Safe redirect validation
   let target = payload.u;
   try {
+    // If target has a localhost/127.0.0.1 domain, rewrite to active baseUrl
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(target)) {
+      const parsedUrl = new URL(target);
+      target = `${baseUrl}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    }
+
     // Only allow redirects to our own domain or fully-qualified external URLs
     if (!target.startsWith("http")) {
       target = baseUrl;
-    } else if (!isInternalUrl(target)) {
+    } else if (!isInternalUrl(target, baseUrl)) {
       // External URL — only allow if it was the original tracked destination
       // This is safe because the token was HMAC-signed by us
     }

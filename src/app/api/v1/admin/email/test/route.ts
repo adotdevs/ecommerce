@@ -8,6 +8,7 @@ import { renderEmailDocument } from "@/lib/email/document-renderer";
 import type { EmailDocument } from "@/lib/email/document-schema";
 import { sendOutreachEmail } from "@/lib/email/sender";
 import { getEmailSettings } from "@/lib/email/settings";
+import { getRequestSiteUrl } from "@/lib/url";
 
 const testEmailSchema = z.object({
   recipientEmail: z.string().email(),
@@ -61,6 +62,8 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
     let renderedHtml = "";
     let renderedText = "";
 
+    const baseUrl = getRequestSiteUrl(request);
+
     if (emailDocument) {
       const docResult = renderEmailDocument(emailDocument as unknown as EmailDocument, {
         personalization: {
@@ -69,6 +72,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
           email: recipientEmail,
         },
         recipientEmail,
+        baseUrl,
       });
       renderedSubject = `[TEST] ${docResult.subject || subject}`;
       renderedHtml = docResult.html;
@@ -91,6 +95,7 @@ export const POST = withAuth(async (request: NextRequest, ctx) => {
           firstName: "Test Admin",
           lastName: "",
         },
+        baseUrl,
       });
       renderedSubject = rendered.subject;
       renderedHtml = rendered.html;

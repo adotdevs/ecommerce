@@ -141,7 +141,7 @@ export const GET = withAuth(async (request: NextRequest) => {
   } catch (err) {
     return apiError(err instanceof Error ? err.message : "Failed to load suppression records", 500);
   }
-}, PERMISSIONS.MARKETING_READ);
+}, PERMISSIONS.MARKETING_WRITE);
 
 /**
  * DELETE /api/v1/admin/email/suppressions

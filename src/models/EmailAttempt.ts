@@ -5,9 +5,11 @@ export type SmtpErrorCategory =
   | "AUTHENTICATION"
   | "CONNECTION"
   | "TIMEOUT"
+  | "DNS_ERROR"
   | "INVALID_RECIPIENT"
   | "RECIPIENT_REJECTED"
   | "MAILBOX_NOT_FOUND"
+  | "MAILBOX_FULL"
   | "RATE_LIMIT"
   | "TEMPORARY_PROVIDER_ERROR"
   | "PERMANENT_PROVIDER_ERROR"
@@ -56,9 +58,11 @@ const EmailAttemptSchema = new Schema<IEmailAttempt>(
         "AUTHENTICATION",
         "CONNECTION",
         "TIMEOUT",
+        "DNS_ERROR",
         "INVALID_RECIPIENT",
         "RECIPIENT_REJECTED",
         "MAILBOX_NOT_FOUND",
+        "MAILBOX_FULL",
         "RATE_LIMIT",
         "TEMPORARY_PROVIDER_ERROR",
         "PERMANENT_PROVIDER_ERROR",

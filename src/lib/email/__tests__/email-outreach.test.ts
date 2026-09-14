@@ -2,7 +2,8 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
+import mongoose from "mongoose";
 import {
   resolveTokens,
   detectMissingTokens,
@@ -112,6 +113,32 @@ describe("Deterministic SMTP Error Classification", () => {
     (netErr as any).code = "ETIMEDOUT";
     const classified = classifySmtpError(netErr);
     assert.equal(classified.category, "TIMEOUT");
+    assert.equal(classified.retryable, true);
+  });
+
+  it("classifies mailbox full 552 as non-retryable", () => {
+    const err = new Error("552 5.2.2 Mailbox quota exceeded");
+    (err as any).responseCode = 552;
+    const classified = classifySmtpError(err);
+    assert.equal(classified.category, "MAILBOX_FULL");
+    assert.equal(classified.retryable, false);
+    assert.equal(classified.smtpCode, 552);
+  });
+
+  it("classifies authentication failures 535 as AUTHENTICATION", () => {
+    const err = new Error("535 5.7.8 Username and Password not accepted");
+    (err as any).responseCode = 535;
+    const classified = classifySmtpError(err);
+    assert.equal(classified.category, "AUTHENTICATION");
+    assert.equal(classified.retryable, false);
+    assert.equal(classified.smtpCode, 535);
+  });
+
+  it("classifies DNS failure as retryable DNS_ERROR", () => {
+    const err = new Error("getaddrinfo ENOTFOUND smtp.mailservice.com");
+    (err as any).code = "ENOTFOUND";
+    const classified = classifySmtpError(err);
+    assert.equal(classified.category, "DNS_ERROR");
     assert.equal(classified.retryable, true);
   });
 });
@@ -604,6 +631,10 @@ describe("Multilingual & Multi-Currency Email Rendering", () => {
     assert.ok(rendered.text.includes("جاكيت جلد رجالي فاخر"), "Text version should include translated product title");
     assert.ok(rendered.text.includes("سماعات أذن لاسلكية عازلة للضوضاء"), "Text version should include translated grid product title 1");
   });
+});
+
+after(async () => {
+  await mongoose.disconnect();
 });
 
 

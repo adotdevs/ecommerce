@@ -50,6 +50,10 @@ interface CampaignItem {
   startedAt?: string;
   completedAt?: string;
   createdAt: string;
+  lastFailureReason?: string;
+  lastFailureCategory?: string;
+  primaryFailureReason?: string;
+  primaryFailureCategory?: string;
 }
 
 interface QuotaStatus {
@@ -567,6 +571,16 @@ export default function AdminCampaignsPage() {
                           </>
                         )}
                       </div>
+
+                      {(camp.primaryFailureReason || camp.lastFailureReason) && (camp.failedCount > 0 || isFailed) && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-destructive bg-destructive/10 px-2.5 py-1 rounded border border-destructive/20 max-w-fit">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate max-w-[450px]">
+                            {camp.primaryFailureCategory ? `[${camp.primaryFailureCategory.replace(/_/g, " ")}] ` : ""}
+                            {camp.primaryFailureReason || camp.lastFailureReason}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action buttons */}

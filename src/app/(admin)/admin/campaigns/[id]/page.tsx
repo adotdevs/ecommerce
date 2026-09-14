@@ -65,19 +65,28 @@ interface RecipientMessage {
   _id: string;
   recipientEmail: string;
   recipientName?: string;
-  status: "PENDING" | "PROCESSING" | "SENT" | "FAILED" | "CANCELLED" | "SUPPRESSED";
+  status: "PENDING" | "QUEUED" | "PROCESSING" | "SENT" | "FAILED" | "RETRYING" | "CANCELLED" | "SUPPRESSED" | "BLOCKED";
   attemptsCount: number;
   maxAttempts: number;
   lastAttemptAt?: string;
   nextRetryAt?: string;
   lastErrorMessage?: string;
   lastSmtpCode?: number;
+  failureCategory?: string;
+  failureReason?: string;
   sentAt?: string;
   failedAt?: string;
   clickCount?: number;
   lastClickedAt?: string;
   renderedHtmlSnapshot?: string;
   subjectSnapshot?: string;
+}
+
+interface FailureSummaryItem {
+  reason: string;
+  category: string;
+  count: number;
+  sampleRecipients: string[];
 }
 
 interface ClickAnalytics {
@@ -98,6 +107,8 @@ export default function CampaignDetailPage({
 
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [messages, setMessages] = useState<RecipientMessage[]>([]);
+  const [failureSummary, setFailureSummary] = useState<FailureSummaryItem[]>([]);
+  const [recipientFilter, setRecipientFilter] = useState<"ALL" | "FAILED" | "SENT" | "PENDING">("ALL");
   const [clickAnalytics, setClickAnalytics] = useState<ClickAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingBatch, setProcessingBatch] = useState(false);
@@ -130,6 +141,9 @@ export default function CampaignDetailPage({
       if (data.success) {
         setCampaign(data.data.campaign);
         setMessages(data.data.messages ?? []);
+        if (data.data.failureSummary) {
+          setFailureSummary(data.data.failureSummary);
+        }
         if (data.data.clickAnalytics) {
           setClickAnalytics(data.data.clickAnalytics);
         }
@@ -264,15 +278,39 @@ export default function CampaignDetailPage({
     }
   };
 
+  const failedCount = useMemo(() => messages.filter((m) => m.status === "FAILED").length, [messages]);
+  const sentCount = useMemo(() => messages.filter((m) => m.status === "SENT").length, [messages]);
+  const pendingCount = useMemo(
+    () => messages.filter((m) => m.status === "PENDING" || m.status === "PROCESSING").length,
+    [messages]
+  );
+
+  const filteredMessages = useMemo(() => {
+    if (recipientFilter === "ALL") return messages;
+    if (recipientFilter === "FAILED") {
+      return messages.filter((m) => m.status === "FAILED" || m.status === "CANCELLED");
+    }
+    if (recipientFilter === "SENT") {
+      return messages.filter((m) => m.status === "SENT");
+    }
+    if (recipientFilter === "PENDING") {
+      return messages.filter((m) => m.status === "PENDING" || m.status === "PROCESSING");
+    }
+    return messages;
+  }, [messages, recipientFilter]);
+
+  // Export Recipient Queue to CSV with failure diagnostics
   const handleExportCsv = () => {
     if (!messages.length) return;
+
     const headers = [
       "Recipient Email",
       "Recipient Name",
       "Status",
       "Attempts",
       "Sent At",
-      "Error Message",
+      "Failure Reason",
+      "Failure Category",
       "SMTP Code",
       "Clicks",
     ];
@@ -282,7 +320,8 @@ export default function CampaignDetailPage({
       m.status,
       m.attemptsCount,
       m.sentAt || "",
-      `"${(m.lastErrorMessage || "").replace(/"/g, '""')}"`,
+      `"${(m.lastErrorMessage || m.failureReason || "").replace(/"/g, '""')}"`,
+      `"${m.failureCategory || ""}"`,
       m.lastSmtpCode || "",
       m.clickCount || 0,
     ]);
@@ -628,30 +667,154 @@ export default function CampaignDetailPage({
         </Card>
       )}
 
+      {/* Delivery Failures & Root Cause Analysis Card */}
+      {(campaign.failedCount > 0 || failureSummary.length > 0 || failedCount > 0) && (
+        <Card className="border-destructive/40 bg-destructive/5 shadow-sm">
+          <CardHeader className="pb-3 border-b border-destructive/20 bg-destructive/10">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="rounded-full bg-destructive/20 p-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
+                    Email Delivery Failure Reasons
+                    <Badge variant="destructive" className="text-[11px] px-2 py-0.5 font-mono">
+                      {campaign.failedCount || failedCount} failed
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    SMTP server rejection reasons, connection timeouts, and mailbox delivery errors
+                  </p>
+                </div>
+              </div>
+              {campaign.status !== "CANCELLED" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={retrying}
+                  onClick={handleRetryFailed}
+                  className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10 text-xs font-semibold gap-1.5"
+                >
+                  {retrying ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                  Retry All Failed
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-3.5 space-y-2.5">
+            {failureSummary.length > 0 ? (
+              failureSummary.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-destructive/20 bg-background/90 p-3 text-xs shadow-xs"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <Badge variant="destructive" className="mt-0.5 shrink-0 text-[10px] uppercase font-mono tracking-wider">
+                      {item.category.replace(/_/g, " ")}
+                    </Badge>
+                    <div className="min-w-0">
+                      <p className="font-mono text-[12px] font-bold text-destructive break-words">
+                        {item.reason}
+                      </p>
+                      {item.sampleRecipients && item.sampleRecipients.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Affected recipients: <span className="font-mono text-foreground/80">{item.sampleRecipients.join(", ")}</span>
+                          {item.count > item.sampleRecipients.length
+                            ? ` and ${item.count - item.sampleRecipients.length} more`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 self-start sm:self-center font-bold text-xs bg-destructive/10 text-destructive border-destructive/20">
+                    {item.count} recipient{item.count === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-destructive/20 bg-background/80 p-3 text-xs text-destructive font-mono">
+                {messages.find((m) => m.lastErrorMessage || m.failureReason)?.lastErrorMessage ||
+                  messages.find((m) => m.lastErrorMessage || m.failureReason)?.failureReason ||
+                  "Delivery was rejected by destination mail server."}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recipient Messages Table */}
       <Card>
-        <CardHeader className="border-b border-border bg-secondary/30 py-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">
-              Recipient Queue ({messages.length})
-            </CardTitle>
-            <span className="text-[12px] text-muted-foreground">
-              Atomic queue worker items with SMTP attempt history
-            </span>
+        <CardHeader className="border-b border-border bg-secondary/30 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base font-semibold">
+                Recipient Queue ({messages.length})
+              </CardTitle>
+              <p className="text-[12px] text-muted-foreground">
+                Atomic queue worker items with SMTP attempt history and failure reasons
+              </p>
+            </div>
+            {/* Filter buttons */}
+            <div className="flex flex-wrap items-center gap-1">
+              <Button
+                variant={recipientFilter === "ALL" ? "primary" : "ghost"}
+                size="sm"
+                className="h-7 px-2.5 text-[11px]"
+                onClick={() => setRecipientFilter("ALL")}
+              >
+                All ({messages.length})
+              </Button>
+              <Button
+                variant={recipientFilter === "FAILED" ? "primary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-7 px-2.5 text-[11px]",
+                  failedCount > 0 && recipientFilter !== "FAILED" && "text-destructive font-bold"
+                )}
+                onClick={() => setRecipientFilter("FAILED")}
+              >
+                Failed ({failedCount})
+              </Button>
+              <Button
+                variant={recipientFilter === "SENT" ? "primary" : "ghost"}
+                size="sm"
+                className="h-7 px-2.5 text-[11px]"
+                onClick={() => setRecipientFilter("SENT")}
+              >
+                Sent ({sentCount})
+              </Button>
+              {pendingCount > 0 && (
+                <Button
+                  variant={recipientFilter === "PENDING" ? "primary" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px]"
+                  onClick={() => setRecipientFilter("PENDING")}
+                >
+                  Pending ({pendingCount})
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {messages.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              No recipient message records found for this campaign.
+          {filteredMessages.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground text-xs">
+              {recipientFilter === "ALL"
+                ? "No recipient message records found for this campaign."
+                : `No messages match the filter '${recipientFilter}'.`}
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {messages.map((msg) => {
+              {filteredMessages.map((msg) => {
                 const isFailed = msg.status === "FAILED";
+                const isRetrying = msg.status === "RETRYING";
                 const isSent = msg.status === "SENT";
-                const isPending = msg.status === "PENDING";
-                const isProcessing = msg.status === "PROCESSING";
+                const failureText = msg.lastErrorMessage || msg.failureReason;
 
                 return (
                   <div key={msg._id} className="p-4 transition-colors hover:bg-secondary/15">
@@ -672,8 +835,11 @@ export default function CampaignDetailPage({
                                 ? "success"
                                 : isFailed
                                 ? "destructive"
+                                : isRetrying
+                                ? "secondary"
                                 : "secondary"
                             }
+                            className={isRetrying ? "bg-amber-100 text-amber-900 border-amber-200" : ""}
                           >
                             {msg.status}
                           </Badge>
@@ -697,14 +863,26 @@ export default function CampaignDetailPage({
                           )}
                         </div>
 
-                        {/* Error diagnostics */}
-                        {isFailed && msg.lastErrorMessage && (
-                          <div className="mt-2 rounded-[var(--radius-sm)] border border-destructive/30 bg-destructive/5 p-2.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-[12px] font-mono text-destructive">
-                                {msg.lastSmtpCode ? `[SMTP ${msg.lastSmtpCode}] ` : ""}
-                                {msg.lastErrorMessage}
-                              </p>
+                        {/* Error diagnostics & Failure Reason */}
+                        {(isFailed || isRetrying || failureText) && (
+                          <div className="mt-2.5 rounded-[var(--radius-sm)] border border-destructive/30 bg-destructive/5 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="flex items-center gap-1 text-[11px] font-bold text-destructive uppercase tracking-wider">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                  Failure Reason
+                                </span>
+                                {msg.failureCategory && (
+                                  <Badge variant="destructive" className="text-[10px] font-mono py-0 px-1.5 uppercase">
+                                    {msg.failureCategory.replace(/_/g, " ")}
+                                  </Badge>
+                                )}
+                                {msg.lastSmtpCode && (
+                                  <Badge variant="outline" className="text-[10px] font-mono py-0 px-1.5 border-destructive/40 text-destructive">
+                                    SMTP {msg.lastSmtpCode}
+                                  </Badge>
+                                )}
+                              </div>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -720,6 +898,11 @@ export default function CampaignDetailPage({
                                 Explain with AI
                               </Button>
                             </div>
+
+                            <p className="mt-1.5 text-[12px] font-mono text-destructive font-semibold break-words">
+                              {msg.lastSmtpCode ? `[SMTP ${msg.lastSmtpCode}] ` : ""}
+                              {failureText || "Delivery rejected by mail server"}
+                            </p>
 
                             {/* AI Explanation Accordion */}
                             {aiExplanation?.messageId === msg._id && (

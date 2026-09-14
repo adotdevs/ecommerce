@@ -53,18 +53,34 @@ export function classifySmtpError(error: unknown): {
     };
   }
 
-  // Network / Connection timeouts (temporary, retryable)
+  // Mailbox full / quota exceeded
+  if (code === 552 && (msg.includes("mailbox") || msg.includes("full") || msg.includes("quota"))) {
+    return {
+      category: "MAILBOX_FULL",
+      smtpCode: 552,
+      retryable: false,
+      sanitized: "Recipient mailbox is full or quota exceeded.",
+    };
+  }
+
+  // Network / Connection / DNS (temporary, retryable)
   if (
     errObj.code === "ETIMEDOUT" ||
     errObj.code === "ECONNRESET" ||
     errObj.code === "ECONNREFUSED" ||
+    errObj.code === "ENOTFOUND" ||
+    errObj.code === "EAI_AGAIN" ||
     msg.includes("timeout") ||
-    msg.includes("connection reset")
+    msg.includes("connection reset") ||
+    msg.includes("enotfound")
   ) {
+    const isDns = errObj.code === "ENOTFOUND" || msg.includes("enotfound");
     return {
-      category: "TIMEOUT",
+      category: isDns ? "DNS_ERROR" : "TIMEOUT",
       retryable: true,
-      sanitized: "Connection to SMTP server timed out or was reset.",
+      sanitized: isDns
+        ? "DNS lookup failed for destination mail server."
+        : "Connection to SMTP server timed out or was reset.",
     };
   }
 

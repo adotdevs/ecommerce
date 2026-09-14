@@ -78,10 +78,57 @@ export const GET = withAuth(async (request: NextRequest, ctx) => {
       }
     }
 
-    const enrichedMessages = messages.map((m) => ({
-      ...m,
-      latestAttempt: attemptsByMessageId.get(String(m._id)) || null,
-    }));
+    const enrichedMessages = messages.map((m) => {
+      const att = attemptsByMessageId.get(String(m._id)) || null;
+      const effectiveReason =
+        m.failureReason ||
+        att?.sanitizedError ||
+        att?.providerResponse ||
+        (m.status === "FAILED" ? "Delivery rejected by mail server" : undefined);
+
+      return {
+        ...m,
+        latestAttempt: att,
+        attemptsCount: m.totalAttempts ?? (att?.attemptNumber ?? 0),
+        lastAttemptAt: m.lastAttemptAt || att?.finishedAt || att?.startedAt || undefined,
+        lastErrorMessage: effectiveReason,
+        lastSmtpCode: att?.smtpCode || undefined,
+        failureCategory: m.failureCategory || att?.errorCategory || undefined,
+        failureReason: effectiveReason,
+      };
+    });
+
+    // Compute aggregated failure breakdown across the campaign
+    const allFailedMessages = await MessageModel.find({
+      campaignId: id,
+      status: { $in: ["FAILED", "RETRYING"] },
+    })
+      .select("failureReason failureCategory recipientEmail")
+      .lean();
+
+    const reasonMap: Record<
+      string,
+      { reason: string; category: string; count: number; sampleRecipients: string[] }
+    > = {};
+
+    for (const fm of allFailedMessages) {
+      const reasonKey = fm.failureReason || "Delivery rejected by mail server";
+      const cat = fm.failureCategory || "UNKNOWN";
+      if (!reasonMap[reasonKey]) {
+        reasonMap[reasonKey] = {
+          reason: reasonKey,
+          category: cat,
+          count: 0,
+          sampleRecipients: [],
+        };
+      }
+      reasonMap[reasonKey].count += 1;
+      if (reasonMap[reasonKey].sampleRecipients.length < 3) {
+        reasonMap[reasonKey].sampleRecipients.push(fm.recipientEmail);
+      }
+    }
+
+    const failureSummary = Object.values(reasonMap).sort((a, b) => b.count - a.count);
 
     return apiSuccess({
       campaign,
@@ -90,6 +137,7 @@ export const GET = withAuth(async (request: NextRequest, ctx) => {
       page,
       limit,
       pages: Math.ceil(totalMessages / limit) || 1,
+      failureSummary,
       clickAnalytics: {
         totalClicks: clickEvents.length,
         byLinkType: clicksByLinkType,

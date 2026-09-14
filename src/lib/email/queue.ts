@@ -256,6 +256,10 @@ export async function processEmailMessage(message: IEmailMessage): Promise<Proce
         $inc: willRetry
           ? { processingCount: -1 }
           : { failedCount: 1, processingCount: -1 },
+        $set: {
+          lastFailureReason: sendRes.sanitizedError,
+          lastFailureCategory: sendRes.errorCategory,
+        },
       }
     );
   }

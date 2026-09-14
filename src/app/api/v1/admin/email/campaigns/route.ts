@@ -83,8 +83,46 @@ export const GET = withAuth(async (request: NextRequest) => {
       CampaignModel.countDocuments(query),
     ]);
 
+    // Enrich campaigns that experienced failures with their primary failure reason
+    const campaignsWithFailures = items.filter(
+      (c) => (c.failedCount || 0) > 0 || c.status === "FAILED" || c.status === "PARTIALLY_FAILED"
+    );
+
+    const failureReasonMap = new Map<string, { reason: string; category?: string }>();
+    if (campaignsWithFailures.length > 0) {
+      const MessageModel = await getEmailMessageModel();
+      const failedSamples = await MessageModel.find({
+        campaignId: { $in: campaignsWithFailures.map((c) => c._id) } as any,
+        status: { $in: ["FAILED", "RETRYING"] },
+      })
+        .select("campaignId failureReason failureCategory")
+        .sort({ failedAt: -1 })
+        .lean();
+
+      for (const fs of failedSamples) {
+        const cId = String(fs.campaignId);
+        if (!failureReasonMap.has(cId) && fs.failureReason) {
+          failureReasonMap.set(cId, {
+            reason: fs.failureReason,
+            category: fs.failureCategory,
+          });
+        }
+      }
+    }
+
+    const enrichedItems = items.map((c) => {
+      const f = failureReasonMap.get(String(c._id));
+      const reason = f?.reason || c.lastFailureReason;
+      const category = f?.category || c.lastFailureCategory;
+      return {
+        ...c,
+        primaryFailureReason: reason || undefined,
+        primaryFailureCategory: category || undefined,
+      };
+    });
+
     return apiSuccess({
-      items,
+      items: enrichedItems,
       total,
       page,
       limit,

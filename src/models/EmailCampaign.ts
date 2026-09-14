@@ -62,6 +62,8 @@ export interface IEmailCampaign extends Document {
   startedAt?: Date;
   completedAt?: Date;
   cancelledAt?: Date;
+  lastFailureReason?: string;
+  lastFailureCategory?: string;
   createdBy?: string;
   updatedBy?: string;
   createdAt: Date;
@@ -133,6 +135,8 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
     startedAt: { type: Date },
     completedAt: { type: Date },
     cancelledAt: { type: Date },
+    lastFailureReason: { type: String, trim: true },
+    lastFailureCategory: { type: String, trim: true },
     createdBy: { type: String, trim: true },
     updatedBy: { type: String, trim: true },
   },

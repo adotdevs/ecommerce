@@ -1,10 +1,11 @@
 import { VisitorLog } from "@/models";
 import { parseUserAgent } from "@/lib/visitors/user-agent";
-import type { FirstVisitContext } from "@/lib/visitors/types";
+import type { FirstVisitContext, CampaignAttribution } from "@/lib/visitors/types";
 
 export async function saveVisitorLog(
   ctx: FirstVisitContext,
-  telegramSent: boolean
+  telegramSent: boolean,
+  campaignAttribution?: CampaignAttribution
 ) {
   const { browser, os, device } = parseUserAgent(ctx.userAgent);
   const geo = ctx.geo;
@@ -48,6 +49,7 @@ export async function saveVisitorLog(
     timezone: ctx.timezone ?? geo?.timezone,
     platform: ctx.platform,
     telegramSent,
+    campaignAttribution: campaignAttribution?.isCampaignVisit ? campaignAttribution : undefined,
     visitedAt: new Date(ctx.visitedAt),
   });
 }

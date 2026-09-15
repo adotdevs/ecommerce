@@ -6,6 +6,24 @@ import { shouldUseNextImage } from "@/lib/images/should-use-next-image";
 
 type RemoteImageProps = ImageProps;
 
+/** Normalizes image src, stripping accidental localhost:3000 prefixes and ensuring clean root paths */
+export function normalizeImageSrc(src: string): string {
+  if (!src) return "";
+  let trimmed = src.trim();
+
+  // Strip accidental http://localhost:3000 or http://127.0.0.1:3000 prefix so local assets load correctly in live production
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(trimmed)) {
+    trimmed = trimmed.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, "");
+  }
+
+  // Ensure public folder paths have leading slash
+  if (trimmed.startsWith("brand/") || trimmed.startsWith("uploads/") || trimmed.startsWith("images/")) {
+    trimmed = `/${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 export function RemoteImage({
   src,
   alt = "",
@@ -19,7 +37,8 @@ export function RemoteImage({
   style,
   ...rest
 }: RemoteImageProps) {
-  const srcString = typeof src === "string" ? src : "";
+  const rawSrc = typeof src === "string" ? src : "";
+  const srcString = normalizeImageSrc(rawSrc);
 
   if (!shouldUseNextImage(srcString)) {
     const imgStyle = fill
@@ -48,7 +67,7 @@ export function RemoteImage({
 
   return (
     <Image
-      src={src}
+      src={srcString || src}
       alt={alt}
       className={className}
       fill={fill}

@@ -85,3 +85,23 @@ export function ModalDescription({
     />
   );
 }
+
+export const Dialog = Modal;
+export const DialogTrigger = ModalTrigger;
+export const DialogClose = ModalClose;
+export const DialogContent = ModalContent;
+export const DialogHeader = ModalHeader;
+export const DialogTitle = ModalTitle;
+export const DialogDescription = ModalDescription;
+
+export function DialogFooter({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4", className)}
+      {...props}
+    />
+  );
+}

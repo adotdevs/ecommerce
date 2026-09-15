@@ -28,6 +28,7 @@ const CANONICAL_BY_ALIAS: Record<string, string> = {
 
   // UAE
   uae: "United Arab Emirates",
+  "u a e": "United Arab Emirates",
   "u.a.e": "United Arab Emirates",
   "u.a.e.": "United Arab Emirates",
   "united arab emirates": "United Arab Emirates",

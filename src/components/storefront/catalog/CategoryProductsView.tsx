@@ -3,7 +3,7 @@
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { RemoteImage } from "@/components/storefront/RemoteImage";
+import { RemoteImage, normalizeImageSrc } from "@/components/storefront/RemoteImage";
 import { ArrowRight } from "lucide-react";
 import {
   CatalogFilters,
@@ -111,7 +111,7 @@ export function CategoryProductsView({
                     {b.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={b.logo}
+                        src={normalizeImageSrc(b.logo)}
                         alt=""
                         className="h-4 w-4 rounded object-contain"
                       />

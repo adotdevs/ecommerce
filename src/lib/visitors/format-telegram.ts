@@ -1,4 +1,5 @@
 import { parseUserAgent } from "./user-agent";
+import { getSiteUrl } from "@/lib/url";
 import type { FirstVisitContext } from "./types";
 
 function escapeHtml(value: string): string {
@@ -21,7 +22,7 @@ function displayValue(value?: string | null): string {
 export function formatFirstVisitTelegramMessage(ctx: FirstVisitContext): string {
   const { browser, os, device } = parseUserAgent(ctx.userAgent);
   const geo = ctx.geo;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+  const appUrl = getSiteUrl();
   const landingUrl = ctx.path
     ? `${appUrl}${ctx.path.startsWith("/") ? ctx.path : `/${ctx.path}`}`
     : appUrl || "—";

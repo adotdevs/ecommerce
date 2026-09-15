@@ -61,15 +61,25 @@ function isHttpUrl(value: string) {
   }
 }
 
+export function normalizeLocalPath(value: string): string {
+  let path = value.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/(brand|uploads)\//i.test(path)) {
+    path = path.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, "");
+  } else if (/^(brand|uploads)\//i.test(path)) {
+    path = "/" + path;
+  }
+  return path;
+}
+
 /** Public-folder path, e.g. `/brand/hero.png` */
 function isLocalPublicPath(value: string) {
-  const path = value.trim();
+  const path = normalizeLocalPath(value);
   return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
 }
 
 function isUsableImageSrc(value: string) {
-  const path = value.trim();
-  return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
+  const normalized = normalizeLocalPath(value);
+  return Boolean(normalized) && (isHttpUrl(normalized) || isLocalPublicPath(normalized));
 }
 
 export function ProductMediaGallery({
@@ -204,7 +214,7 @@ export function ProductMediaGallery({
   };
 
   const addUrl = async (url: string) => {
-    const trimmed = url.trim();
+    const trimmed = normalizeLocalPath(url);
     if (!isUsableImageSrc(trimmed)) return;
     const imageIndex = value.length;
     const alt =
@@ -323,7 +333,7 @@ export function ProductMediaGallery({
                 )}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.url}
+                  src={normalizeLocalPath(item.url)}
                   alt={item.alt || ""}
                   className="h-full w-full object-cover"
                 />

@@ -24,15 +24,25 @@ function isHttpUrl(value: string) {
   }
 }
 
+function normalizeLocalPath(value: string): string {
+  let path = value.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/(brand|uploads)\//i.test(path)) {
+    path = path.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, "");
+  } else if (/^(brand|uploads)\//i.test(path)) {
+    path = "/" + path;
+  }
+  return path;
+}
+
 /** Public-folder path, e.g. `/brand/hero.png` (same pattern as logo URL). */
 function isLocalPublicPath(value: string) {
-  const path = value.trim();
+  const path = normalizeLocalPath(value);
   return path.startsWith("/") && !path.startsWith("//") && !path.includes("://");
 }
 
 function isUsableImageSrc(value: string) {
-  const path = value.trim();
-  return Boolean(path) && (isHttpUrl(path) || isLocalPublicPath(path));
+  const normalized = normalizeLocalPath(value);
+  return Boolean(normalized) && (isHttpUrl(normalized) || isLocalPublicPath(normalized));
 }
 
 export function ImageUpload({
@@ -128,7 +138,7 @@ export function ImageUpload({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={value}
-                src={value}
+                src={normalizeLocalPath(value)}
                 alt=""
                 className="h-full w-full object-cover"
                 onError={() => setBroken(true)}
@@ -233,7 +243,7 @@ export function ImageUpload({
           value={value}
           onChange={(e) => {
             setBroken(false);
-            onChange(e.target.value);
+            onChange(normalizeLocalPath(e.target.value));
           }}
           className="flex h-9 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-small"
           placeholder="https://... or /brand/hero.png"

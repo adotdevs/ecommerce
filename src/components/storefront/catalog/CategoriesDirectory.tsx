@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { RemoteImage } from "@/components/storefront/RemoteImage";
+import { RemoteImage, normalizeImageSrc } from "@/components/storefront/RemoteImage";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -310,7 +310,7 @@ export function CategoriesDirectory({
                   >
                     {b.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={b.logo} alt="" className="h-5 w-5 rounded object-contain" />
+                      <img src={normalizeImageSrc(b.logo)} alt="" className="h-5 w-5 rounded object-contain" />
                     ) : (
                       <Tag className="h-3.5 w-3.5 shrink-0 opacity-60" />
                     )}
@@ -395,7 +395,7 @@ export function CategoriesDirectory({
                                   {b.logo ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img
-                                      src={b.logo}
+                                      src={normalizeImageSrc(b.logo)}
                                       alt=""
                                       className="h-3.5 w-3.5 rounded-sm object-contain"
                                     />

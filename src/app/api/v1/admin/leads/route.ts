@@ -9,6 +9,13 @@ import {
   expandCountryAliases,
   normalizeCountryName,
 } from "@/lib/leads/countries";
+import {
+  normalizeEmail,
+  normalizePhone,
+  enrichPhoneFields,
+  normalizeString,
+  normalizeTags,
+} from "@/lib/leads/normalize";
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -23,6 +30,17 @@ const listQuerySchema = z.object({
   brand: z.string().optional(),
   hasEmail: z.enum(["true", "false"]).optional(),
   hasPhone: z.enum(["true", "false"]).optional(),
+  emailStatus: z
+    .enum([
+      "never_sent",
+      "sent_1_plus",
+      "sent_2_plus",
+      "cooldown",
+      "failed",
+      "suppressed",
+      "eligible_now",
+    ])
+    .optional(),
 });
 
 function escapeRegex(value: string) {
@@ -154,6 +172,32 @@ export function buildLeadFilter(params: z.infer<typeof listQuerySchema>) {
     });
   }
 
+  if (params.emailStatus === "never_sent") {
+    and.push({
+      $or: [{ emailSentCount: { $exists: false } }, { emailSentCount: null }, { emailSentCount: 0 }],
+    });
+  } else if (params.emailStatus === "sent_1_plus") {
+    and.push({ emailSentCount: { $gte: 1 } });
+  } else if (params.emailStatus === "sent_2_plus") {
+    and.push({ emailSentCount: { $gte: 2 } });
+  } else if (params.emailStatus === "cooldown") {
+    and.push({ cooldownUntil: { $gt: new Date() } });
+  } else if (params.emailStatus === "failed") {
+    and.push({ lastEmailStatus: "FAILED" });
+  } else if (params.emailStatus === "suppressed") {
+    and.push({ isSuppressed: true });
+  } else if (params.emailStatus === "eligible_now") {
+    and.push({
+      email: { $exists: true, $nin: [null, ""] },
+      isSuppressed: { $ne: true },
+      $or: [
+        { cooldownUntil: { $exists: false } },
+        { cooldownUntil: null },
+        { cooldownUntil: { $lte: new Date() } },
+      ],
+    });
+  }
+
   if (and.length) filter.$and = and;
   return filter;
 }
@@ -206,3 +250,88 @@ export const DELETE = withAuth(async (request: NextRequest) => {
     return apiError(message, 500);
   }
 }, PERMISSIONS.MARKETING_WRITE);
+
+const createLeadSchema = z.object({
+  firstName: z.string().trim().optional(),
+  lastName: z.string().trim().optional(),
+  email: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
+  country: z.string().trim().optional(),
+  brand: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  status: z.string().trim().optional(),
+  agent: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+  tags: z.union([z.array(z.string()), z.string()]).optional(),
+  source: z.string().trim().optional(),
+});
+
+export const POST = withAuth(async (request: NextRequest) => {
+  try {
+    const Lead = await getLeadModel();
+    const body = await request.json().catch(() => ({}));
+    const parsed = createLeadSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || "Invalid lead input", 400);
+    }
+
+    const data = parsed.data;
+    const normalizedEmail = normalizeEmail(data.email);
+    const rawPhone = normalizeString(data.phone);
+    const normalizedPhone = rawPhone ? normalizePhone(rawPhone) : undefined;
+
+    if (!normalizedEmail && !normalizedPhone) {
+      return apiError("At least one valid email address or phone number is required.", 400);
+    }
+
+    // Pre-check for duplicate email or phone
+    const duplicateChecks: Record<string, unknown>[] = [];
+    if (normalizedEmail) duplicateChecks.push({ email: normalizedEmail });
+    if (normalizedPhone) duplicateChecks.push({ phone: normalizedPhone });
+
+    if (duplicateChecks.length > 0) {
+      const existing = await Lead.findOne({ $or: duplicateChecks }).lean();
+      if (existing) {
+        if (normalizedEmail && existing.email === normalizedEmail) {
+          return apiError(`A lead with email "${normalizedEmail}" already exists.`, 409);
+        }
+        if (normalizedPhone && existing.phone === normalizedPhone) {
+          return apiError(`A lead with phone "${normalizedPhone}" already exists.`, 409);
+        }
+        return apiError("A lead with this email or phone already exists.", 409);
+      }
+    }
+
+    const leadDoc: Record<string, unknown> = {
+      firstName: normalizeString(data.firstName),
+      lastName: normalizeString(data.lastName),
+      email: normalizedEmail,
+      country: data.country ? (normalizeCountryName(data.country) || normalizeString(data.country)) : undefined,
+      brand: normalizeString(data.brand),
+      address: normalizeString(data.address),
+      status: normalizeString(data.status) || "New",
+      agent: normalizeString(data.agent),
+      notes: normalizeString(data.notes),
+      tags: normalizeTags(data.tags),
+      source: normalizeString(data.source) || "Manual",
+    };
+
+    if (normalizedPhone) {
+      const enriched = enrichPhoneFields(normalizedPhone);
+      leadDoc.phone = enriched.phone;
+      leadDoc.phoneCountry = enriched.phoneCountry;
+      leadDoc.phoneDialCode = enriched.phoneDialCode;
+      leadDoc.phoneLength = enriched.phoneLength;
+    }
+
+    const created = await Lead.create(leadDoc);
+    return apiSuccess(created, 201);
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000) {
+      return apiError("A lead with this email or phone already exists.", 409);
+    }
+    const message = err instanceof Error ? err.message : "Failed to create lead";
+    return apiError(message, 500);
+  }
+}, PERMISSIONS.MARKETING_WRITE);
+

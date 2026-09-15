@@ -35,7 +35,15 @@ const OPTIMIZED_HOST_PATTERNS = [
 
 /** Same-origin /public files — do not send through /_next/image. */
 export function isLocalPublicSrc(src: string): boolean {
-  return Boolean(src) && src.startsWith("/") && !src.startsWith("//");
+  if (!src) return false;
+  let clean = src.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(clean)) {
+    clean = clean.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, "");
+  }
+  if (clean.startsWith("brand/") || clean.startsWith("uploads/") || clean.startsWith("images/")) {
+    clean = `/${clean}`;
+  }
+  return clean.startsWith("/") && !clean.startsWith("//");
 }
 
 /**

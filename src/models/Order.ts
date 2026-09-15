@@ -50,6 +50,9 @@ export interface IOrder extends Document {
   promoCode?: string;
   discount?: number;
   notes?: string;
+  campaignId?: string;
+  emailMessageId?: string;
+  attributionSource?: string;
 }
 
 const OrderSchema = new Schema<IOrder>(
@@ -88,7 +91,13 @@ const OrderSchema = new Schema<IOrder>(
       ],
       default: "pending",
     },
-    timeline: [{ status: String, note: String, at: Date }],
+    timeline: [
+      {
+        status: String,
+        note: String,
+        at: { type: Date, default: Date.now },
+      },
+    ],
     shippingAddress: {
       firstName: String,
       lastName: String,
@@ -108,6 +117,9 @@ const OrderSchema = new Schema<IOrder>(
     promoCode: String,
     discount: { type: Number, default: 0 },
     notes: String,
+    campaignId: { type: String, index: true },
+    emailMessageId: { type: String, index: true },
+    attributionSource: { type: String },
   },
   { timestamps: true }
 );

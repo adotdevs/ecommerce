@@ -81,6 +81,10 @@ interface EmailComposerProps {
   onSuccess?: () => void;
   initialSubject?: string;
   initialBody?: string;
+  initialCampaignName?: string;
+  initialPreviewText?: string;
+  initialHeadline?: string;
+  initialDocument?: EmailDocument | null;
 }
 
 interface ProductItem {
@@ -110,6 +114,10 @@ export function EmailComposer({
   onSuccess,
   initialSubject = "",
   initialBody = "",
+  initialCampaignName = "",
+  initialPreviewText = "",
+  initialHeadline = "",
+  initialDocument = null,
 }: EmailComposerProps) {
   const storeRates = useExchangeRates();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -124,16 +132,30 @@ export function EmailComposer({
   const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(null);
   const [composerFormat, setComposerFormat] = useState<"simple" | "visual">("simple");
   const [isModifiedFromTemplate, setIsModifiedFromTemplate] = useState(false);
-  const [visualDoc, setVisualDoc] = useState<EmailDocument | null>(null);
+  const [visualDoc, setVisualDoc] = useState<EmailDocument | null>(initialDocument);
 
   // Core Form State
-  const [campaignName, setCampaignName] = useState("");
+  const [campaignName, setCampaignName] = useState(initialCampaignName);
   const [goal, setGoal] = useState("");
   const [tone, setTone] = useState("premium, warm, and professional");
   const [subject, setSubject] = useState(initialSubject);
-  const [previewText, setPreviewText] = useState("");
-  const [headline, setHeadline] = useState("");
+  const [previewText, setPreviewText] = useState(initialPreviewText);
+  const [headline, setHeadline] = useState(initialHeadline);
   const [body, setBody] = useState(initialBody);
+
+  useEffect(() => {
+    if (open) {
+      if (initialCampaignName) setCampaignName(initialCampaignName);
+      if (initialSubject) setSubject(initialSubject);
+      if (initialPreviewText) setPreviewText(initialPreviewText);
+      if (initialHeadline) setHeadline(initialHeadline);
+      if (initialBody) setBody(initialBody);
+      if (initialDocument) {
+        setVisualDoc(initialDocument);
+        setComposerFormat("visual");
+      }
+    }
+  }, [open, initialCampaignName, initialSubject, initialPreviewText, initialHeadline, initialBody, initialDocument]);
 
   // Simple CTA & Sign-off State
   const [enableCta, setEnableCta] = useState(true);

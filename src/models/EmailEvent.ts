@@ -20,7 +20,8 @@ export type EmailEventType =
   | "CONVERTED"
   | "SETTINGS_UPDATED"
   | "PAUSED"
-  | "RESUMED";
+  | "RESUMED"
+  | "DELETED";
 
 export interface IEmailEvent extends Document {
   campaignId?: any;

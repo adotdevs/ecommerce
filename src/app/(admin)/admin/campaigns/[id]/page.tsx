@@ -33,8 +33,10 @@ import {
   DollarSign,
   ShieldCheck,
   Ban,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/components/ds/utils";
+import { DeleteCampaignDialog } from "@/components/admin/email/DeleteCampaignDialog";
 
 interface CampaignDetail {
   _id: string;
@@ -116,6 +118,7 @@ export default function CampaignDetailPage({
   const [cancelling, setCancelling] = useState(false);
   const [viewingHtml, setViewingHtml] = useState<string | null>(null);
   const [explainingId, setExplainingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [aiExplanation, setAiExplanation] = useState<{
     messageId?: string;
     text?: string;
@@ -470,6 +473,15 @@ export default function CampaignDetailPage({
                 </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Clear / Delete
+            </Button>
           </div>
         </div>
       </div>
@@ -956,6 +968,25 @@ export default function CampaignDetailPage({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Password-Secured Delete & Redo Dialog */}
+      <DeleteCampaignDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        campaignId={campaignId}
+        campaignName={campaign.name}
+        onDeleted={() => {
+          router.push("/admin/campaigns");
+        }}
+        onRedo={(redoData) => {
+          try {
+            sessionStorage.setItem("campaign_redo_data", JSON.stringify(redoData));
+          } catch (e) {
+            console.error(e);
+          }
+          router.push("/admin/campaigns");
+        }}
+      />
     </div>
   );
 }

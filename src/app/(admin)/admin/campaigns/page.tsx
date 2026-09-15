@@ -26,8 +26,10 @@ import {
   Users,
   Layers,
   UserX,
+  Trash2,
 } from "lucide-react";
 import { EmailComposer, type SelectedLeadContext } from "@/components/admin/email/EmailComposer";
+import { DeleteCampaignDialog } from "@/components/admin/email/DeleteCampaignDialog";
 import { cn } from "@/components/ds/utils";
 
 interface CampaignItem {
@@ -74,6 +76,40 @@ export default function AdminCampaignsPage() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerLeads, setComposerLeads] = useState<SelectedLeadContext[]>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
+  const [deletingCampaign, setDeletingCampaign] = useState<{ id: string; name: string } | null>(null);
+  const [composerInitialData, setComposerInitialData] = useState<{
+    campaignName?: string;
+    subject?: string;
+    previewText?: string;
+    headline?: string;
+    body?: string;
+    document?: any;
+  }>({});
+
+  // Check for redo campaign passed via sessionStorage from detail page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("campaign_redo_data");
+      if (saved) {
+        sessionStorage.removeItem("campaign_redo_data");
+        const parsed = JSON.parse(saved);
+        if (parsed.leads && parsed.leads.length > 0) {
+          setComposerLeads(parsed.leads);
+        }
+        setComposerInitialData({
+          campaignName: parsed.campaignName ? `${parsed.campaignName} (Redo)` : "",
+          subject: parsed.subject || "",
+          previewText: parsed.previewText || "",
+          headline: parsed.headline || "",
+          body: parsed.body || "",
+          document: parsed.emailDocumentSnapshot || null,
+        });
+        setIsComposerOpen(true);
+      }
+    } catch (e) {
+      console.error("Failed to restore redo campaign", e);
+    }
+  }, []);
 
   const authHeaders = useMemo(
     () => ({
@@ -597,6 +633,15 @@ export default function AdminCampaignsPage() {
                           )}
                         </Link>
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Delete or Redo Campaign"
+                        onClick={() => setDeletingCampaign({ id: camp._id, name: camp.name })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 );
@@ -609,13 +654,54 @@ export default function AdminCampaignsPage() {
       {/* Embedded Email Composer */}
       <EmailComposer
         open={isComposerOpen}
-        onOpenChange={setIsComposerOpen}
+        onOpenChange={(open) => {
+          setIsComposerOpen(open);
+          if (!open) {
+            setComposerInitialData({});
+          }
+        }}
         leads={composerLeads}
+        initialCampaignName={composerInitialData.campaignName}
+        initialSubject={composerInitialData.subject}
+        initialPreviewText={composerInitialData.previewText}
+        initialHeadline={composerInitialData.headline}
+        initialBody={composerInitialData.body}
+        initialDocument={composerInitialData.document}
         onSuccess={() => {
           loadCampaigns();
           loadSettingsAndQuota();
         }}
       />
+
+      {/* Password-Secured Delete & Redo Dialog */}
+      {deletingCampaign && (
+        <DeleteCampaignDialog
+          open={!!deletingCampaign}
+          onOpenChange={(open) => !open && setDeletingCampaign(null)}
+          campaignId={deletingCampaign.id}
+          campaignName={deletingCampaign.name}
+          onDeleted={() => {
+            loadCampaigns();
+            loadSettingsAndQuota();
+          }}
+          onRedo={(redoData) => {
+            if (redoData.leads && redoData.leads.length > 0) {
+              setComposerLeads(redoData.leads as any);
+            }
+            setComposerInitialData({
+              campaignName: redoData.campaignName ? `${redoData.campaignName} (Redo)` : "",
+              subject: redoData.subject || "",
+              previewText: redoData.previewText || "",
+              headline: redoData.headline || "",
+              body: redoData.body || "",
+              document: redoData.emailDocumentSnapshot || null,
+            });
+            setIsComposerOpen(true);
+            loadCampaigns();
+            loadSettingsAndQuota();
+          }}
+        />
+      )}
     </div>
   );
 }
